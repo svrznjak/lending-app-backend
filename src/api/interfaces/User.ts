@@ -2,7 +2,7 @@ import { Budget } from './Budget.js';
 import { Loan } from './Loan.js';
 
 export interface User {
-  _id: string;
+  _id: object;
   name: string;
   email: string;
   firebaseId: string;

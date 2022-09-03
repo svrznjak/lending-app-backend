@@ -1,7 +1,7 @@
 import { InterestRate } from './Loan.js';
 
 export interface Budget {
-  _id: string;
+  _id: object;
   name: string;
   description: string;
   defaultInterestRate: InterestRate;

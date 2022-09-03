@@ -1,5 +1,5 @@
 export interface Transaction {
-  _id: string;
+  _id: object;
   userId: string;
   transactionTimestamp: number;
   description: string;
@@ -11,5 +11,5 @@ export interface Transaction {
 }
 export interface TransactionAddress {
   datatype: 'BUDGET' | 'LOAN' | 'INTEREST' | 'OUTSIDE';
-  _id: string;
+  _id: object;
 }
