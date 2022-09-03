@@ -13,7 +13,6 @@ export const LoanSchema = new mongoose.Schema({
   _id: {
     type: mongoose.Schema.Types.ObjectId,
     required: true,
-    index: true,
   },
   name: { type: String, required: true },
   description: { type: String, required: true },

@@ -9,7 +9,6 @@ const TransactionAddressSchema = new mongoose.Schema({
   _id: {
     type: mongoose.Schema.Types.ObjectId,
     required: true,
-    index: true,
   },
 });
 
@@ -17,7 +16,6 @@ const TransactionSchema = new mongoose.Schema({
   _id: {
     type: mongoose.Schema.Types.ObjectId,
     required: true,
-    index: true,
   },
   userId: {
     type: mongoose.Schema.Types.ObjectId,
