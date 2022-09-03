@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 
-import { LoanInterestRateSchema } from './LoanSchema.js';
+import { LoanInterestRateSchema } from './LoanInterestRateSchema.js';
 
 export const BudgetSchema = new mongoose.Schema({
   _id: {
