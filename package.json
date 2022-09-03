@@ -34,5 +34,13 @@
     "test:watch": "jest --watch"
   },
   "author": "Gregor Svržnjak",
-  "license": "Private property! :D"
+  "license": "Private property! :D",
+  "dependencies": {
+    "express": "^4.18.1",
+    "express-graphql": "^0.12.0",
+    "firebase-admin": "^11.0.1",
+    "graphql": "^16.6.0",
+    "graphql-tools": "^8.3.4",
+    "mongoose": "^6.5.4"
+  }
 }
