@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 
-import { BudgetSchema } from './Budget.js';
-import { LoanSchema } from './Loan.js';
+import { BudgetSchema } from './BudgetSchema.js';
+import { LoanSchema } from './LoanSchema.js';
 
 const SubscriptionSchema = new mongoose.Schema({
   revenuecatId: { type: String, required: true },
