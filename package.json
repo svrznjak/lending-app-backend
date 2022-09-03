@@ -36,6 +36,7 @@
   "author": "Gregor Svržnjak",
   "license": "Private property! :D",
   "dependencies": {
+    "dotenv": "^16.0.2",
     "express": "^4.18.1",
     "express-graphql": "^0.12.0",
     "firebase": "^9.9.4",

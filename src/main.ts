@@ -1,9 +1,20 @@
-import initFirebase from './firebase/firebaseApp.js';
+import 'dotenv/config';
+import mongoose from 'mongoose';
 
+import initFirebase from './firebase/firebaseApp.js';
 initFirebase();
 
-function hello(text: string): void {
-  console.log(text);
+try {
+  await mongoose.connect(process.env.MONGO_URI);
+} catch (err) {
+  throw new Error('Failed to connect to MongoDB');
 }
 
-hello('My hello');
+const testModel = mongoose.model(
+  'test',
+  new mongoose.Schema({
+    text: { type: String, required: true },
+  }),
+);
+
+await new testModel({ text: 'test' }).save();
