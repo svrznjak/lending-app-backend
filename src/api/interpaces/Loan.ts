@@ -1,5 +1,5 @@
 export interface Loan {
-  id: string;
+  _id: string;
   name: string;
   description: string;
   notes: [Note];
@@ -7,13 +7,12 @@ export interface Loan {
   closesAt: number;
   interestRate: InterestRate;
   initialPrincipal: number;
-  calculatedRemainingPrincipal: number;
   calculatedTotalPaidPrincipal: number;
   calculatedChargedInterest: number;
   calculatedPaidInterest: number;
 }
 export interface Note {
-  id: string;
+  _id: string;
   content: string;
   createdAtTimestamp: number;
   revisions: Note;
