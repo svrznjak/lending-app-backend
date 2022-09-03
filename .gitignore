@@ -16,8 +16,10 @@ build/
 .vscode
 !.vscode/tasks.js
 
-# JetBrains IDEs
-.idea/
+# Env
+.env
+.env.dev
+.env.prod
 
 # Optional npm cache directory
 .npm
@@ -27,3 +29,6 @@ build/
 
 # Misc
 .DS_Store
+
+# FirebaseConfig
+firebaseConfig.ts
