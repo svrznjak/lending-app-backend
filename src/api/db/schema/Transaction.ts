@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 const TransactionAddressSchema = new mongoose.Schema({
   datatype: {
     type: String,
-    enum: ['budget', 'loan', 'interest', 'outside'],
+    enum: ['BUDGET', 'LOAN', 'INTEREST', 'OUTSIDE'],
     required: true,
   },
   _id: {

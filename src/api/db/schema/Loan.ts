@@ -3,12 +3,12 @@ import mongoose from 'mongoose';
 const LoanInterestRate = new mongoose.Schema({
   type: {
     type: String,
-    enum: ['percentagePerDuration', 'fixedPerDuration'],
+    enum: ['PERCENTAGE_PER_DURATION', 'FIXED_PER_DURATION'],
     required: true,
   },
   duration: {
     type: String,
-    enum: ['day', 'week', 'month', 'year', 'fullDuration'],
+    enum: ['DAY', 'WEEK', 'MONTH', 'YEAR', 'FULL_DURATION'],
     required: true,
   },
   amount: { type: Number, required: true },

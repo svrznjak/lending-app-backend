@@ -18,8 +18,8 @@ export interface Note {
   revisions: Note;
 }
 export interface InterestRate {
-  type: 'percentagePerDuration' | 'fixedPerDuration';
-  duration: 'day' | 'week' | 'month' | 'year' | 'fullDuration';
+  type: 'PERCENTAGE_PER_DURATION' | 'FIXED_PER_DURATION';
+  duration: 'DAY' | 'WEEK' | 'MONTH' | 'YEAR' | 'FULL_DURATION';
   amount: number;
   entryTimestamp: number;
   revisions: InterestRate;

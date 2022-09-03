@@ -7,7 +7,7 @@ const SubscriptionSchema = new mongoose.Schema({
   revenuecatId: { type: String, required: true },
   type: {
     type: String,
-    enum: ['free', 'standard', 'premium'],
+    enum: ['FREE', 'STANDARD', 'PREMIUM'],
     required: true,
   },
 });

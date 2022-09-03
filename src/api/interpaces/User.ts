@@ -16,5 +16,5 @@ export interface User {
 
 export interface Subscription {
   revenuecatId: string;
-  type: 'free' | 'standard' | 'premium';
+  type: 'FREE' | 'STANDARD' | 'PREMIUM';
 }

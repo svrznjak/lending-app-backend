@@ -10,6 +10,6 @@ export interface Transaction {
   revisions: Transaction;
 }
 export interface TransactionAddress {
-  datatype: 'budget' | 'loan' | 'Interest' | 'outside';
+  datatype: 'BUDGET' | 'LOAN' | 'INTEREST' | 'OUTSIDE';
   _id: string;
 }
