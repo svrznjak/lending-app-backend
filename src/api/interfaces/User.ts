@@ -6,8 +6,8 @@ export interface User {
   name: string;
   email: string;
   firebaseId: string;
-  budgets: [Budget];
-  loans: [Loan];
+  budgets: [Budget?];
+  loans: [Loan?];
   currency: string;
   language: string;
   timezone: string;
