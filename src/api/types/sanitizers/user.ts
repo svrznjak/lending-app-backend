@@ -7,31 +7,18 @@ export function sanitizeNewUserInput(newUserInput: NewUserInput): NewUserInput {
 
   sanatizedNewUserInput.name = sanitizeUserName(sanatizedNewUserInput.name);
   sanatizedNewUserInput.email = sanitizeUserEmail(sanatizedNewUserInput.email);
-  sanatizedNewUserInput.currency = sanitizeUserCurrency(
-    sanatizedNewUserInput.currency,
-  );
-  sanatizedNewUserInput.language = sanitizeUserLanguage(
-    sanatizedNewUserInput.language,
-  );
+  sanatizedNewUserInput.currency = sanitizeUserCurrency(sanatizedNewUserInput.currency);
+  sanatizedNewUserInput.language = sanitizeUserLanguage(sanatizedNewUserInput.language);
 
   return sanatizedNewUserInput;
 }
 
-export function sanitizeUpdateUserInput(
-  updateUserInput: UpdateUserInput,
-): UpdateUserInput {
-  const sanatizedUpdateUserInput: UpdateUserInput =
-    _.cloneDeep(updateUserInput);
+export function sanitizeUpdateUserInput(updateUserInput: UpdateUserInput): UpdateUserInput {
+  const sanatizedUpdateUserInput: UpdateUserInput = _.cloneDeep(updateUserInput);
 
-  sanatizedUpdateUserInput.name = sanitizeUserName(
-    sanatizedUpdateUserInput.name,
-  );
-  sanatizedUpdateUserInput.currency = sanitizeUserCurrency(
-    sanatizedUpdateUserInput.currency,
-  );
-  sanatizedUpdateUserInput.language = sanitizeUserLanguage(
-    sanatizedUpdateUserInput.language,
-  );
+  sanatizedUpdateUserInput.name = sanitizeUserName(sanatizedUpdateUserInput.name);
+  sanatizedUpdateUserInput.currency = sanitizeUserCurrency(sanatizedUpdateUserInput.currency);
+  sanatizedUpdateUserInput.language = sanitizeUserLanguage(sanatizedUpdateUserInput.language);
 
   return sanatizedUpdateUserInput;
 }
