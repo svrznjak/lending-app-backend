@@ -59,9 +59,3 @@ export function sanitizeUserLanguage(language: string): string {
   language = _.lowerCase(language);
   return language;
 }
-
-export function sanitizeUserTimezone(timezone: string): string {
-  timezone = validator.trim(timezone);
-  timezone = _.lowerCase(timezone);
-  return timezone;
-}
