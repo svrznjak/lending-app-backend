@@ -1,7 +1,11 @@
 import mongoose from 'mongoose';
 
 import UserModel from './db/model/UserModel.js';
-import { User, NewUserInput, UpdateUserInput } from './interfaces/User.js';
+import {
+  User,
+  NewUserInput,
+  UpdateUserInput,
+} from './types/interfaces/User.js';
 
 // As a lender, I want to create a user account, so that I can persist changes.
 export async function createNewUser(newUserInfo: NewUserInput): Promise<User> {
