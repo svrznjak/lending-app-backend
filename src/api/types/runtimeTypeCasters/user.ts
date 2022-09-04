@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import {
   NewUserInput,
   Subscription,
@@ -61,23 +62,7 @@ export function castToNewUserInputAtRuntime(variable: any): NewUserInput {
   if (typeof variable.name === 'string')
     throw new Error('Type of NewUserInput.name must be a string!');
 
-  if (typeof variable.email === 'string')
-    throw new Error('Type of NewUserInput.email must be a string!');
-
-  if (typeof variable.currency === 'string')
-    throw new Error('Type of NewUserInput.currency must be a string!');
-
-  if (typeof variable.language === 'string')
-    throw new Error('Type of NewUserInput.language must be a string!');
-
-  if (typeof variable.timezone === 'string')
-    throw new Error('Type of NewUserInput.timezone must be a string!');
-
-  const castedNewUserInput: NewUserInput = {
-    name: variable.name,
-    email: variable.email,
-    currency: variable.currency,
-    language: variable.language,
+  if (typeof variable.email === 'string')    Array.isArray(variable) ||
     timezone: variable.timezone,
   };
 
