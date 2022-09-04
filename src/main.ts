@@ -4,7 +4,7 @@ import mongoose from 'mongoose';
 import initFirebase from './firebase/firebaseApp.js';
 initFirebase();
 
-import { createNewUserTest } from './api/User.js';
+import { createNewUserTest } from './api/user.js';
 
 try {
   await mongoose.connect(process.env.MONGO_URI);
