@@ -6,11 +6,7 @@ import {
 } from '../interfaces/User.js';
 
 export function castToUserAtRuntime(variable: any): User {
-  if (
-    typeof variable !== 'object' ||
-    Array.isArray(variable) ||
-    variable === null
-  )
+  if (typeof variable !== 'object' || variable === null)
     throw new Error('Type of User must be an object!');
 
   if (typeof variable._id !== 'object' || variable._id === null)
@@ -59,11 +55,7 @@ export function castToUserAtRuntime(variable: any): User {
 }
 
 export function castToNewUserInputAtRuntime(variable: any): NewUserInput {
-  if (
-    typeof variable !== 'object' ||
-    Array.isArray(variable) ||
-    variable === null
-  )
+  if (typeof variable !== 'object' || variable === null)
     throw new Error('Type of NewUserInput must be an object!');
 
   if (typeof variable.name === 'string')
@@ -93,11 +85,7 @@ export function castToNewUserInputAtRuntime(variable: any): NewUserInput {
 }
 
 export function castToUpdateUserInputAtRuntime(variable: any): UpdateUserInput {
-  if (
-    typeof variable !== 'object' ||
-    Array.isArray(variable) ||
-    variable === null
-  )
+  if (typeof variable !== 'object' || variable === null)
     throw new Error('Type of UpdateUserInput must be an object!');
 
   if (typeof variable.name === 'string' || undefined)
@@ -123,11 +111,7 @@ export function castToUpdateUserInputAtRuntime(variable: any): UpdateUserInput {
 }
 
 export function castToSubscriptionAtRuntime(variable: any): Subscription {
-  if (
-    typeof variable !== 'object' ||
-    Array.isArray(variable) ||
-    variable === null
-  )
+  if (typeof variable !== 'object' || variable === null)
     throw new Error('Type of Subscription must be an object!');
 
   if (typeof variable.revenuecatId === 'string' || undefined)
