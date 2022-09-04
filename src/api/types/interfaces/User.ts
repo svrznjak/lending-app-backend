@@ -12,7 +12,6 @@ export interface User {
   loans: [Loan?];
   currency: string;
   language: string;
-  timezone: string;
   subscription: Subscription;
 }
 
@@ -26,12 +25,10 @@ export interface NewUserInput {
   email: string;
   currency: string;
   language: string;
-  timezone: string;
 }
 
 export interface UpdateUserInput {
   name?: string;
   currency?: string;
   language?: string;
-  timezone?: string;
 }

@@ -13,9 +13,6 @@ export function sanitizeNewUserInput(newUserInput: NewUserInput): NewUserInput {
   sanatizedNewUserInput.language = sanitizeUserLanguage(
     sanatizedNewUserInput.language,
   );
-  sanatizedNewUserInput.timezone = sanitizeUserTimezone(
-    sanatizedNewUserInput.timezone,
-  );
 
   return sanatizedNewUserInput;
 }
@@ -34,9 +31,6 @@ export function sanitizeUpdateUserInput(
   );
   sanatizedUpdateUserInput.language = sanitizeUserLanguage(
     sanatizedUpdateUserInput.language,
-  );
-  sanatizedUpdateUserInput.timezone = sanitizeUserTimezone(
-    sanatizedUpdateUserInput.timezone,
   );
 
   return sanatizedUpdateUserInput;

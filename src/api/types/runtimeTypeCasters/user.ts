@@ -36,9 +36,6 @@ export function castToUserAtRuntime(variable: any): User {
   if (!_.isString(variable.language))
     throw new Error('Type of User.language must be a string!');
 
-  if (!_.isString(variable.timezone))
-    throw new Error('Type of User.timezone must be a string!');
-
   const subscription = castToSubscriptionAtRuntime(variable.subscription);
 
   const castedUser: User = {
@@ -50,7 +47,6 @@ export function castToUserAtRuntime(variable: any): User {
     loans: variable.loans,
     currency: variable.currency,
     language: variable.language,
-    timezone: variable.timezone,
     subscription: subscription,
   };
 
@@ -73,15 +69,11 @@ export function castToNewUserInputAtRuntime(variable: any): NewUserInput {
   if (!_.isString(variable.language))
     throw new Error('Type of NewUserInput.language must be a string!');
 
-  if (!_.isString(variable.timezone))
-    throw new Error('Type of NewUserInput.timezone must be a string!');
-
   const castedNewUserInput: NewUserInput = {
     name: variable.name,
     email: variable.email,
     currency: variable.currency,
     language: variable.language,
-    timezone: variable.timezone,
   };
 
   return castedNewUserInput;
@@ -107,7 +99,6 @@ export function castToUpdateUserInputAtRuntime(variable: any): UpdateUserInput {
     name: variable.name,
     currency: variable.currency,
     language: variable.language,
-    timezone: variable.timezone,
   };
 
   return castedUpdateUserInput;
