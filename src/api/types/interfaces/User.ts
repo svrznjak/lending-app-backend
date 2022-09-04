@@ -1,4 +1,4 @@
-// TODO : Types currency, language, timezone should as some point be changed into enums
+// TODO : Types currency, language should as some point be changed into enums
 
 import { Budget } from './Budget.js';
 import { Loan } from './Loan.js';

@@ -24,6 +24,5 @@ export default new mongoose.Schema({
   loans: { type: [LoanSchema], default: [], required: true },
   currency: { type: String, required: true },
   language: { type: String, required: true },
-  timezone: { type: String, required: true },
   subscription: SubscriptionSchema,
 });

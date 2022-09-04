@@ -20,7 +20,6 @@ export async function getUserById(id: object): Promise<User> {
 // As a lender, I want to change my user account name, so that I can fix errors in spelling.
 // As a lender, I want to change my subscription, so that I can pay for exactly what I need.
 // As a lender, I want to change the UI language, so that I can more easily use the application.
-// As a lender, I want to change my timezone, so that interest can be calculated at the right time (local midnight)
 export async function updateUserById(
   updatedUserInfo: UpdateUserInput,
 ): Promise<User> {
@@ -39,7 +38,6 @@ export async function createNewUserTest(): Promise<boolean> {
     loans: [],
     currency: 'string',
     language: 'string',
-    timezone: 'string',
     subscription: {
       revenuecatId: 'xxx',
       type: 'FREE',

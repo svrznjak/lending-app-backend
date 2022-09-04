@@ -92,9 +92,6 @@ export function castToUpdateUserInputAtRuntime(variable: any): UpdateUserInput {
   if (!_.isString(variable.language) || undefined)
     throw new Error('Type of UpdateUserInput.language must be a string!');
 
-  if (!_.isString(variable.timezone) || undefined)
-    throw new Error('Type of UpdateUserInput.timezone must be a string!');
-
   const castedUpdateUserInput: UpdateUserInput = {
     name: variable.name,
     currency: variable.currency,
