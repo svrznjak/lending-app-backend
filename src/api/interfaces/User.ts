@@ -18,3 +18,11 @@ export interface Subscription {
   revenuecatId: string;
   type: 'FREE' | 'STANDARD' | 'PREMIUM';
 }
+
+export interface UserInput {
+  name: string;
+  email: string;
+  currency: string;
+  language: string;
+  timezone: string;
+}
