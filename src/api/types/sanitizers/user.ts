@@ -31,7 +31,14 @@ export function sanitizeUserName(name: string): string {
 
 export function sanitizeUserEmail(email: string): string {
   email = validator.trim(email);
-  email = validator.normalizeEmail(email);
+  email = validator.normalizeEmail(email, {
+    gmail_remove_dots: false,
+    gmail_remove_subaddress: false,
+    gmail_convert_googlemaildotcom: false,
+    outlookdotcom_remove_subaddress: false,
+    yahoo_remove_subaddress: false,
+    icloud_remove_subaddress: false,
+  });
   return email;
 }
 
@@ -43,6 +50,5 @@ export function sanitizeUserCurrency(currency: string): string {
 
 export function sanitizeUserLanguage(language: string): string {
   language = validator.trim(language);
-  language = _.lowerCase(language);
   return language;
 }
