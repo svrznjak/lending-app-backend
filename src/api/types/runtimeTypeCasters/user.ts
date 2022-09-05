@@ -61,21 +61,27 @@ export function castToNewUserInputAtRuntime(variable: any): NewUserInput {
 }
 
 export function castToUpdateUserInputAtRuntime(variable: any): UpdateUserInput {
+  const castedUpdateUserInput: UpdateUserInput = {};
+
   if (typeof variable !== 'object' || variable === null) throw new Error('Type of UpdateUserInput must be an object!');
 
-  if (!_.isString(variable.name) || undefined) throw new Error('Type of UpdateUserInput.name must be a string!');
+  if (!_.isString(variable.name) && variable.name != undefined) {
+    throw new Error('Type of UpdateUserInput.name must be a string!');
+  } else {
+    castedUpdateUserInput.name = variable.name;
+  }
 
-  if (!_.isString(variable.currency) || undefined)
+  if (!_.isString(variable.currency) && variable.currency != undefined) {
     throw new Error('Type of UpdateUserInput.currency must be a string!');
+  } else {
+    castedUpdateUserInput.currency = variable.currency;
+  }
 
-  if (!_.isString(variable.language) || undefined)
+  if (!_.isString(variable.language) && variable.language != undefined) {
     throw new Error('Type of UpdateUserInput.language must be a string!');
-
-  const castedUpdateUserInput: UpdateUserInput = {
-    name: variable.name,
-    currency: variable.currency,
-    language: variable.language,
-  };
+  } else {
+    castedUpdateUserInput.language = variable.language;
+  }
 
   return castedUpdateUserInput;
 }

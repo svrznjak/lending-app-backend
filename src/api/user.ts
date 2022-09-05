@@ -3,9 +3,13 @@ import auth from './auth.js';
 
 import UserModel from './db/model/UserModel.js';
 import { User, NewUserInput, UpdateUserInput } from './types/interfaces/User.js';
-import { castToNewUserInputAtRuntime, castToUserAtRuntime } from './types/runtimeTypeCasters/user.js';
-import { sanitizeNewUserInput } from './types/sanitizers/user.js';
-import { validateNewUserInput } from './types/validators/user.js';
+import {
+  castToNewUserInputAtRuntime,
+  castToUpdateUserInputAtRuntime,
+  castToUserAtRuntime,
+} from './types/runtimeTypeCasters/user.js';
+import { sanitizeNewUserInput, sanitizeUpdateUserInput } from './types/sanitizers/user.js';
+import { validateNewUserInput, validateUpdateUserInput } from './types/validators/user.js';
 
 // As a lender, I want to create a user account, so that I can persist changes.
 export async function createNewUser(newUserProfileInfo: NewUserInput, password: string): Promise<User> {
@@ -60,13 +64,32 @@ export async function getUserByAuthId(authId: string): Promise<User | undefined>
   }
 }
 
+export async function getUserById(id: string | object): Promise<User | undefined> {
+  try {
+    const result = await UserModel.findOne({ _id: id }).exec();
+    if (!result) return undefined;
+    const user = castToUserAtRuntime(result);
+    return user;
+  } catch (err) {
+    throw new Error('DB query error!');
+  }
+}
+
 // As a lender, I want to change my user account name, so that I can fix errors in spelling.
 // As a lender, I want to change my subscription, so that I can pay for exactly what I need.
 // As a lender, I want to change the UI language, so that I can more easily use the application.
-export async function updateUserById(updatedUserInfo: UpdateUserInput): Promise<User> {
-  console.log(updatedUserInfo);
-
-  throw new Error('Function not implemented');
+export async function updateUserById(id: string | object, updatedUserInfo: UpdateUserInput): Promise<User> {
+  const checkedUpdatedUserInfo = sanitizeUpdateUserInput(
+    validateUpdateUserInput(castToUpdateUserInputAtRuntime(updatedUserInfo)),
+  );
+  try {
+    const result = await UserModel.updateOne({ _id: id }, checkedUpdatedUserInfo).exec();
+    if (result.modifiedCount !== 1) throw new Error('Could not find user to update!');
+    const updatedUser = await getUserById(id);
+    return updatedUser;
+  } catch (err) {
+    throw new Error('DB query error!');
+  }
 }
 
 // example function

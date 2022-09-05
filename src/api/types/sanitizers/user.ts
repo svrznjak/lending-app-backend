@@ -16,9 +16,12 @@ export function sanitizeNewUserInput(newUserInput: NewUserInput): NewUserInput {
 export function sanitizeUpdateUserInput(updateUserInput: UpdateUserInput): UpdateUserInput {
   const sanatizedUpdateUserInput: UpdateUserInput = _.cloneDeep(updateUserInput);
 
-  sanatizedUpdateUserInput.name = sanitizeUserName(sanatizedUpdateUserInput.name);
-  sanatizedUpdateUserInput.currency = sanitizeUserCurrency(sanatizedUpdateUserInput.currency);
-  sanatizedUpdateUserInput.language = sanitizeUserLanguage(sanatizedUpdateUserInput.language);
+  if (sanatizedUpdateUserInput.name !== undefined)
+    sanatizedUpdateUserInput.name = sanitizeUserName(sanatizedUpdateUserInput.name);
+  if (sanatizedUpdateUserInput.currency !== undefined)
+    sanatizedUpdateUserInput.currency = sanitizeUserCurrency(sanatizedUpdateUserInput.currency);
+  if (sanatizedUpdateUserInput.language !== undefined)
+    sanatizedUpdateUserInput.language = sanitizeUserLanguage(sanatizedUpdateUserInput.language);
 
   return sanatizedUpdateUserInput;
 }
