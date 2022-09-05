@@ -91,26 +91,3 @@ export async function updateUserById(id: string | object, updatedUserInfo: Updat
     throw new Error('DB query error!');
   }
 }
-
-// example function
-
-export async function createNewUserTest(): Promise<boolean> {
-  const newUserData: User = {
-    _id: new mongoose.Types.ObjectId(),
-    name: 'test name',
-    email: 'test@gmail.com',
-    authId: 'xxx',
-    budgets: [],
-    loans: [],
-    currency: 'string',
-    language: 'string',
-    subscription: {
-      revenuecatId: 'xxx',
-      type: 'FREE',
-    },
-  };
-
-  const newUser = new UserModel(newUserData);
-  await newUser.save();
-  return true;
-}
