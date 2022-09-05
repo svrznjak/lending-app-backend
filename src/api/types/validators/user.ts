@@ -28,7 +28,7 @@ export function validateUpdateUserInput(updateUserInput: UpdateUserInput): Updat
 }
 
 export function validateUserName(name: string): string {
-  if (!validator.isEmpty(name, { ignore_whitespace: true })) throw new Error('(validation) Name should contain value!');
+  if (validator.isEmpty(name, { ignore_whitespace: true })) throw new Error('(validation) Name should contain value!');
   return name;
 }
 
@@ -38,7 +38,7 @@ export function validateUserEmail(email: string): string {
 }
 
 export function validateUserCurrency(currency: string): string {
-  if (!validator.isEmpty(currency, { ignore_whitespace: true }))
+  if (validator.isEmpty(currency, { ignore_whitespace: true }))
     throw new Error('(validation) Currency should contain value!');
 
   // TODO : check if value is currency (USD, EUR, etc.)
