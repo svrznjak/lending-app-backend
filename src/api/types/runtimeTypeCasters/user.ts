@@ -12,7 +12,7 @@ export function castToUserAtRuntime(variable: any): User {
 
   if (!_.isString(variable.email)) throw new Error('Type of User.email must be a string!');
 
-  if (!_.isString(variable.firebaseId)) throw new Error('Type of User.firebaseId must be a string!');
+  if (!_.isString(variable.authId)) throw new Error('Type of User.authId must be a string!');
 
   if (!Array.isArray(variable.budgets)) throw new Error('Type of User.budgets must be an Array!');
 
@@ -28,7 +28,7 @@ export function castToUserAtRuntime(variable: any): User {
     _id: variable._id,
     name: variable.name,
     email: variable.email,
-    firebaseId: variable.firebaseId,
+    authId: variable.authId,
     budgets: variable.budgets,
     loans: variable.loans,
     currency: variable.currency,
