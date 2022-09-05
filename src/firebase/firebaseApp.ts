@@ -1,7 +1,5 @@
-import { initializeApp } from 'firebase/app';
+import admin from 'firebase-admin';
 
 import config from './firebaseConfig.js';
 
-export default function initFirebase(): void {
-  initializeApp(config);
-}
+export default admin.initializeApp(config);
