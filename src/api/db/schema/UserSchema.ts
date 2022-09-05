@@ -19,7 +19,7 @@ export default new mongoose.Schema({
   },
   name: { type: String, required: true },
   email: { type: String, required: true },
-  authId: { type: String, required: true },
+  authId: { type: String, required: true, index: true },
   budgets: { type: [BudgetSchema], default: [], required: true },
   loans: { type: [LoanSchema], default: [], required: true },
   currency: { type: String, required: true },

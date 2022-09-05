@@ -49,9 +49,15 @@ export async function createNewUser(newUserProfileInfo: NewUserInput, password: 
 }
 
 // As a lender, I want to view my user account information, so that I can make appropriate changes.
-export async function getUserById(id: object): Promise<User> {
-  console.log(id);
-  throw new Error('Function not implemented');
+export async function getUserByAuthId(authId: string): Promise<User | undefined> {
+  try {
+    const result = await UserModel.findOne({ authId: authId }).exec();
+    if (!result) return undefined;
+    const user = castToUserAtRuntime(result);
+    return user;
+  } catch (err) {
+    throw new Error('DB query error!');
+  }
 }
 
 // As a lender, I want to change my user account name, so that I can fix errors in spelling.
