@@ -1,12 +1,12 @@
 import validator from 'validator';
 import _ from 'lodash';
 
-import { NewUserInput, UpdateUserInput } from '../interfaces/User.js';
+import { NewUserInput, UpdateUserInput } from './interface.js';
 
 export function validateNewUserInput(newUserInput: NewUserInput): NewUserInput {
   const validatedNewUserInput: NewUserInput = _.cloneDeep(newUserInput);
 
-  validatedNewUserInput.name = validateUserName(validatedNewUserInput.name);
+  validatedNewUserInput.name = 'validateUserName(validatedNewUserInput.name)';
   validatedNewUserInput.email = validateUserEmail(validatedNewUserInput.email);
   validatedNewUserInput.currency = validateUserCurrency(validatedNewUserInput.currency);
   validatedNewUserInput.language = validateUserLanguage(validatedNewUserInput.language);

@@ -1,9 +1,11 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import _ from 'lodash';
 
-import { NewUserInput, Subscription, UpdateUserInput, User } from '../interfaces/User.js';
+import { NewUserInput, Subscription, UpdateUserInput, User } from './interface.js';
 
-export function castToUserAtRuntime(variable: any): User {
+import { sanitizeNewUserInput, sanitizeUpdateUserInput } from './sanitizer.js';
+import { validateNewUserInput, validateUpdateUserInput } from './validator.js';
+
+export function castToUser(variable: any): User {
   if (typeof variable !== 'object' || variable === null) throw new Error('Type of User must be an object!');
 
   if (typeof variable._id !== 'object' || variable._id === null) throw new Error('Type of User._id must be an object!');
@@ -22,7 +24,7 @@ export function castToUserAtRuntime(variable: any): User {
 
   if (!_.isString(variable.language)) throw new Error('Type of User.language must be a string!');
 
-  const subscription = castToSubscriptionAtRuntime(variable.subscription);
+  const subscription = castToSubscription(variable.subscription);
 
   const castedUser: User = {
     _id: variable._id,
@@ -39,7 +41,7 @@ export function castToUserAtRuntime(variable: any): User {
   return castedUser;
 }
 
-export function castToNewUserInputAtRuntime(variable: any): NewUserInput {
+export function castToNewUserInput(variable: any): NewUserInput {
   if (typeof variable !== 'object' || variable === null) throw new Error('Type of NewUserInput must be an object!');
 
   if (!_.isString(variable.name)) throw new Error('Type of NewUserInput.name must be a string!');
@@ -55,13 +57,26 @@ export function castToNewUserInputAtRuntime(variable: any): NewUserInput {
     email: variable.email,
     currency: variable.currency,
     language: variable.language,
+    validate: function () {
+      return validateNewUserInput(this);
+    },
+    sanizize: function () {
+      return sanitizeNewUserInput(this);
+    },
   };
 
   return castedNewUserInput;
 }
 
-export function castToUpdateUserInputAtRuntime(variable: any): UpdateUserInput {
-  const castedUpdateUserInput: UpdateUserInput = {};
+export function castToUpdateUserInput(variable: any): UpdateUserInput {
+  const castedUpdateUserInput: UpdateUserInput = {
+    validate: function () {
+      return validateUpdateUserInput(this);
+    },
+    sanizize: function () {
+      return sanitizeUpdateUserInput(this);
+    },
+  };
 
   if (typeof variable !== 'object' || variable === null) throw new Error('Type of UpdateUserInput must be an object!');
 
@@ -86,7 +101,7 @@ export function castToUpdateUserInputAtRuntime(variable: any): UpdateUserInput {
   return castedUpdateUserInput;
 }
 
-export function castToSubscriptionAtRuntime(variable: any): Subscription {
+export function castToSubscription(variable: any): Subscription {
   if (typeof variable !== 'object' || variable === null) throw new Error('Type of Subscription must be an object!');
 
   if (!_.isString(variable.revenuecatId)) throw new Error('Type of Subscription.revenuecatId must be a string!');

@@ -1,6 +1,6 @@
 import validator from 'validator';
 import _ from 'lodash';
-import { NewUserInput, UpdateUserInput } from '../interfaces/User.js';
+import { NewUserInput, UpdateUserInput } from './interface.js';
 
 export function sanitizeNewUserInput(newUserInput: NewUserInput): NewUserInput {
   const sanatizedNewUserInput: NewUserInput = _.cloneDeep(newUserInput);

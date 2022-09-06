@@ -2,24 +2,16 @@ import mongoose from 'mongoose';
 import auth from './auth.js';
 
 import UserModel from './db/model/UserModel.js';
-import { User, NewUserInput, UpdateUserInput } from './types/interfaces/User.js';
-import {
-  castToNewUserInputAtRuntime,
-  castToUpdateUserInputAtRuntime,
-  castToUserAtRuntime,
-} from './types/runtimeTypeCasters/user.js';
-import { sanitizeNewUserInput, sanitizeUpdateUserInput } from './types/sanitizers/user.js';
-import { validateNewUserInput, validateUpdateUserInput } from './types/validators/user.js';
+import { User, NewUserInput, UpdateUserInput } from './types/User/interface.js';
+import { castToNewUserInput, castToUpdateUserInput, castToUser } from './types/User/user.js';
 
 // As a lender, I want to create a user account, so that I can persist changes.
-export async function createNewUser(newUserProfileInfo: NewUserInput, password: string): Promise<User> {
-  const castedNewUserProfileInfo = castToNewUserInputAtRuntime(newUserProfileInfo);
-  const validatedNewUserProfileInfo = validateNewUserInput(castedNewUserProfileInfo);
-  const newProfileInfo = sanitizeNewUserInput(validatedNewUserProfileInfo);
+export async function createNewUser(newUserProfileInfo: any, password: string): Promise<User> {
+  const newProfileInfo = castToNewUserInput(newUserProfileInfo).validate().sanizize();
 
   const newUserAuthId = await auth.createNewUserWithEmail(newProfileInfo.email, password);
 
-  const newUserData: User = {
+  const newUser = new UserModel({
     _id: new mongoose.Types.ObjectId(),
     name: newProfileInfo.name,
     email: newProfileInfo.email,
@@ -32,13 +24,11 @@ export async function createNewUser(newUserProfileInfo: NewUserInput, password: 
       revenuecatId: '',
       type: 'FREE',
     },
-  };
-
-  const newUser = new UserModel(newUserData);
+  } as User);
   try {
-    const savedNewUser = await newUser.save();
+    await newUser.save();
     try {
-      return castToUserAtRuntime(savedNewUser);
+      return castToUser(newUser);
     } catch (err) {
       //report error to admin
       console.log(err);
@@ -57,7 +47,7 @@ export async function getUserByAuthId(authId: string): Promise<User | undefined>
   try {
     const result = await UserModel.findOne({ authId: authId }).exec();
     if (!result) return undefined;
-    const user = castToUserAtRuntime(result);
+    const user = castToUser(result);
     return user;
   } catch (err) {
     throw new Error('DB query error!');
@@ -68,7 +58,7 @@ export async function getUserById(id: string | object): Promise<User | undefined
   try {
     const result = await UserModel.findOne({ _id: id }).exec();
     if (!result) return undefined;
-    const user = castToUserAtRuntime(result);
+    const user = castToUser(result);
     return user;
   } catch (err) {
     throw new Error('DB query error!');
@@ -79,9 +69,8 @@ export async function getUserById(id: string | object): Promise<User | undefined
 // As a lender, I want to change my subscription, so that I can pay for exactly what I need.
 // As a lender, I want to change the UI language, so that I can more easily use the application.
 export async function updateUserById(id: string | object, updatedUserInfo: UpdateUserInput): Promise<User> {
-  const checkedUpdatedUserInfo = sanitizeUpdateUserInput(
-    validateUpdateUserInput(castToUpdateUserInputAtRuntime(updatedUserInfo)),
-  );
+  const checkedUpdatedUserInfo = castToUpdateUserInput(updatedUserInfo).validate().sanizize();
+
   try {
     const result = await UserModel.updateOne({ _id: id }, checkedUpdatedUserInfo).exec();
     if (result.modifiedCount !== 1) throw new Error('Could not find user to update!');
