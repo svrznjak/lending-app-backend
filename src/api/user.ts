@@ -1,4 +1,4 @@
-import mongoose from 'mongoose';
+//import mongoose from 'mongoose';
 import auth from './auth.js';
 
 import UserModel from './db/model/UserModel.js';
@@ -6,39 +6,23 @@ import { User, NewUserInput, UpdateUserInput } from './types/User/interface.js';
 import { castToNewUserInput, castToUpdateUserInput, castToUser } from './types/User/user.js';
 
 // As a lender, I want to create a user account, so that I can persist changes.
-export async function createNewUser(newUserProfileInfo: any, password: string): Promise<User> {
-  const newProfileInfo = castToNewUserInput(newUserProfileInfo).validate().sanizize();
-
-  const newUserAuthId = await auth.createNewUserWithEmail(newProfileInfo.email, password);
-
-  const newUser = new UserModel({
-    _id: new mongoose.Types.ObjectId(),
-    name: newProfileInfo.name,
-    email: newProfileInfo.email,
-    authId: newUserAuthId,
-    budgets: [],
-    loans: [],
-    currency: newProfileInfo.currency,
-    language: newProfileInfo.language,
-    subscription: {
-      revenuecatId: '',
-      type: 'FREE',
-    },
-  } as User);
+export async function createNewUser(profileInfo: NewUserInput, password: string): Promise<User> {
+  const newUserProfile: NewUserInput = castToNewUserInput(profileInfo).validate().sanizize();
+  const newUserAuthId = await auth.createNewUserWithEmail(newUserProfile.email, password);
   try {
-    await newUser.save();
+    const newUser = await new UserModel({ ...newUserProfile, authId: newUserAuthId }).save();
     try {
       return castToUser(newUser);
     } catch (err) {
       //report error to admin
       console.log(err);
-      auth.deleteUserById(newUserAuthId);
-      newUser.remove();
+      await auth.deleteUserById(newUserAuthId);
+      UserModel.deleteOne({ _id: newUser._id });
       throw new Error('User saving failed. Error was sent to admin.');
     }
   } catch (err) {
-    auth.deleteUserById(newUserAuthId);
-    throw new Error('User saving failed... Reverting firebase created account.');
+    await auth.deleteUserById(newUserAuthId);
+    throw new Error('User saving failed... Reverting created firebase account.');
   }
 }
 
