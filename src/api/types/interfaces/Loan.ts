@@ -1,26 +1,26 @@
-export interface Loan {
+export interface ILoan {
   _id: object;
   name: string;
   description: string;
-  notes: [Note];
+  notes: [INote];
   startedOn: number;
   closesAt: number;
-  interestRate: InterestRate;
+  interestRate: IInterestRate;
   initialPrincipal: number;
   calculatedTotalPaidPrincipal: number;
   calculatedChargedInterest: number;
   calculatedPaidInterest: number;
 }
-export interface Note {
+export interface INote {
   _id: object;
   content: string;
   createdAtTimestamp: number;
-  revisions: Note;
+  revisions: INote;
 }
-export interface InterestRate {
+export interface IInterestRate {
   type: 'PERCENTAGE_PER_DURATION' | 'FIXED_PER_DURATION';
   duration: 'DAY' | 'WEEK' | 'MONTH' | 'YEAR' | 'FULL_DURATION';
   amount: number;
   entryTimestamp: number;
-  revisions: InterestRate;
+  revisions: [IInterestRate?];
 }

@@ -1,42 +1,38 @@
 // TODO : Types currency, language should as some point be changed into enums
 
-import { Budget } from '../interfaces/Budget.js';
-import { Loan } from '../interfaces/Loan.js';
+import { IBudget } from '../Budget/Interface.js';
+import { ILoan } from '../interfaces/Loan.js';
 
-export interface User {
+export interface IUser {
   _id: object;
   name: string;
   email: string;
   authId: string;
-  budgets: [Budget?];
-  loans: [Loan?];
+  budgets: [IBudget?];
+  loans: [ILoan?];
   currency: string;
   language: string;
-  subscription: Subscription;
+  subscription: ISubscription;
 }
 
-export interface Subscription {
+export interface ISubscription {
   revenuecatId: string;
   type: 'FREE' | 'STANDARD' | 'PREMIUM';
 }
 
-// UserCreateFields
-// UserInputFields
-// UserNew
-export interface NewUserInput {
+export interface IuserRegistrationInfo {
   name: string;
   email: string;
   currency: string;
   language: string;
-  validate(this: NewUserInput): NewUserInput;
-  sanizize(this: NewUserInput): NewUserInput;
+  password: string;
 }
 
 //UserUpdateFields
-export interface UpdateUserInput {
+export interface IuserUpdateInfo {
   name?: string;
   currency?: string;
   language?: string;
-  validate(this: UpdateUserInput): UpdateUserInput;
-  sanizize(this: UpdateUserInput): UpdateUserInput;
+  validate(this: IuserUpdateInfo): IuserUpdateInfo;
+  sanizize(this: IuserUpdateInfo): IuserUpdateInfo;
 }

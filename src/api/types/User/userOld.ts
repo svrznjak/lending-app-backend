@@ -1,9 +1,9 @@
-import _ from 'lodash';
+/* import _ from 'lodash';
 
 import { NewUserInput, Subscription, UpdateUserInput, User } from './interface.js';
 
-import { sanitizeNewUserInput, sanitizeUpdateUserInput } from './sanitizer.js';
-import { validateNewUserInput, validateUpdateUserInput } from './validator.js';
+import { sanitizeNewUserInput, sanitizeUpdateUserInput } from './UserSanitizer.js';
+import { validateNewUserInput, validateUpdateUserInput } from './UserValidator.js';
 
 export function castToUser(variable: any): User {
   if (typeof variable !== 'object' || variable === null) throw new Error('Type of User must be an object!');
@@ -115,3 +115,31 @@ export function castToSubscription(variable: any): Subscription {
 
   return castedSubscription;
 }
+
+export class NewUser implements NewUserInput {
+  public name: string;
+  public email: string;
+  public currency: string;
+  public language: string;
+
+  constructor(variable: any) {
+    if (typeof variable !== 'object' || variable === null) throw new Error('Type of NewUserInput must be an object!');
+    if (!_.isString(variable.name)) throw new Error('Type of NewUserInput.name must be a string!');
+    if (!_.isString(variable.email)) throw new Error('Type of NewUserInput.email must be a string!');
+    if (!_.isString(variable.currency)) throw new Error('Type of NewUserInput.currency must be a string!');
+    if (!_.isString(variable.language)) throw new Error('Type of NewUserInput.language must be a string!');
+    this.name = variable.name;
+    this.email = variable.email;
+    this.currency = variable.currency;
+    this.language = variable.language;
+  }
+
+  validate(): NewUserInput {
+    validateNewUserInput(this);
+    return validateNewUserInput(this);
+  }
+  sanizize(): NewUserInput {
+    return sanitizeNewUserInput(this);
+  }
+}
+*/

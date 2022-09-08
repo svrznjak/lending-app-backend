@@ -1,66 +1,34 @@
 //import mongoose from 'mongoose';
-import auth from './auth.js';
+import { env } from 'process';
 
-import UserModel from './db/model/UserModel.js';
-import { User, NewUserInput, UpdateUserInput } from './types/User/interface.js';
-import { castToNewUserInput, castToUpdateUserInput, castToUser } from './types/User/user.js';
+import { IUser, IuserRegistrationInfo, IuserUpdateInfo } from './types/User/interface.js';
+import { User, instantiateUserFromUserAuthId, instantiateUserFromUserId } from './types/User/User.js';
+import { UserRegistrator } from './types/User/UserRegistration.js';
 
 // As a lender, I want to create a user account, so that I can persist changes.
-export async function createNewUser(profileInfo: NewUserInput, password: string): Promise<User> {
-  const newUserProfile: NewUserInput = castToNewUserInput(profileInfo).validate().sanizize();
-  const newUserAuthId = await auth.createNewUserWithEmail(newUserProfile.email, password);
-  try {
-    const newUser = await new UserModel({ ...newUserProfile, authId: newUserAuthId }).save();
-    try {
-      return castToUser(newUser);
-    } catch (err) {
-      //report error to admin
-      console.log(err);
-      await auth.deleteUserById(newUserAuthId);
-      UserModel.deleteOne({ _id: newUser._id });
-      throw new Error('User saving failed. Error was sent to admin.');
-    }
-  } catch (err) {
-    await auth.deleteUserById(newUserAuthId);
-    throw new Error('User saving failed... Reverting created firebase account.');
-  }
+export async function createUser(userRegistrationInfo: IuserRegistrationInfo): Promise<User> {
+  const registrator: UserRegistrator = new UserRegistrator(userRegistrationInfo);
+  if (env.DEV) registrator.runtimeDataTypeCheck();
+
+  return await registrator.createUser();
 }
 
 // As a lender, I want to view my user account information, so that I can make appropriate changes.
-export async function getUserByAuthId(authId: string): Promise<User | undefined> {
-  try {
-    const result = await UserModel.findOne({ authId: authId }).exec();
-    if (!result) return undefined;
-    const user = castToUser(result);
-    return user;
-  } catch (err) {
-    throw new Error('DB query error!');
-  }
+export async function getUserByAuthId(authId: string): Promise<IUser | undefined> {
+  return await instantiateUserFromUserAuthId(authId);
 }
 
-export async function getUserById(id: string | object): Promise<User | undefined> {
-  try {
-    const result = await UserModel.findOne({ _id: id }).exec();
-    if (!result) return undefined;
-    const user = castToUser(result);
-    return user;
-  } catch (err) {
-    throw new Error('DB query error!');
-  }
+export async function getUserById(id: string | object): Promise<IUser | undefined> {
+  return await instantiateUserFromUserId(id);
 }
 
 // As a lender, I want to change my user account name, so that I can fix errors in spelling.
 // As a lender, I want to change my subscription, so that I can pay for exactly what I need.
 // As a lender, I want to change the UI language, so that I can more easily use the application.
-export async function updateUserById(id: string | object, updatedUserInfo: UpdateUserInput): Promise<User> {
-  const checkedUpdatedUserInfo = castToUpdateUserInput(updatedUserInfo).validate().sanizize();
+export async function updateUserById(id: string | object, updatedUserInfo: IuserUpdateInfo): Promise<IUser> {
+  const user: User = await instantiateUserFromUserId(id);
 
-  try {
-    const result = await UserModel.updateOne({ _id: id }, checkedUpdatedUserInfo).exec();
-    if (result.modifiedCount !== 1) throw new Error('Could not find user to update!');
-    const updatedUser = await getUserById(id);
-    return updatedUser;
-  } catch (err) {
-    throw new Error('DB query error!');
-  }
+  await user.updateUser(updatedUserInfo);
+
+  return user.detach();
 }
