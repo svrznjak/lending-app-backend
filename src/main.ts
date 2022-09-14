@@ -10,7 +10,7 @@ console.log('Firebase project id: ' + firebaseApp);
 //import { castToNewUserInput } from './api/types/User/user.js';
 //import { createUser } from './api/user.js';
 //import { IuserRegistrationInfo } from './api/types/User/interface.js';
-import { instantiateUserFromUserId, User } from './api/types/User/User.js';
+import { getUserById } from './api/user.js';
 //import { NewUserInput } from './api/types/interfaces/User.js';
 
 try {
@@ -27,6 +27,8 @@ try {
   password: 'newPassword',
 };*/
 
+await getUserById('6319700ccac59dc8fdc9de04');
+/*
 const user: User = await instantiateUserFromUserId('6319700ccac59dc8fdc9de05');
 const newBudget = await user.addNewBudget({
   name: 'Test',

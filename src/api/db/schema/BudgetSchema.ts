@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 import { LoanInterestRateSchema } from './LoanInterestRateSchema.js';
 
 export const BudgetSchema = new mongoose.Schema({
+  userId: { type: mongoose.Schema.Types.ObjectId, required: true, index: true },
   name: { type: String, required: true },
   description: { type: String, required: true },
   defaultInterestRate: { type: LoanInterestRateSchema },

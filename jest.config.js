@@ -1,6 +1,6 @@
 export default {
   testEnvironment: 'node',
-  preset: 'ts-jest/presets/default-esm',
+  preset: 'ts-jest',
   globals: {
     'ts-jest': {
       useESM: true,
@@ -11,10 +11,5 @@ export default {
   },
   testRegex: '(/__tests__/.*|(\\.|/)(test|spec))\\.(m)?ts$',
   coverageDirectory: 'coverage',
-  collectCoverageFrom: [
-    'src/**/*.ts',
-    'src/**/*.mts',
-    '!src/**/*.d.ts',
-    '!src/**/*.d.mts',
-  ],
+  collectCoverageFrom: ['src/**/*.ts', 'src/**/*.mts', '!src/**/*.d.ts', '!src/**/*.d.mts'],
 };
