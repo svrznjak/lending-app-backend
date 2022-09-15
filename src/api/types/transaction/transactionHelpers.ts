@@ -2,7 +2,7 @@ import { sanitizeText } from './../../utils/inputSanitizer/inputSanitizer.js';
 import _ from 'lodash';
 import { ITransaction } from './transactionInterface.js';
 import { transactionAddressHelpers } from '../transactionAddress/transactionAddressHelpers.js';
-import { isValidAmountOfMoney, isValidTimestamp } from '../../utils/inputValidator/inputValidator.js';
+import { isValidAmountOfMoney, isValidTimestamp, isValidText } from '../../utils/inputValidator/inputValidator.js';
 
 export const transactionHelpers = {
   validate: function validate(
@@ -13,6 +13,8 @@ export const transactionHelpers = {
   ): Pick<ITransaction, 'transactionTimestamp' | 'description' | 'amount' | 'entryTimestamp'> {
     if (!isValidTimestamp({ timestamp: transaction.transactionTimestamp }))
       throw new Error('(validation) transaction.transactionTimestamp is invalid!');
+    if (!isValidText({ text: transaction.description, validEmpty: true, maxLength: 1000 }))
+      throw new Error('(validation) transaction.description is invalid!');
     if (!isValidAmountOfMoney({ amount: transaction.amount }))
       throw new Error('(validation) transaction.isValidAmount is invalid!');
     if (!isValidTimestamp({ timestamp: transaction.entryTimestamp }))
