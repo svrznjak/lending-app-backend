@@ -1,10 +1,16 @@
 import { ITransactionAddress } from './transactionAddressInterface.js';
 import _ from 'lodash';
-import { validateTransactionAddress } from './transactionAddressValidator.js';
+import { isValidOption } from '../../utils/inputValidator/inputValidator.js';
 
 export const transactionAddressHelpers = {
   validate: function validate(transactionAddress: ITransactionAddress): ITransactionAddress {
-    if (!validateTransactionAddress.isValidTransactionAddress(transactionAddress.datatype))
+    if (
+      !isValidOption({
+        option: transactionAddress.datatype,
+        validOptions: ['BUDGET', 'LOAN', 'INTEREST', 'OUTSIDE'],
+        caseSensitive: true,
+      })
+    )
       throw new Error('(validation) transactionAddress.datatype is invalid!');
     return transactionAddress;
   },

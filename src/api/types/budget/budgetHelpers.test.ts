@@ -2,7 +2,7 @@
 import { budgetHelpers } from './budgetHelpers.js';
 import { IBudget } from './budgetInterface.js';
 
-describe('interestRateHelpers', () => {
+describe('budgetHelpers', () => {
   describe('validate', () => {
     const correctValidationInputs: Pick<IBudget, 'name' | 'description' | 'defaultInterestRate'>[] = [
       {
@@ -152,18 +152,6 @@ describe('interestRateHelpers', () => {
           duration: 'FULL_DURATION',
           amount: 1,
           entryTimestamp: Infinity,
-          revisions: [],
-        },
-      },
-      {
-        // defaultInterestRate.entryTimestamp is null
-        name: 'Budget',
-        description: 'Budget for risky loans.',
-        defaultInterestRate: {
-          type: 'FIXED_PER_DURATION',
-          duration: 'FULL_DURATION',
-          amount: 1,
-          entryTimestamp: null,
           revisions: [],
         },
       },

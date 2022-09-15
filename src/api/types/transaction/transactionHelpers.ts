@@ -1,8 +1,8 @@
+import { sanitizeText } from './../../utils/inputSanitizer/inputSanitizer.js';
 import _ from 'lodash';
 import { ITransaction } from './transactionInterface.js';
-import { validateTransaction } from './transactionValidator.js';
-import { sanitizeTransaction } from './transactionSanitizer.js';
 import { transactionAddressHelpers } from '../transactionAddress/transactionAddressHelpers.js';
+import { isValidAmountOfMoney, isValidTimestamp } from '../../utils/inputValidator/inputValidator.js';
 
 export const transactionHelpers = {
   validate: function validate(
@@ -11,11 +11,11 @@ export const transactionHelpers = {
       'transactionTimestamp' | 'description' | 'from' | 'to' | 'amount' | 'entryTimestamp'
     >,
   ): Pick<ITransaction, 'transactionTimestamp' | 'description' | 'amount' | 'entryTimestamp'> {
-    if (!validateTransaction.isValidTransactionTimestamp(transaction.transactionTimestamp))
+    if (!isValidTimestamp({ timestamp: transaction.transactionTimestamp }))
       throw new Error('(validation) transaction.transactionTimestamp is invalid!');
-    if (!validateTransaction.isValidAmount(transaction.amount))
+    if (!isValidAmountOfMoney({ amount: transaction.amount }))
       throw new Error('(validation) transaction.isValidAmount is invalid!');
-    if (!validateTransaction.isValidEntryTimestamp(transaction.entryTimestamp))
+    if (!isValidTimestamp({ timestamp: transaction.entryTimestamp }))
       throw new Error('(validation) transaction.isValidEntryTimestamp is invalid!');
 
     transactionAddressHelpers.validate(transaction.from);
@@ -25,7 +25,7 @@ export const transactionHelpers = {
   },
 
   sanitize: function sanitize(transaction: ITransaction): void {
-    transaction.description = sanitizeTransaction.description(transaction.description);
+    transaction.description = sanitizeText({ text: transaction.description });
   },
 
   runtimeCast: function runtimeCast(transaction: any): ITransaction {

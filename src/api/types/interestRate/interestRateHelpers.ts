@@ -1,17 +1,28 @@
 import _ from 'lodash';
+import { isValidAmountOfMoney, isValidOption, isValidTimestamp } from '../../utils/inputValidator/inputValidator.js';
 import { IInterestRate } from './interestRateInterface.js';
-
-import { validateInterestRate } from './interestRateValidator.js';
 
 export const interestRateHelpers = {
   validate: function validate(interestRate: IInterestRate): IInterestRate {
-    if (!validateInterestRate.isValidType(interestRate.type))
+    if (
+      !isValidOption({
+        option: interestRate.type,
+        validOptions: ['PERCENTAGE_PER_DURATION', 'FIXED_PER_DURATION'],
+        caseSensitive: true,
+      })
+    )
       throw new Error('(validation) interestRate.type is invalid!');
-    if (!validateInterestRate.isValidDuration(interestRate.duration))
+    if (
+      !isValidOption({
+        option: interestRate.duration,
+        validOptions: ['DAY', 'WEEK', 'MONTH', 'YEAR', 'FULL_DURATION'],
+        caseSensitive: true,
+      })
+    )
       throw new Error('(validation) interestRate.duration is invalid!');
-    if (!validateInterestRate.isValidAmount(interestRate.amount))
+    if (!isValidAmountOfMoney({ amount: interestRate.amount }))
       throw new Error('(validation) interestRate.amount is invalid!');
-    if (!validateInterestRate.isValidEntryTimestamp(interestRate.entryTimestamp))
+    if (!isValidTimestamp({ timestamp: interestRate.entryTimestamp }))
       throw new Error('(validation) interestRate.entryTimestamp is invalid!');
 
     return interestRate;

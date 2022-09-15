@@ -1,7 +1,7 @@
 import _ from 'lodash';
 import { IBudget } from './budgetInterface.js';
 
-import { sanitizeBudget } from './budgetSanitizer.js';
+import { sanitizeText } from './../../utils/inputSanitizer/inputSanitizer.js';
 import { interestRateHelpers } from '../interestRate/interestRateHelpers.js';
 import { isValidText } from '../../utils/inputValidator/inputValidator.js';
 export const budgetHelpers = {
@@ -30,8 +30,8 @@ export const budgetHelpers = {
   },
 
   sanitize: function sanitize(budget: IBudget): void {
-    budget.name = sanitizeBudget.name(budget.name);
-    budget.description = sanitizeBudget.description(budget.description);
+    budget.name = sanitizeText({ text: budget.name });
+    budget.description = sanitizeText({ text: budget.description });
   },
 
   runtimeCast: function runtimeCast(budget: any): IBudget {

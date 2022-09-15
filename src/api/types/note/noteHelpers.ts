@@ -1,21 +1,28 @@
+import { sanitizeText } from './../../utils/inputSanitizer/inputSanitizer.js';
 import _ from 'lodash';
 import { INote } from './noteInterface.js';
-import { validateNote } from './noteValidator.js';
-import { sanitizeNote } from './noteSanitizer.js';
+import { isValidText, isValidTimestamp } from '../../utils/inputValidator/inputValidator.js';
 
 export const noteHelpers = {
   validate: function validate(
     note: Pick<INote, 'content' | 'createdAtTimestamp'>,
   ): Pick<INote, 'content' | 'createdAtTimestamp'> {
-    if (!validateNote.isValidContent(note.content)) throw new Error('(validation) note.content is invalid!');
-    if (!validateNote.isValidCreatedAtTimestamp(note.createdAtTimestamp))
+    if (
+      !isValidText({
+        text: note.content,
+        validEmpty: false,
+        maxLength: 2000,
+      })
+    )
+      throw new Error('(validation) note.content is invalid!');
+    if (!isValidTimestamp({ timestamp: note.createdAtTimestamp }))
       throw new Error('(validation) note.createdAtTimestamp is invalid!');
 
     return note;
   },
 
   sanitize: function sanitize(note: INote): void {
-    note.content = sanitizeNote.content(note.content);
+    note.content = sanitizeText({ text: note.content });
   },
 
   runtimeCast: function runtimeCast(note: any): INote {

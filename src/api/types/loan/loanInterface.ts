@@ -2,10 +2,10 @@ import { IInterestRate } from '../interestRate/interestRateInterface.js';
 import { INote } from '../note/noteInterface.js';
 
 export interface ILoan {
-  _id: object;
+  _id: string;
   name: string;
   description: string;
-  notes: [INote];
+  notes: [INote?];
   openedTimestamp: number;
   closesTimestamp: number;
   interestRate: IInterestRate;

@@ -1,17 +1,21 @@
-//import { subscriptionHelpers } from '../subscription/subscriptionHelpers.js';
+import { sanitizeText } from './../../utils/inputSanitizer/inputSanitizer.js';
 import { IUser, IUserRegistrationInfo, IUserUpdateInfo } from './userInterface.js';
-import Validator from './userValidator.js';
-import Sanitize from './userSanitizer.js';
 import _ from 'lodash';
 import { subscriptionHelpers } from '../subscription/subscriptionHelpers.js';
+import {
+  isValidCurrency,
+  isValidEmail,
+  isValidLanguage,
+  isValidText,
+} from '../../utils/inputValidator/inputValidator.js';
 
 export const userHelpers = {
-  validateUser: function validateUser(user: IUser): IUser {
+  validate: function validateUser(user: IUser): IUser {
     // Validate is currently not implemented on userHelpers, because this helper is currently only used as output from database.
     throw new Error('Function not implemented!');
     return user;
   },
-  sanitizeUser: function sanitizeUser(user: IUser): IUser {
+  sanitize: function sanitizeUser(user: IUser): IUser {
     // Sanitize is currently not implemented on userHelpers, because this helper is currently only used as output from database.
     throw new Error('Function not implemented!');
     return user;
@@ -47,21 +51,38 @@ export const userRegistrationInfoHelpers = {
   validateUserRegistrationInfo: function validateUserRegistrationInfo(
     registrationInfo: IUserRegistrationInfo,
   ): IUserRegistrationInfo {
-    if (!Validator.isValidName(registrationInfo.name)) throw new Error('(validation) Name should contain value!');
-    if (!Validator.isValidEmail(registrationInfo.email))
+    if (
+      !isValidText({
+        text: registrationInfo.name,
+        validEmpty: false,
+        maxLength: 100,
+      })
+    )
+      throw new Error('(validation) Name should contain value!');
+    if (!isValidEmail({ email: registrationInfo.email }))
       throw new Error('(validation) Email value does not contain email!');
-    if (!Validator.isValidCurrency(registrationInfo.currency))
+    if (
+      !isValidCurrency({
+        currency: registrationInfo.currency,
+        caseSensitive: true,
+      })
+    )
       throw new Error('(validation) Name should be a currency value!');
-    if (!Validator.isValidLanguage(registrationInfo.language))
+    if (
+      !isValidLanguage({
+        language: registrationInfo.language,
+        caseSensitive: true,
+      })
+    )
       throw new Error('(validation) Language should be locale value!');
 
     return registrationInfo;
   },
   sanitizeUserRegistrationInfo: function sanitizeUserRegistrationInfo(registrationInfo: IUserRegistrationInfo): void {
-    registrationInfo.name = Sanitize.name(registrationInfo.name);
-    registrationInfo.email = Sanitize.email(registrationInfo.email);
-    registrationInfo.currency = Sanitize.currency(registrationInfo.currency);
-    registrationInfo.language = Sanitize.language(registrationInfo.language);
+    registrationInfo.name = sanitizeText({ text: registrationInfo.name });
+    registrationInfo.email = sanitizeText({ text: registrationInfo.email });
+    registrationInfo.currency = sanitizeText({ text: registrationInfo.currency });
+    registrationInfo.language = sanitizeText({ text: registrationInfo.language });
   },
   runtimeCast: function runtimeCast(registrationInfo: any): IUserRegistrationInfo {
     if (typeof registrationInfo !== 'object' || registrationInfo === null)
@@ -84,19 +105,36 @@ export const userRegistrationInfoHelpers = {
 export const userUpdateInfoHelpers = {
   validateUserUpdateInfo: function validateUserUpdateInfo(updateInfo: IUserUpdateInfo): IUserUpdateInfo {
     if (updateInfo.name !== undefined)
-      if (!Validator.isValidName(updateInfo.name)) throw new Error('(validation) Name should contain value!');
+      if (
+        !isValidText({
+          text: updateInfo.name,
+          validEmpty: false,
+          maxLength: 100,
+        })
+      )
+        throw new Error('(validation) Name should contain value!');
     if (updateInfo.currency !== undefined)
-      if (!Validator.isValidCurrency(updateInfo.currency))
+      if (
+        !isValidCurrency({
+          currency: updateInfo.currency,
+          caseSensitive: true,
+        })
+      )
         throw new Error('(validation) Name should be a currency value!');
     if (updateInfo.language !== undefined)
-      if (!Validator.isValidLanguage(updateInfo.language))
+      if (
+        !isValidLanguage({
+          language: updateInfo.language,
+          caseSensitive: true,
+        })
+      )
         throw new Error('(validation) Language should be locale value!');
     return updateInfo;
   },
   sanitizeUserUpdateInfo: function sanitizeUserUpdateInfo(updateInfo: IUserUpdateInfo): void {
-    if (updateInfo.name !== undefined) updateInfo.name = Sanitize.name(updateInfo.name);
-    if (updateInfo.currency !== undefined) updateInfo.currency = Sanitize.currency(updateInfo.currency);
-    if (updateInfo.language !== undefined) updateInfo.language = Sanitize.language(updateInfo.language);
+    if (updateInfo.name !== undefined) updateInfo.name = sanitizeText({ text: updateInfo.name });
+    if (updateInfo.currency !== undefined) updateInfo.currency = sanitizeText({ text: updateInfo.currency });
+    if (updateInfo.language !== undefined) updateInfo.language = sanitizeText({ text: updateInfo.language });
   },
   runtimeCast: function runtimeCast(updateInfo: any): IUserUpdateInfo {
     if (typeof updateInfo !== 'object' || updateInfo === null)
