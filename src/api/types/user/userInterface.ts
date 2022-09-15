@@ -1,5 +1,3 @@
-// TODO : Types currency, language should as some point be changed into enums
-
 import { IBudget } from '../budget/budgetInterface.js';
 import { ILoan } from '../loan/loanInterface.js';
 

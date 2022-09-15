@@ -305,7 +305,7 @@ describe('userRegistrationInfoHelpers', () => {
       userRegistrationInfoHelpers.sanitizeUserRegistrationInfo(input);
       expect(input.name).toBe('Gregor');
       expect(input.email).toBe('gregor@test.com');
-      expect(input.currency).toBe('eur');
+      expect(input.currency).toBe('EUR');
       expect(input.language).toBe('sl-SI');
     });
   });
@@ -401,7 +401,7 @@ describe('userUpdateInfoHelpers', () => {
       };
       userUpdateInfoHelpers.sanitizeUserUpdateInfo(userUpdate);
       expect(userUpdate.name).toBe('Gregor');
-      expect(userUpdate.currency).toBe('eur');
+      expect(userUpdate.currency).toBe('EUR');
       expect(userUpdate.language).toBe('sl-SI');
     });
 

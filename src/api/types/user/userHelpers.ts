@@ -1,4 +1,4 @@
-import { sanitizeText } from './../../utils/inputSanitizer/inputSanitizer.js';
+import { sanitizeEmail, sanitizeText } from './../../utils/inputSanitizer/inputSanitizer.js';
 import { IUser, IUserRegistrationInfo, IUserUpdateInfo } from './userInterface.js';
 import _ from 'lodash';
 import { subscriptionHelpers } from '../subscription/subscriptionHelpers.js';
@@ -80,17 +80,18 @@ export const userRegistrationInfoHelpers = {
   },
   sanitizeUserRegistrationInfo: function sanitizeUserRegistrationInfo(registrationInfo: IUserRegistrationInfo): void {
     registrationInfo.name = sanitizeText({ text: registrationInfo.name });
-    registrationInfo.email = sanitizeText({ text: registrationInfo.email });
+    registrationInfo.email = sanitizeEmail({ email: registrationInfo.email });
     registrationInfo.currency = sanitizeText({ text: registrationInfo.currency });
     registrationInfo.language = sanitizeText({ text: registrationInfo.language });
   },
   runtimeCast: function runtimeCast(registrationInfo: any): IUserRegistrationInfo {
     if (typeof registrationInfo !== 'object' || registrationInfo === null)
-      throw new Error('Type of NewUserInput must be an object!');
-    if (!_.isString(registrationInfo.name)) throw new Error('Type of NewUserInput.name must be a string!');
-    if (!_.isString(registrationInfo.email)) throw new Error('Type of NewUserInput.email must be a string!');
-    if (!_.isString(registrationInfo.currency)) throw new Error('Type of NewUserInput.currency must be a string!');
-    if (!_.isString(registrationInfo.language)) throw new Error('Type of NewUserInput.language must be a string!');
+      throw new Error('Type of registrationInfo must be an object!');
+    if (!_.isString(registrationInfo.name)) throw new Error('Type of registrationInfo.name must be a string!');
+    if (!_.isString(registrationInfo.email)) throw new Error('Type of registrationInfo.email must be a string!');
+    if (!_.isString(registrationInfo.currency)) throw new Error('Type of registrationInfo.currency must be a string!');
+    if (!_.isString(registrationInfo.language)) throw new Error('Type of registrationInfo.language must be a string!');
+    if (!_.isString(registrationInfo.password)) throw new Error('Type of registrationInfo.password must be a string!');
 
     return {
       name: registrationInfo.name,
