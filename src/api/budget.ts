@@ -7,14 +7,20 @@ export async function createBudget(
   userId: Pick<IUser, '_id'>,
   budget: Omit<IBudget, '_id, calculatedTotalAmount, calculatedLendedAmount'>,
 ): Promise<IBudget> {
-  const userFromDB = await UserModel.findOne({ _id: userId });
-  userFromDB.budgets.push(budget);
-  await userFromDB.save();
-  const newBudget = userFromDB.budgets[userFromDB.budgets.length - 1];
-  return newBudget.toObject();
+  try {
+    const userFromDB = await UserModel.findOne({ _id: userId });
+    userFromDB.budgets.push(budget);
+    await userFromDB.save();
+    const newBudget = userFromDB.budgets[userFromDB.budgets.length - 1];
+    return newBudget.toObject();
+  } catch (err) {
+    console.log(err);
+    throw new Error('Budget creation failed!');
+  }
 }
 // As a lender, I want to view a list of budgets with basic information, so that I can have a general overview of my investments.
 export function getBudgets(): void {
+  throw new Error('Not implemented. User getUserById to obtain budgets.');
   return;
 }
 
