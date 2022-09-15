@@ -11,7 +11,7 @@ export async function createBudget(
   userFromDB.budgets.push(budget);
   await userFromDB.save();
   const newBudget = userFromDB.budgets[userFromDB.budgets.length - 1];
-  return newBudget;
+  return newBudget.toObject();
 }
 // As a lender, I want to view a list of budgets with basic information, so that I can have a general overview of my investments.
 export function getBudgets(): void {
