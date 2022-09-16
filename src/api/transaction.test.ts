@@ -14,11 +14,11 @@ describe('Manual tests', () => {
       transactionTimestamp: 1663249282,
       description: 'new transaction',
       from: {
-        datatype: 'BUDGET',
-        addressId: '6319700ccac59dc8fdc9de05',
+        datatype: 'OUTSIDE',
+        addressId: '6319700ccac59dc8fdc9de04',
       },
       to: {
-        datatype: 'LOAN',
+        datatype: 'BUDGET',
         addressId: '6319700ccac59dc8fdc9de05',
       },
       amount: 2000,
@@ -33,7 +33,7 @@ describe('Manual tests', () => {
       description: 'Edited transaction',
       from: {
         datatype: 'BUDGET',
-        addressId: '6319700ccac59dc8fdc9de05',
+        addressId: '6319700ccac59dc8fdc9de06',
       },
       to: {
         datatype: 'LOAN',
@@ -51,7 +51,7 @@ describe('Manual tests', () => {
     expect(true).toBeTruthy();
   });
   test('find', async () => {
-    const response = await transaction.findTranasactionsFrom('6319700ccac59dc8fdc9de05', {
+    const response = await transaction.findTranasactionsFromAndTo('6319700ccac59dc8fdc9de05', {
       addressId: '6319700ccac59dc8fdc9de05',
       datatype: 'BUDGET',
     });

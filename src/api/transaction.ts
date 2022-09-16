@@ -120,7 +120,7 @@ export default {
       throw new Error('Transaction deletion failed!');
     }
   },
-  findTranasactionsFrom: async function findTransactionsFrom(
+  findTranasactionsFromAndTo: async function findTransactionsFromAndTo(
     userId: string,
     transactionAddress: ITransactionAddress,
   ): Promise<ITransaction[]> {
@@ -128,8 +128,16 @@ export default {
     validatedTransactionAddress = transactionAddressHelpers.runtimeCast(transactionAddress);
     const transactions = await TransactionModel.find({
       userId: userId,
-      'from.datatype': validatedTransactionAddress.datatype,
-      'from.addressId': validatedTransactionAddress.addressId,
+      $or: [
+        {
+          'from.datatype': validatedTransactionAddress.datatype,
+          'from.addressId': validatedTransactionAddress.addressId,
+        },
+        {
+          'to.datatype': validatedTransactionAddress.datatype,
+          'to.addressId': validatedTransactionAddress.addressId,
+        },
+      ],
     })
       .lean()
       .exec();
