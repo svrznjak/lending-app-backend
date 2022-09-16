@@ -6,7 +6,7 @@ const TransactionAddressSchema = new mongoose.Schema({
     enum: ['BUDGET', 'LOAN', 'INTEREST', 'OUTSIDE'],
     required: true,
   },
-  _id: {
+  addressId: {
     type: mongoose.Schema.Types.ObjectId,
     required: true,
   },

@@ -1,7 +1,7 @@
 import { ITransactionAddress } from '../transactionAddress/transactionAddressInterface.js';
 
 export interface ITransaction {
-  _id: object;
+  _id: string;
   userId: string;
   transactionTimestamp: number;
   description: string;

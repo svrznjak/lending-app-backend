@@ -26,15 +26,21 @@ export const transactionHelpers = {
     return transaction;
   },
 
-  sanitize: function sanitize(transaction: ITransaction): void {
+  sanitize: function sanitize(
+    transaction: Pick<
+      ITransaction,
+      'transactionTimestamp' | 'description' | 'from' | 'to' | 'amount' | 'entryTimestamp'
+    >,
+  ): void {
     transaction.description = sanitizeText({ text: transaction.description });
   },
 
   runtimeCast: function runtimeCast(transaction: any): ITransaction {
     if (typeof this !== 'object' || this === null) throw new Error('Type of transaction must be an object!');
     if (!_.isString(transaction._id)) throw new Error('Type of transaction._id must be a string!');
-    if (!Number.isFinite(transaction.createdAtTimestamp))
-      throw new Error('Type of transaction.createdAtTimestamp must be a number!');
+    if (!_.isString(transaction.userId)) throw new Error('Type of transaction.userId must be a string!');
+    if (!Number.isFinite(transaction.transactionTimestamp))
+      throw new Error('Type of transaction.transactionTimestamp must be a number!');
     if (!_.isString(transaction.description)) throw new Error('Type of transaction.description must be a string!');
     if (!Number.isFinite(transaction.amount)) throw new Error('Type of transaction.amount must be a number!');
     if (!Number.isFinite(transaction.entryTimestamp))
