@@ -9,5 +9,5 @@ export interface ITransaction {
   to: ITransactionAddress;
   amount: number;
   entryTimestamp: number;
-  revisions: [ITransaction?];
+  revisions?: ITransaction;
 }

@@ -28,7 +28,7 @@ describe('Manual tests', () => {
     expect(true).toBeTruthy();
   });
   test('edit', async () => {
-    const response = await transaction.edit('63245b2039e39ffdcbdced6a', {
+    const response = await transaction.edit('6324ae64a03d6a8800cc8f52', {
       transactionTimestamp: 1663244582,
       description: 'Edited transaction',
       from: {
@@ -39,7 +39,7 @@ describe('Manual tests', () => {
         datatype: 'LOAN',
         addressId: '6319700ccac59dc8fdc9de05',
       },
-      amount: 2500,
+      amount: 3500,
       entryTimestamp: 1663249282,
     });
     console.log(response);

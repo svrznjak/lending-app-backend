@@ -19,7 +19,6 @@ export default {
       _id: new mongoose.Types.ObjectId().toString(),
       userId: userId,
       ...transaction,
-      revisions: [],
     } as ITransaction;
     transactionHelpers.runtimeCast(validatedTransaction);
     try {
@@ -31,15 +30,14 @@ export default {
         description: newTransactionInDB.description,
         from: {
           datatype: newTransactionInDB.from.datatype,
-          addressId: newTransactionInDB.from.addressId,
+          addressId: newTransactionInDB.from.addressId.toString(),
         },
         to: {
           datatype: newTransactionInDB.to.datatype,
-          addressId: newTransactionInDB.to.addressId,
+          addressId: newTransactionInDB.to.addressId.toString(),
         },
         amount: newTransactionInDB.amount,
         entryTimestamp: newTransactionInDB.entryTimestamp,
-        revisions: newTransactionInDB.revisions,
       };
       return transactionHelpers.runtimeCast(newTransaction);
     } catch (err) {
@@ -62,7 +60,7 @@ export default {
     if (transaction === null) throw new Error('Transaction you wanted to edit, does not exist.');
 
     // push current values to revisions
-    const currentValues: Omit<ITransaction, 'revisions'> = {
+    /*const currentValues: Omit<ITransaction, 'revisions'> = {
       _id: transaction._id.toString(),
       userId: transaction.userId.toString(),
       transactionTimestamp: transaction.transactionTimestamp,
@@ -77,8 +75,8 @@ export default {
       },
       amount: transaction.amount,
       entryTimestamp: transaction.entryTimestamp,
-    };
-    transaction.revisions.push(currentValues);
+    };*/
+    transaction.revisions = transaction;
     // set values from newTransaction
     transaction.transactionTimestamp = newTransaction.transactionTimestamp;
     transaction.description = newTransaction.description;

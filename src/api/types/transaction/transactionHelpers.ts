@@ -45,7 +45,8 @@ export const transactionHelpers = {
     if (!Number.isFinite(transaction.amount)) throw new Error('Type of transaction.amount must be a number!');
     if (!Number.isFinite(transaction.entryTimestamp))
       throw new Error('Type of transaction.entryTimestamp must be a number!');
-    if (!Array.isArray(transaction.revisions)) throw new Error('Type of transaction.revisions must be an array!');
+    if (!_.isObject(transaction.revisions) && transaction.revisions !== undefined)
+      throw new Error('Type of transaction.revisions must be an object or undefined!');
 
     transactionAddressHelpers.runtimeCast(transaction.from);
     transactionAddressHelpers.runtimeCast(transaction.to);

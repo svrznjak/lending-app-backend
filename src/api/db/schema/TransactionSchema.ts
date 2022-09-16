@@ -30,5 +30,5 @@ const TransactionSchema = new mongoose.Schema({
   entryTimestamp: { type: Number, required: true },
 });
 
-TransactionSchema.add({ revisions: [TransactionSchema] });
+TransactionSchema.add({ revisions: TransactionSchema });
 export default TransactionSchema;
