@@ -62,10 +62,39 @@ export default {
   },
 
   // As a lender, I want to withdraw funds from the budget, so that I can make use of interest or move it to another budget.
-  withdrawAmountToOutside: function withdrawAmountFromBudgetToOutside(): void {
-    return;
+  withdrawAmountToOutside: async function withdrawAmountFromBudgetToOutside({
+    userId,
+    budgetId,
+    transactionTimestamp,
+    description,
+    amount,
+  }: {
+    userId: string;
+    budgetId: string;
+    transactionTimestamp: number;
+    description: string;
+    amount: number;
+  }): Promise<ITransaction> {
+    const newTransaction: Pick<
+      ITransaction,
+      'userId' | 'transactionTimestamp' | 'description' | 'from' | 'to' | 'amount' | 'entryTimestamp'
+    > = {
+      userId: userId,
+      transactionTimestamp: transactionTimestamp,
+      description: description,
+      from: {
+        datatype: 'BUDGET',
+        addressId: budgetId,
+      },
+      to: {
+        datatype: 'OUTSIDE',
+        addressId: '000000000000000000000000',
+      },
+      amount: amount,
+      entryTimestamp: new Date().getTime(),
+    };
+    return await transaction.add(newTransaction);
   },
-
   // As a lender, I want to view transactions related to budget, so that I can make decisions.
   getTransactions: async function getBudgetTransactions(): Promise<ITransaction[]> {
     return await transaction.findTranasactionsFromAndTo({
