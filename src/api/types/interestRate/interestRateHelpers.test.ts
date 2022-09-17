@@ -9,7 +9,7 @@ describe('interestRateHelpers', () => {
         duration: 'MONTH',
         amount: 5,
         entryTimestamp: 1663012853,
-        revisions: [],
+        revisions: undefined,
       } as IInterestRate;
       const result = interestRateHelpers.validate(input);
 
@@ -18,7 +18,7 @@ describe('interestRateHelpers', () => {
       expect(input.duration).toBe('MONTH');
       expect(input.amount).toBe(5);
       expect(input.entryTimestamp).toBe(1663012853);
-      expect(input.revisions).toEqual([]);
+      expect(input.revisions).toEqual(undefined);
 
       // Check if result is same as input
       expect(result.type).toBe(input.type);
@@ -36,7 +36,7 @@ describe('interestRateHelpers', () => {
           // eslint-disable-next-line @typescript-eslint/no-loss-of-precision
           amount: -9999999999999999,
           entryTimestamp: 1663012853,
-          revisions: [],
+          revisions: undefined,
         });
       }).toThrow();
       expect(() => {
@@ -45,7 +45,7 @@ describe('interestRateHelpers', () => {
           duration: 'MONTH',
           amount: 5,
           entryTimestamp: -1,
-          revisions: [],
+          revisions: undefined,
         });
       }).toThrow();
       expect(() => {
@@ -54,7 +54,7 @@ describe('interestRateHelpers', () => {
           duration: 'MONTH',
           amount: NaN,
           entryTimestamp: 1663012853,
-          revisions: [],
+          revisions: undefined,
         });
       }).toThrow();
       expect(() => {
@@ -63,7 +63,7 @@ describe('interestRateHelpers', () => {
           duration: 'MONTH',
           amount: 5,
           entryTimestamp: Infinity,
-          revisions: [],
+          revisions: undefined,
         });
       }).toThrow();
       expect(() => {
@@ -72,7 +72,7 @@ describe('interestRateHelpers', () => {
           duration: 'WEEK',
           amount: null,
           entryTimestamp: 1663012853,
-          revisions: [],
+          revisions: undefined,
         });
       }).toThrow();
       expect(() => {
@@ -81,7 +81,7 @@ describe('interestRateHelpers', () => {
           duration: 'MONTH',
           amount: 5,
           entryTimestamp: null,
-          revisions: [],
+          revisions: undefined,
         });
       }).toThrow();
       expect(() => {
@@ -91,7 +91,7 @@ describe('interestRateHelpers', () => {
           amount: 5,
           // eslint-disable-next-line @typescript-eslint/no-loss-of-precision
           entryTimestamp: 9999999999999999999999,
-          revisions: [],
+          revisions: undefined,
         });
       }).toThrow();
     });
@@ -104,7 +104,7 @@ describe('interestRateHelpers', () => {
         duration: 'MONTH',
         amount: 5,
         entryTimestamp: 1663012853,
-        revisions: [],
+        revisions: {},
       };
       const result = interestRateHelpers.runtimeCast(input);
 
@@ -113,7 +113,7 @@ describe('interestRateHelpers', () => {
       expect(input.duration).toBe('MONTH');
       expect(input.amount).toBe(5);
       expect(input.entryTimestamp).toBe(1663012853);
-      expect(input.revisions).toEqual([]);
+      expect(input.revisions).toEqual({});
 
       // Check if result is same as input
       expect(result.type).toBe(input.type);
@@ -129,7 +129,7 @@ describe('interestRateHelpers', () => {
           duration: 'MONTH',
           amount: 5,
           entryTimestamp: 1663012853,
-          revisions: [],
+          revisions: undefined,
         });
       }).toThrow();
       expect(() => {
@@ -138,7 +138,7 @@ describe('interestRateHelpers', () => {
           duration: 'MONTH',
           amount: 5,
           entryTimestamp: 1663012853,
-          revisions: [],
+          revisions: undefined,
         });
       }).toThrow();
       expect(() => {
@@ -147,7 +147,7 @@ describe('interestRateHelpers', () => {
           duration: 'MONTH',
           amount: 5,
           entryTimestamp: 1663012853,
-          revisions: [],
+          revisions: undefined,
         });
       }).toThrow();
       expect(() => {
@@ -156,7 +156,7 @@ describe('interestRateHelpers', () => {
           duration: true,
           amount: 5,
           entryTimestamp: 1663012853,
-          revisions: [],
+          revisions: undefined,
         });
       }).toThrow();
       expect(() => {
@@ -165,7 +165,7 @@ describe('interestRateHelpers', () => {
           duration: undefined,
           amount: 5,
           entryTimestamp: 1663012853,
-          revisions: [],
+          revisions: undefined,
         });
       }).toThrow();
       expect(() => {
@@ -174,7 +174,7 @@ describe('interestRateHelpers', () => {
           duration: null,
           amount: 5,
           entryTimestamp: 1663012853,
-          revisions: [],
+          revisions: undefined,
         });
       }).toThrow();
       expect(() => {
@@ -183,7 +183,7 @@ describe('interestRateHelpers', () => {
           duration: 'MONTH',
           amount: NaN,
           entryTimestamp: 1663012853,
-          revisions: [],
+          revisions: undefined,
         });
       }).toThrow();
       expect(() => {
@@ -192,7 +192,7 @@ describe('interestRateHelpers', () => {
           duration: 'MONTH',
           amount: true,
           entryTimestamp: 1663012853,
-          revisions: [],
+          revisions: undefined,
         });
       }).toThrow();
       expect(() => {
@@ -201,7 +201,7 @@ describe('interestRateHelpers', () => {
           duration: 'MONTH',
           amount: 5,
           entryTimestamp: true,
-          revisions: [],
+          revisions: undefined,
         });
       }).toThrow();
       expect(() => {
@@ -210,7 +210,7 @@ describe('interestRateHelpers', () => {
           duration: 'MONTH',
           amount: 5,
           entryTimestamp: NaN,
-          revisions: [],
+          revisions: undefined,
         });
       }).toThrow();
       expect(() => {
@@ -219,6 +219,7 @@ describe('interestRateHelpers', () => {
           duration: 'MONTH',
           amount: 5,
           entryTimestamp: 1663012853,
+          revisions: 'Old',
         });
       }).toThrow();
       expect(() => {
@@ -226,7 +227,7 @@ describe('interestRateHelpers', () => {
           duration: 'MONTH',
           amount: 5,
           entryTimestamp: 1663012853,
-          revisions: [],
+          revisions: undefined,
         });
       }).toThrow();
       expect(() => {
@@ -238,7 +239,7 @@ describe('interestRateHelpers', () => {
           duration: 'MONTH',
           amount: 5,
           entryTimestamp: 1663012853,
-          revisions: new Object(),
+          revisions: [],
         });
       }).toThrow();
       expect(() => {
@@ -247,7 +248,7 @@ describe('interestRateHelpers', () => {
           duration: 'MONTH',
           amount: 100,
           entryTimestamp: Infinity,
-          revisions: [],
+          revisions: undefined,
         });
       }).toThrow();
     });

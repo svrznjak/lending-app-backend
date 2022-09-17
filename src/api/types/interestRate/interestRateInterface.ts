@@ -3,5 +3,5 @@ export interface IInterestRate {
   duration: 'DAY' | 'WEEK' | 'MONTH' | 'YEAR' | 'FULL_DURATION';
   amount: number;
   entryTimestamp: number;
-  revisions: [IInterestRate?];
+  revisions?: IInterestRate;
 }

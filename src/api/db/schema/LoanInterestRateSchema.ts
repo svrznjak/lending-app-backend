@@ -15,5 +15,5 @@ const LoanInterestRate = new mongoose.Schema({
   entryTimestamp: { type: Number, required: true },
 });
 
-LoanInterestRate.add({ revisions: [LoanInterestRate] });
+LoanInterestRate.add({ revisions: LoanInterestRate });
 export const LoanInterestRateSchema = LoanInterestRate;

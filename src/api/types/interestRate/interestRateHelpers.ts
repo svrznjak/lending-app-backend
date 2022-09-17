@@ -36,8 +36,8 @@ export const interestRateHelpers = {
     if (!Number.isFinite(interestRate.amount)) throw new Error('Type of interestRate.amount must be a number!');
     if (!Number.isFinite(interestRate.entryTimestamp))
       throw new Error('Type of interestRate.entryTimestamp must be a number!');
-    if (!Array.isArray(interestRate.revisions)) throw new Error('Type of interestRate.revisions must be an array!');
-
+    if (!_.isObject(interestRate.revisions) && interestRate.revisions !== undefined)
+      throw new Error('Type of interestRate.revisions must be an object or undefined!');
     return {
       type: interestRate.type,
       duration: interestRate.duration,
