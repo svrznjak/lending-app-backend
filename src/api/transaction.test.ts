@@ -10,7 +10,8 @@ describe('Manual tests', () => {
     }
   });
   test('add', async () => {
-    const response = await transaction.add('6319700ccac59dc8fdc9de05', {
+    const response = await transaction.add({
+      userId: '6319700ccac59dc8fdc9de05',
       transactionTimestamp: 1663249282,
       description: 'new transaction',
       from: {
@@ -31,14 +32,6 @@ describe('Manual tests', () => {
     const response = await transaction.edit('6324ae64a03d6a8800cc8f52', {
       transactionTimestamp: 1663244582,
       description: 'Edited transaction',
-      from: {
-        datatype: 'BUDGET',
-        addressId: '6319700ccac59dc8fdc9de06',
-      },
-      to: {
-        datatype: 'LOAN',
-        addressId: '6319700ccac59dc8fdc9de05',
-      },
       amount: 3500,
       entryTimestamp: 1663249282,
     });
@@ -51,7 +44,7 @@ describe('Manual tests', () => {
     expect(true).toBeTruthy();
   });
   test('find', async () => {
-    const response = await transaction.findTranasactionsFromAndTo('6319700ccac59dc8fdc9de05', {
+    const response = await transaction.findTranasactionsFromAndTo({
       addressId: '6319700ccac59dc8fdc9de05',
       datatype: 'BUDGET',
     });

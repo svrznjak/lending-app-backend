@@ -9,6 +9,7 @@ const TransactionAddressSchema = new mongoose.Schema({
   addressId: {
     type: mongoose.Schema.Types.ObjectId,
     required: true,
+    index: true,
   },
 });
 
@@ -20,7 +21,6 @@ const TransactionSchema = new mongoose.Schema({
   userId: {
     type: mongoose.Schema.Types.ObjectId,
     required: true,
-    index: true,
   },
   transactionTimestamp: { type: Number, required: true },
   description: { type: String, required: true },

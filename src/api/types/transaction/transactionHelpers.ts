@@ -5,33 +5,29 @@ import { transactionAddressHelpers } from '../transactionAddress/transactionAddr
 import { isValidAmountOfMoney, isValidTimestamp, isValidText } from '../../utils/inputValidator/inputValidator.js';
 
 export const transactionHelpers = {
-  validate: function validate(
-    transaction: Pick<
-      ITransaction,
-      'transactionTimestamp' | 'description' | 'from' | 'to' | 'amount' | 'entryTimestamp'
-    >,
-  ): Pick<ITransaction, 'transactionTimestamp' | 'description' | 'amount' | 'entryTimestamp'> {
-    if (!isValidTimestamp({ timestamp: transaction.transactionTimestamp }))
+  validate: function validate(transaction: Partial<ITransaction>): Partial<ITransaction> {
+    if (
+      transaction.transactionTimestamp !== undefined &&
+      !isValidTimestamp({ timestamp: transaction.transactionTimestamp })
+    )
       throw new Error('(validation) transaction.transactionTimestamp is invalid!');
-    if (!isValidText({ text: transaction.description, validEmpty: true, maxLength: 1000 }))
+    if (
+      transaction.description !== undefined &&
+      !isValidText({ text: transaction.description, validEmpty: true, maxLength: 1000 })
+    )
       throw new Error('(validation) transaction.description is invalid!');
-    if (!isValidAmountOfMoney({ amount: transaction.amount }))
+    if (transaction.amount !== undefined && !isValidAmountOfMoney({ amount: transaction.amount }))
       throw new Error('(validation) transaction.isValidAmount is invalid!');
-    if (!isValidTimestamp({ timestamp: transaction.entryTimestamp }))
+    if (transaction.entryTimestamp !== undefined && !isValidTimestamp({ timestamp: transaction.entryTimestamp }))
       throw new Error('(validation) transaction.isValidEntryTimestamp is invalid!');
 
-    transactionAddressHelpers.validate(transaction.from);
-    transactionAddressHelpers.validate(transaction.to);
+    if (transaction.from !== undefined) transactionAddressHelpers.validate(transaction.from);
+    if (transaction.to !== undefined) transactionAddressHelpers.validate(transaction.to);
 
     return transaction;
   },
 
-  sanitize: function sanitize(
-    transaction: Pick<
-      ITransaction,
-      'transactionTimestamp' | 'description' | 'from' | 'to' | 'amount' | 'entryTimestamp'
-    >,
-  ): void {
+  sanitize: function sanitize(transaction: Partial<ITransaction>): void {
     transaction.description = sanitizeText({ text: transaction.description });
   },
 

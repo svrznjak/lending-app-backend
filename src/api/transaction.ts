@@ -7,18 +7,17 @@ import mongoose from 'mongoose';
 
 export default {
   add: async function addTransaction(
-    userId: string,
     transaction: Pick<
       ITransaction,
-      'transactionTimestamp' | 'description' | 'from' | 'to' | 'amount' | 'entryTimestamp'
+      'userId' | 'transactionTimestamp' | 'description' | 'from' | 'to' | 'amount' | 'entryTimestamp'
     >,
-  ): Promise<Pick<ITransaction, 'transactionTimestamp' | 'description' | 'from' | 'to' | 'amount' | 'entryTimestamp'>> {
+  ): Promise<ITransaction> {
     transactionHelpers.validate(transaction);
     transactionHelpers.sanitize(transaction);
     const validatedTransaction = {
       _id: new mongoose.Types.ObjectId().toString(),
-      userId: userId,
       ...transaction,
+      revisions: undefined,
     } as ITransaction;
     transactionHelpers.runtimeCast(validatedTransaction);
     try {
@@ -47,10 +46,7 @@ export default {
   },
   edit: async function editTransaction(
     transactionId: string,
-    newTransaction: Pick<
-      ITransaction,
-      'transactionTimestamp' | 'description' | 'from' | 'to' | 'amount' | 'entryTimestamp'
-    >,
+    newTransaction: Pick<ITransaction, 'transactionTimestamp' | 'description' | 'amount' | 'entryTimestamp'>,
   ): Promise<ITransaction> {
     // check if newTransaction values are valid for entry
     transactionHelpers.validate(newTransaction);
@@ -59,29 +55,10 @@ export default {
     const transaction: any = await TransactionModel.findById(transactionId);
     if (transaction === null) throw new Error('Transaction you wanted to edit, does not exist.');
 
-    // push current values to revisions
-    /*const currentValues: Omit<ITransaction, 'revisions'> = {
-      _id: transaction._id.toString(),
-      userId: transaction.userId.toString(),
-      transactionTimestamp: transaction.transactionTimestamp,
-      description: transaction.description,
-      from: {
-        datatype: transaction.from.datatype,
-        addressId: transaction.from.addressId.toString(),
-      },
-      to: {
-        datatype: transaction.to.datatype,
-        addressId: transaction.to.addressId.toString(),
-      },
-      amount: transaction.amount,
-      entryTimestamp: transaction.entryTimestamp,
-    };*/
     transaction.revisions = transaction;
     // set values from newTransaction
     transaction.transactionTimestamp = newTransaction.transactionTimestamp;
     transaction.description = newTransaction.description;
-    transaction.from = newTransaction.from;
-    transaction.to = newTransaction.to;
     transaction.amount = newTransaction.amount;
     transaction.entryTimestamp = newTransaction.entryTimestamp;
     // verify transaction values
@@ -121,13 +98,11 @@ export default {
     }
   },
   findTranasactionsFromAndTo: async function findTransactionsFromAndTo(
-    userId: string,
     transactionAddress: ITransactionAddress,
   ): Promise<ITransaction[]> {
     let validatedTransactionAddress = transactionAddressHelpers.validate(transactionAddress);
     validatedTransactionAddress = transactionAddressHelpers.runtimeCast(transactionAddress);
     const transactions = await TransactionModel.find({
-      userId: userId,
       $or: [
         {
           'from.datatype': validatedTransactionAddress.datatype,

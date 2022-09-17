@@ -1,4 +1,6 @@
+import { ITransaction } from './types/transaction/transactionInterface.js';
 import UserModel from './db/model/UserModel.js';
+import transaction from './transaction.js';
 import { IBudget } from './types/budget/budgetInterface.js';
 import { IUser } from './types/user/userInterface.js';
 // As a lender, I want to create a budget, so that I can categorize my investments.
@@ -25,8 +27,38 @@ export function getBudgets(): void {
 }
 
 // As a lender, I want to add funds to the budget, so that I can later assign them to loans.
-export function addAmountToBudget(): void {
-  return;
+export async function addAmountFromOutside({
+  userId,
+  budgetId,
+  transactionTimestamp,
+  description,
+  amount,
+}: {
+  userId: string;
+  budgetId: string;
+  transactionTimestamp: number;
+  description: string;
+  amount: number;
+}): Promise<ITransaction> {
+  const newTransaction: Pick<
+    ITransaction,
+    'userId' | 'transactionTimestamp' | 'description' | 'from' | 'to' | 'amount' | 'entryTimestamp'
+  > = {
+    userId: userId,
+    transactionTimestamp: transactionTimestamp,
+    description: description,
+    from: {
+      datatype: 'OUTSIDE',
+      addressId: '000000000000000000000000',
+    },
+    to: {
+      datatype: 'BUDGET',
+      addressId: budgetId,
+    },
+    amount: amount,
+    entryTimestamp: new Date().getTime(),
+  };
+  return await transaction.add(newTransaction);
 }
 
 // As a lender, I want to withdraw funds from the budget, so that I can make use of interest or move it to another budget.
@@ -35,8 +67,11 @@ export function withdrawAmountFromBudget(): void {
 }
 
 // As a lender, I want to view transactions related to budget, so that I can make decisions.
-export function getBudgetTransactions(): void {
-  return;
+export async function getBudgetTransactions(): Promise<ITransaction[]> {
+  return await transaction.findTranasactionsFromAndTo({
+    addressId: '6319700ccac59dc8fdc9de05',
+    datatype: 'BUDGET',
+  });
 }
 
 // As a lender, I want to export budget data and transactions, so that I can archive them or import them to other software.
