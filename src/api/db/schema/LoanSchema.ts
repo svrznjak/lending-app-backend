@@ -4,7 +4,7 @@ import { LoanInterestRateSchema } from './LoanInterestRateSchema.js';
 
 const NoteSchema = new mongoose.Schema({
   content: { type: String, required: true },
-  createdAtTimestamp: { type: Number, required: true },
+  entryTimestamp: { type: Number, required: true },
 });
 
 NoteSchema.add({ revisions: [NoteSchema] });

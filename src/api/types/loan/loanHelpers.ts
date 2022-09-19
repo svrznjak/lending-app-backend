@@ -6,57 +6,90 @@ import { interestRateHelpers } from '../interestRate/interestRateHelpers.js';
 import { isValidText } from '../../utils/inputValidator/inputValidator.js';
 import _ from 'lodash';
 export const loanHelpers = {
-  validate: function validate(
-    loan: Pick<
+  validate: {
+    all: function validateAll(
+      loan: Pick<
+        ILoan,
+        'name' | 'description' | 'openedTimestamp' | 'closesTimestamp' | 'initialPrincipal' | 'interestRate'
+      >,
+    ): Pick<
       ILoan,
       'name' | 'description' | 'openedTimestamp' | 'closesTimestamp' | 'initialPrincipal' | 'interestRate'
-    >,
-  ): Pick<ILoan, 'name' | 'description' | 'openedTimestamp' | 'closesTimestamp' | 'initialPrincipal' | 'interestRate'> {
-    if (
-      !isValidText({
-        text: loan.name,
-        validEmpty: false,
-        maxLength: 100,
-      })
-    )
-      throw new Error('(validation) Loan.name is invalid!');
-    if (
-      !isValidText({
-        text: loan.description,
-        validEmpty: true,
-        maxLength: 1000,
-      })
-    )
-      throw new Error('(validation) Loan.description is invalid!');
+    > {
+      this.name(loan.name);
+      this.description(loan.description);
+      this.openedTimestamp(loan.openedTimestamp);
+      this.closesTimestamp(loan.closesTimestamp);
+      this.amount(loan.initialPrincipal);
 
-    if (
-      !isValidTimestamp({
-        timestamp: loan.openedTimestamp,
-      })
-    )
-      throw new Error('(validation) Loan.openedTimestamp is invalid!');
-    if (
-      !isValidTimestamp({
-        timestamp: loan.closesTimestamp,
-      })
-    )
-      throw new Error('(validation) Loan.closesTimestamp is invalid!');
-    if (
-      !isValidAmountOfMoney({
-        amount: loan.initialPrincipal,
-      })
-    )
-      throw new Error('(validation) Loan.initialPrincipal is invalid!');
-    interestRateHelpers.validate(loan.interestRate);
+      interestRateHelpers.validate.all(loan.interestRate);
 
-    return loan;
+      return loan;
+    },
+    name: function validateName(name: string): string {
+      if (
+        !isValidText({
+          text: name,
+          validEmpty: false,
+          maxLength: 100,
+        })
+      )
+        throw new Error('(validation) name is invalid!');
+      return name;
+    },
+    description: function validateDescription(description: string): string {
+      if (
+        !isValidText({
+          text: description,
+          validEmpty: true,
+          maxLength: 1000,
+        })
+      )
+        throw new Error('(validation) description is invalid!');
+
+      return description;
+    },
+    openedTimestamp: function validateOpenedTimestamp(openedTimestamp: number): number {
+      if (
+        !isValidTimestamp({
+          timestamp: openedTimestamp,
+        })
+      )
+        throw new Error('(validation) openedTimestamp is invalid!');
+      return openedTimestamp;
+    },
+    closesTimestamp: function validateClosesTimestamp(closesTimestamp: number): number {
+      if (
+        !isValidTimestamp({
+          timestamp: closesTimestamp,
+        })
+      )
+        throw new Error('(validation) closesTimestamp is invalid!');
+      return closesTimestamp;
+    },
+    initialPrincipal: function validateInitialPrincipal(initialPrincipal: number): number {
+      if (
+        !isValidAmountOfMoney({
+          amount: initialPrincipal,
+        })
+      )
+        throw new Error('(validation) initialPrincipal is invalid!');
+      return initialPrincipal;
+    },
   },
 
-  sanitize: function sanitize(loan: ILoan): void {
-    loan.name = sanitizeText({ text: loan.name });
-    loan.description = sanitizeText({ text: loan.description });
+  sanitize: {
+    all: function sanitizeAll(loan: ILoan): void {
+      loan.name = this.name(loan.name);
+      loan.description = this.description(loan.description);
+    },
+    name: function sanitizeName(name: string): string {
+      return sanitizeText({ text: name });
+    },
+    description: function sanitizeDescription(description: string): string {
+      return sanitizeText({ text: description });
+    },
   },
-
   runtimeCast: function runtimeCast(loan: any): ILoan {
     if (typeof this !== 'object' || this === null) throw new Error('Type of loan must be an object!');
     if (!_.isString(loan._id)) throw new Error('Type of loan._id must be a string!');

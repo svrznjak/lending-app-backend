@@ -1,6 +1,6 @@
 export interface INote {
   _id: object;
   content: string;
-  createdAtTimestamp: number;
+  entryTimestamp: number;
   revisions: [INote?];
 }

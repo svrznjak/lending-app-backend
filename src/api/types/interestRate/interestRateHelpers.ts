@@ -3,29 +3,47 @@ import { isValidAmountOfMoney, isValidOption, isValidTimestamp } from '../../uti
 import { IInterestRate } from './interestRateInterface.js';
 
 export const interestRateHelpers = {
-  validate: function validate(interestRate: IInterestRate): IInterestRate {
-    if (
-      !isValidOption({
-        option: interestRate.type,
-        validOptions: ['PERCENTAGE_PER_DURATION', 'FIXED_PER_DURATION'],
-        caseSensitive: true,
-      })
-    )
-      throw new Error('(validation) interestRate.type is invalid!');
-    if (
-      !isValidOption({
-        option: interestRate.duration,
-        validOptions: ['DAY', 'WEEK', 'MONTH', 'YEAR', 'FULL_DURATION'],
-        caseSensitive: true,
-      })
-    )
-      throw new Error('(validation) interestRate.duration is invalid!');
-    if (!isValidAmountOfMoney({ amount: interestRate.amount }))
-      throw new Error('(validation) interestRate.amount is invalid!');
-    if (!isValidTimestamp({ timestamp: interestRate.entryTimestamp }))
-      throw new Error('(validation) interestRate.entryTimestamp is invalid!');
+  validate: {
+    all: function validateAll(
+      interestRate: Pick<IInterestRate, 'type' | 'duration' | 'amount' | 'entryTimestamp'>,
+    ): Pick<IInterestRate, 'type' | 'duration' | 'amount' | 'entryTimestamp'> {
+      this.type(interestRate.type);
+      this.duration(interestRate.duration);
+      this.amount(interestRate.amount);
+      this.entryTimestamp(interestRate.entryTimestamp);
 
-    return interestRate;
+      return interestRate;
+    },
+    type: function validateType(type: string): string {
+      if (
+        !isValidOption({
+          option: type,
+          validOptions: ['PERCENTAGE_PER_DURATION', 'FIXED_PER_DURATION'],
+          caseSensitive: true,
+        })
+      )
+        throw new Error('(validation) type is invalid!');
+      return type;
+    },
+    duration: function validateDuration(duration: string): string {
+      if (
+        !isValidOption({
+          option: duration,
+          validOptions: ['DAY', 'WEEK', 'MONTH', 'YEAR', 'FULL_DURATION'],
+          caseSensitive: true,
+        })
+      )
+        throw new Error('(validation) duration is invalid!');
+      return duration;
+    },
+    amount: function validateAmount(amount: number): number {
+      if (!isValidAmountOfMoney({ amount: amount })) throw new Error('(validation) amount is invalid!');
+      return amount;
+    },
+    entryTimestamp: function validateEntryTimestamp(entryTimestamp: number): number {
+      if (!isValidTimestamp({ timestamp: entryTimestamp })) throw new Error('(validation) entryTimestamp is invalid!');
+      return entryTimestamp;
+    },
   },
 
   runtimeCast: function runtimeCast(interestRate: any): IInterestRate {
@@ -36,7 +54,7 @@ export const interestRateHelpers = {
     if (!Number.isFinite(interestRate.amount)) throw new Error('Type of interestRate.amount must be a number!');
     if (!Number.isFinite(interestRate.entryTimestamp))
       throw new Error('Type of interestRate.entryTimestamp must be a number!');
-    if (!_.isObject(interestRate.revisions) && interestRate.revisions !== undefined)
+    if (!_.isPlainObject(interestRate.revisions) && interestRate.revisions !== undefined)
       throw new Error('Type of interestRate.revisions must be an object or undefined!');
     return {
       type: interestRate.type,

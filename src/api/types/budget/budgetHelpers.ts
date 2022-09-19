@@ -1,37 +1,54 @@
-import _ from 'lodash';
+import _, { StringNullableChain } from 'lodash';
 import { IBudget } from './budgetInterface.js';
 
 import { sanitizeText } from './../../utils/inputSanitizer/inputSanitizer.js';
 import { interestRateHelpers } from '../interestRate/interestRateHelpers.js';
 import { isValidText } from '../../utils/inputValidator/inputValidator.js';
 export const budgetHelpers = {
-  validate: function validate(
-    budget: Pick<IBudget, 'name' | 'description' | 'defaultInterestRate'>,
-  ): Pick<IBudget, 'name' | 'description' | 'defaultInterestRate'> {
-    if (
-      !isValidText({
-        text: budget.name,
-        validEmpty: false,
-        maxLength: 100,
-      })
-    )
-      throw new Error('(validation) Budget.name is invalid!');
-    if (
-      !isValidText({
-        text: budget.description,
-        validEmpty: true,
-        maxLength: 1000,
-      })
-    )
-      throw new Error('(validation) Budget.description is invalid!');
-    interestRateHelpers.validate(budget.defaultInterestRate);
+  validate: {
+    all: function validateAll(
+      budget: Pick<IBudget, 'name' | 'description' | 'defaultInterestRate'>,
+    ): Pick<IBudget, 'name' | 'description' | 'defaultInterestRate'> {
+      this.name(budget.name);
+      this.description(budget.description);
+      if (budget.defaultInterestRate !== undefined) interestRateHelpers.validate.all(budget.defaultInterestRate);
 
-    return budget;
+      return budget;
+    },
+    name: function validateName(name: string): string {
+      if (
+        !isValidText({
+          text: name,
+          validEmpty: false,
+          maxLength: 100,
+        })
+      )
+        throw new Error('(validation) name is invalid!');
+      return name;
+    },
+    description: function validateDescription(description: string): string {
+      if (
+        !isValidText({
+          text: description,
+          validEmpty: true,
+          maxLength: 1000,
+        })
+      )
+        throw new Error('(validation) description is invalid!');
+      return description;
+    },
   },
-
-  sanitize: function sanitize(budget: IBudget): void {
-    budget.name = sanitizeText({ text: budget.name });
-    budget.description = sanitizeText({ text: budget.description });
+  sanitize: {
+    all: function sanitizeAll(budget: IBudget): void {
+      budget.name = this.name(budget.name);
+      budget.description = this.description(budget.description);
+    },
+    name: function sanitizeName(name: string): string {
+      return sanitizeText({ text: name });
+    },
+    description: function sanitizeDescription(description: string): string {
+      return sanitizeText({ text: description });
+    },
   },
 
   runtimeCast: function runtimeCast(budget: any): IBudget {

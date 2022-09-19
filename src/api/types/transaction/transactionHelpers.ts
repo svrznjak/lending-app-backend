@@ -5,30 +5,51 @@ import { transactionAddressHelpers } from '../transactionAddress/transactionAddr
 import { isValidAmountOfMoney, isValidTimestamp, isValidText } from '../../utils/inputValidator/inputValidator.js';
 
 export const transactionHelpers = {
-  validate: function validate(transaction: Partial<ITransaction>): Partial<ITransaction> {
-    if (
-      transaction.transactionTimestamp !== undefined &&
-      !isValidTimestamp({ timestamp: transaction.transactionTimestamp })
-    )
-      throw new Error('(validation) transaction.transactionTimestamp is invalid!');
-    if (
-      transaction.description !== undefined &&
-      !isValidText({ text: transaction.description, validEmpty: true, maxLength: 1000 })
-    )
-      throw new Error('(validation) transaction.description is invalid!');
-    if (transaction.amount !== undefined && !isValidAmountOfMoney({ amount: transaction.amount }))
-      throw new Error('(validation) transaction.isValidAmount is invalid!');
-    if (transaction.entryTimestamp !== undefined && !isValidTimestamp({ timestamp: transaction.entryTimestamp }))
-      throw new Error('(validation) transaction.isValidEntryTimestamp is invalid!');
+  validate: {
+    all: function validateAll(
+      transaction: Pick<
+        ITransaction,
+        'transactionTimestamp' | 'description' | 'amount' | 'entryTimestamp' | 'from' | 'to'
+      >,
+    ): Pick<ITransaction, 'transactionTimestamp' | 'description' | 'amount' | 'entryTimestamp' | 'from' | 'to'> {
+      this.transactionTimestamp(transaction.transactionTimestamp);
+      this.description(transaction.description);
+      this.amount(transaction.amount);
+      this.entryTimestamp(transaction.entryTimestamp);
 
-    if (transaction.from !== undefined) transactionAddressHelpers.validate(transaction.from);
-    if (transaction.to !== undefined) transactionAddressHelpers.validate(transaction.to);
+      transactionAddressHelpers.validate.all(transaction.from);
+      transactionAddressHelpers.validate.all(transaction.to);
 
-    return transaction;
+      return transaction;
+    },
+    transactionTimestamp: function validateTransactionTimestamp(transactionTimestamp: number): number {
+      if (!isValidTimestamp({ timestamp: transactionTimestamp }))
+        throw new Error('(validation) transactionTimestamp is invalid!');
+      return transactionTimestamp;
+    },
+    description: function validateDescription(description: string): string {
+      if (!isValidText({ text: description, validEmpty: true, maxLength: 1000 }))
+        throw new Error('(validation) description is invalid!');
+      return description;
+    },
+    amount: function validateAmount(amount: number): number {
+      if (!isValidAmountOfMoney({ amount: amount })) throw new Error('(validation) isValidAmount is invalid!');
+      return amount;
+    },
+    entryTimestamp: function validateEntryTimestramp(entryTimestamp: number): number {
+      if (!isValidTimestamp({ timestamp: entryTimestamp }))
+        throw new Error('(validation) isValidEntryTimestamp is invalid!');
+      return entryTimestamp;
+    },
   },
 
-  sanitize: function sanitize(transaction: Partial<ITransaction>): void {
-    transaction.description = sanitizeText({ text: transaction.description });
+  sanitize: {
+    all: function sanitizeAll(transaction: ITransaction): void {
+      transaction.description = this.description(transaction.description);
+    },
+    description: function sanitizeDescription(description: string): string {
+      return sanitizeText({ text: description });
+    },
   },
 
   runtimeCast: function runtimeCast(transaction: any): ITransaction {
@@ -41,7 +62,7 @@ export const transactionHelpers = {
     if (!Number.isFinite(transaction.amount)) throw new Error('Type of transaction.amount must be a number!');
     if (!Number.isFinite(transaction.entryTimestamp))
       throw new Error('Type of transaction.entryTimestamp must be a number!');
-    if (!_.isObject(transaction.revisions) && transaction.revisions !== undefined)
+    if (!_.isPlainObject(transaction.revisions) && transaction.revisions !== undefined)
       throw new Error('Type of transaction.revisions must be an object or undefined!');
 
     transactionAddressHelpers.runtimeCast(transaction.from);
