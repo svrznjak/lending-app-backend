@@ -1,3 +1,4 @@
+import { budgetHelpers } from './types/budget/budgetHelpers.js';
 import mongoose from 'mongoose';
 import UserModel from './db/model/UserModel.js';
 import transaction from './transaction.js';
@@ -183,7 +184,7 @@ export default {
       description: description,
       from: {
         datatype: 'OUTSIDE',
-        addressId: loanId,
+        addressId: '000000000000000000000000',
       },
       to: {
         datatype: 'LOAN',
@@ -195,6 +196,47 @@ export default {
     return await transaction.add(newTransaction);
   },
 
+  addInterest: async function addInterestToLoan(
+    userId: string,
+    loanId: string,
+    transactionTimestamp: number,
+    description: string,
+    amount: number,
+  ): Promise<ITransaction> {
+    // Get user
+    const user = await UserModel.findOne({ _id: userId });
+    if (user === null) throw new Error('User does not exist!');
+    // Get loan
+    const loan: any = await user.loans.id(loanId);
+    if (loan === null) throw new Error('loan does not exist!');
+
+    transactionHelpers.validate.transactionTimestamp(transactionTimestamp);
+    transactionHelpers.validate.description(description);
+    description = transactionHelpers.sanitize.description(description);
+    transactionHelpers.validate.amount(amount);
+
+    const newTransaction: Pick<
+      ITransaction,
+      'userId' | 'transactionTimestamp' | 'description' | 'from' | 'to' | 'amount' | 'entryTimestamp'
+    > = {
+      userId: userId,
+      transactionTimestamp: transactionTimestamp,
+      description: description,
+      from: {
+        datatype: 'INTEREST',
+        addressId: '000000000000000000000000',
+      },
+      to: {
+        datatype: 'LOAN',
+        addressId: loanId,
+      },
+      amount: amount,
+      entryTimestamp: transactionHelpers.validate.entryTimestamp(new Date().getTime()),
+    };
+    return await transaction.add(newTransaction);
+  },
+
+  // As a lender, I want to change the status of the loan, so that status reflects the real world.
   changeStatus: async function changeLoanStatus(
     userId: string,
     loanId: string,
@@ -235,18 +277,3 @@ export default {
     // TODO
   },
 };
-
-// As a lender, I want to view and search for loans, so that I can find the specific loan.
-export function getLoans(): void {
-  throw new Error('Not implemented! Use getUserById to obtain user loans');
-}
-
-// As a lender, I want to add new transactions to the loan, so that I can track payments, interest and fees.
-export function addTransactionToLoan(): void {
-  // TODO
-}
-
-// As a lender, I want to change the status of the loan, so that status reflects the real world.
-export function changeLoanStatus(): void {
-  // TODO
-}
