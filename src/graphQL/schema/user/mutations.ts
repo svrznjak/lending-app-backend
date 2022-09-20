@@ -15,7 +15,7 @@ export default new GraphQLObjectType({
         language: { type: new GraphQLNonNull(GraphQLString) },
         password: { type: new GraphQLNonNull(GraphQLString) },
       },
-      async resolve(parent: any, args: any, context: any): Promise<IUser> {
+      async resolve(_parent: any, args: any, _context: any): Promise<IUser> {
         try {
           const registrationInfo: IUserRegistrationInfo = {
             name: args.name,

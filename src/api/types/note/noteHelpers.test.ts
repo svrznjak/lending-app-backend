@@ -4,58 +4,58 @@ import { noteHelpers } from './noteHelpers.js';
 
 describe('noteHelpers', () => {
   describe('validate', () => {
-    const correctValidationInputs: Pick<INote, 'content' | 'createdAtTimestamp'>[] = [
+    const correctValidationInputs: Pick<INote, 'content' | 'entryTimestamp'>[] = [
       {
         content: `New note!`,
-        createdAtTimestamp: 1663017539,
+        entryTimestamp: 1663017539,
       },
       {
         content: `This is Perfect
         note!`,
-        createdAtTimestamp: 1663019999,
+        entryTimestamp: 1663019999,
       },
     ];
     test.each(correctValidationInputs)('It works with correct input', (input) => {
-      const result = noteHelpers.validate(input);
+      const result = noteHelpers.validate.all(input);
       expect(result).toEqual(input);
     });
 
-    const invalidValidationInputs: Pick<INote, 'content' | 'createdAtTimestamp'>[] = [
+    const invalidValidationInputs: Pick<INote, 'content' | 'entryTimestamp'>[] = [
       {
         // content is undefined
         content: undefined,
-        createdAtTimestamp: 1663019999,
+        entryTimestamp: 1663019999,
       },
       {
-        // createdAtTimestamp is negative
+        // entryTimestamp is negative
         content: `This is Perfect note!`,
-        createdAtTimestamp: -1,
+        entryTimestamp: -1,
       },
       {
-        // createdAtTimestamp is NaN
+        // entryTimestamp is NaN
         content: `This is Perfect note!`,
-        createdAtTimestamp: NaN,
+        entryTimestamp: NaN,
       },
       {
-        // createdAtTimestamp is undefined
+        // entryTimestamp is undefined
         content: `This is Perfect note!`,
-        createdAtTimestamp: undefined,
+        entryTimestamp: undefined,
       },
       {
-        // createdAtTimestamp is null
+        // entryTimestamp is null
         content: `This is Perfect note!`,
-        createdAtTimestamp: null,
+        entryTimestamp: null,
       },
       {
-        // createdAtTimestamp is to large
+        // entryTimestamp is to large
         content: `This is Perfect note!`,
         // eslint-disable-next-line @typescript-eslint/no-loss-of-precision
-        createdAtTimestamp: 9999999999999999999,
+        entryTimestamp: 9999999999999999999,
       },
     ];
     test.each(invalidValidationInputs)('It throws error if input is invalid', (input) => {
       expect(() => {
-        noteHelpers.validate(input);
+        noteHelpers.validate.all(input);
       }).toThrow();
     });
   });
@@ -65,26 +65,28 @@ describe('noteHelpers', () => {
       {
         // Name and description get trimmed
         const input = {
+          _id: 'xxxx',
           content: `This is Perfect
           note!`,
-          createdAtTimestamp: 1663019999,
+          entryTimestamp: 1663019999,
         } as INote;
-        noteHelpers.sanitize(input);
+        noteHelpers.sanitize.all(input);
         expect(input.content).toBe(`This is Perfect
           note!`);
-        expect(input.createdAtTimestamp).toBe(1663019999);
+        expect(input.entryTimestamp).toBe(1663019999);
       }
       {
         // Name and description get trimmed when only name and description are passed
         const input = {
+          _id: 'xxxxx',
           content: `    This is Perfect
           note!      `,
-          createdAtTimestamp: 1663019999,
+          entryTimestamp: 1663019999,
         } as INote;
-        noteHelpers.sanitize(input);
+        noteHelpers.sanitize.all(input);
         expect(input.content).toBe(`This is Perfect
           note!`);
-        expect(input.createdAtTimestamp).toBe(1663019999);
+        expect(input.entryTimestamp).toBe(1663019999);
       }
     });
   });
@@ -95,7 +97,7 @@ describe('noteHelpers', () => {
         _id: 'xxxxxxxxxasasd',
         content: `This is Perfect
           note!  `,
-        createdAtTimestamp: 1663019999,
+        entryTimestamp: 1663019999,
         revisions: [],
       };
       const result = noteHelpers.runtimeCast(input);
@@ -104,13 +106,13 @@ describe('noteHelpers', () => {
       expect(input._id).toBe('xxxxxxxxxasasd');
       expect(input.content).toBe(`This is Perfect
           note!  `);
-      expect(input.createdAtTimestamp).toBe(1663019999);
+      expect(input.entryTimestamp).toBe(1663019999);
       expect(input.revisions).toEqual([]);
 
       // Check if result is same as input
       expect(result._id).toBe(input._id);
       expect(result.content).toBe(input.content);
-      expect(result.createdAtTimestamp).toBe(input.createdAtTimestamp);
+      expect(result.entryTimestamp).toBe(input.entryTimestamp);
       expect(result.revisions).toEqual(input.revisions);
     });
     test('It throws error if input is not ok', () => {
@@ -119,7 +121,7 @@ describe('noteHelpers', () => {
         noteHelpers.runtimeCast({
           content: `This is Perfect
           note!  `,
-          createdAtTimestamp: 1663019999,
+          entryTimestamp: 1663019999,
           revisions: [],
         });
       }).toThrow();
@@ -127,11 +129,11 @@ describe('noteHelpers', () => {
       expect(() => {
         noteHelpers.runtimeCast({
           _id: 'asdasdasfsadc',
-          createdAtTimestamp: 1663019999,
+          entryTimestamp: 1663019999,
           revisions: [],
         });
       }).toThrow();
-      // createdAtTimestamp is not present in input object
+      // entryTimestamp is not present in input object
       expect(() => {
         noteHelpers.runtimeCast({
           _id: 'asdasfacasfasd',
@@ -146,7 +148,7 @@ describe('noteHelpers', () => {
           _id: 'asdasfacasfasd',
           content: `This is Perfect
           note!  `,
-          createdAtTimestamp: 1663019999,
+          entryTimestamp: 1663019999,
         });
       }).toThrow();
       // _id is number
@@ -155,7 +157,7 @@ describe('noteHelpers', () => {
           _id: 123329052345,
           content: `This is Perfect
           note!  `,
-          createdAtTimestamp: 1663019999,
+          entryTimestamp: 1663019999,
           revisions: [],
         });
       }).toThrow();
@@ -165,7 +167,7 @@ describe('noteHelpers', () => {
           _id: undefined,
           content: `This is Perfect
           note!  `,
-          createdAtTimestamp: 1663019999,
+          entryTimestamp: 1663019999,
           revisions: [],
         });
       }).toThrow();
@@ -175,7 +177,7 @@ describe('noteHelpers', () => {
           _id: null,
           content: `This is Perfect
           note!  `,
-          createdAtTimestamp: 1663019999,
+          entryTimestamp: 1663019999,
           revisions: [],
         });
       }).toThrow();
@@ -184,7 +186,7 @@ describe('noteHelpers', () => {
         noteHelpers.runtimeCast({
           _id: 'xxxxxxxxxasasd',
           content: undefined,
-          createdAtTimestamp: 1663019999,
+          entryTimestamp: 1663019999,
           revisions: [],
         });
       }).toThrow();
@@ -193,7 +195,7 @@ describe('noteHelpers', () => {
         noteHelpers.runtimeCast({
           _id: 'xxxxxxxxxasasd',
           content: null,
-          createdAtTimestamp: 1663019999,
+          entryTimestamp: 1663019999,
           revisions: [],
         });
       }).toThrow();
@@ -202,7 +204,7 @@ describe('noteHelpers', () => {
         noteHelpers.runtimeCast({
           _id: 'xxxxxxxxxasasd',
           content: 10020,
-          createdAtTimestamp: 1663019999,
+          entryTimestamp: 1663019999,
           revisions: [],
         });
       }).toThrow();
@@ -211,7 +213,7 @@ describe('noteHelpers', () => {
         noteHelpers.runtimeCast({
           _id: 'xxxxxxxxxasasd',
           content: 10020,
-          createdAtTimestamp: 1663019999,
+          entryTimestamp: 1663019999,
           revisions: [],
         });
       }).toThrow();
@@ -220,37 +222,37 @@ describe('noteHelpers', () => {
         noteHelpers.runtimeCast({
           _id: 'xxxxxxxxxasasd',
           content: true,
-          createdAtTimestamp: 1663019999,
+          entryTimestamp: 1663019999,
           revisions: [],
         });
       }).toThrow();
-      // createdAtTimestamp is string
+      // entryTimestamp is string
       expect(() => {
         noteHelpers.runtimeCast({
           _id: 'xxxxxxacascasc12',
           content: `This is Perfect
           note!  `,
-          createdAtTimestamp: '1663019999',
+          entryTimestamp: '1663019999',
           revisions: [],
         });
       }).toThrow();
-      // createdAtTimestamp is true
+      // entryTimestamp is true
       expect(() => {
         noteHelpers.runtimeCast({
           _id: 'xxxxxxacascasc12',
           content: `This is Perfect
           note!  `,
-          createdAtTimestamp: true,
+          entryTimestamp: true,
           revisions: [],
         });
       }).toThrow();
-      // createdAtTimestamp is undefined
+      // entryTimestamp is undefined
       expect(() => {
         noteHelpers.runtimeCast({
           _id: 'xxxxxxacascasc12',
           content: `This is Perfect
           note!  `,
-          createdAtTimestamp: undefined,
+          entryTimestamp: undefined,
           revisions: [],
         });
       }).toThrow();
@@ -260,7 +262,7 @@ describe('noteHelpers', () => {
           _id: 'xxxxxxacascasc12',
           content: `This is Perfect
           note!  `,
-          createdAtTimestamp: 1663019999,
+          entryTimestamp: 1663019999,
           revisions: undefined,
         });
       }).toThrow();
@@ -270,7 +272,7 @@ describe('noteHelpers', () => {
           _id: 'xxxxxxacascasc12',
           content: `This is Perfect
           note!  `,
-          createdAtTimestamp: 1663019999,
+          entryTimestamp: 1663019999,
           revisions: null,
         });
       }).toThrow();
@@ -280,7 +282,7 @@ describe('noteHelpers', () => {
           _id: 'xxxxxxacascasc12',
           content: `This is Perfect
           note!  `,
-          createdAtTimestamp: 1663019999,
+          entryTimestamp: 1663019999,
           revisions: true,
         });
       }).toThrow();

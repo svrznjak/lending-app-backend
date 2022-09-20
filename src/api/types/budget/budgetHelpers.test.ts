@@ -13,7 +13,7 @@ describe('budgetHelpers', () => {
           duration: 'MONTH',
           amount: 5,
           entryTimestamp: 1663012853,
-          revisions: [],
+          revisions: undefined,
         },
       },
       {
@@ -24,7 +24,7 @@ describe('budgetHelpers', () => {
           duration: 'WEEK',
           amount: 0,
           entryTimestamp: 1663017539,
-          revisions: [],
+          revisions: undefined,
         },
       },
       {
@@ -35,12 +35,12 @@ describe('budgetHelpers', () => {
           duration: 'FULL_DURATION',
           amount: 5,
           entryTimestamp: 1663024156,
-          revisions: [],
+          revisions: undefined,
         },
       },
     ];
     test.each(correctValidationInputs)('It works with correct input', (input) => {
-      const result = budgetHelpers.validate(input);
+      const result = budgetHelpers.validate.all(input);
       expect(result).toEqual(input);
     });
 
@@ -54,7 +54,7 @@ describe('budgetHelpers', () => {
           duration: 'MONTH',
           amount: 5,
           entryTimestamp: 1663012853,
-          revisions: [],
+          revisions: undefined,
         },
       },
       {
@@ -66,7 +66,7 @@ describe('budgetHelpers', () => {
           duration: 'MONTH',
           amount: 5,
           entryTimestamp: 1663012853,
-          revisions: [],
+          revisions: undefined,
         },
       },
       {
@@ -79,7 +79,7 @@ describe('budgetHelpers', () => {
           duration: 'MONTH',
           amount: 5,
           entryTimestamp: 1663012853,
-          revisions: [],
+          revisions: undefined,
         },
       },
       {
@@ -92,7 +92,7 @@ describe('budgetHelpers', () => {
           duration: 'MONTH',
           amount: 5,
           entryTimestamp: 1663012853,
-          revisions: [],
+          revisions: undefined,
         },
       },
       {
@@ -104,7 +104,7 @@ describe('budgetHelpers', () => {
           duration: 'FULL_DURATION',
           amount: -1,
           entryTimestamp: 1663024156,
-          revisions: [],
+          revisions: undefined,
         },
       },
       {
@@ -116,7 +116,7 @@ describe('budgetHelpers', () => {
           duration: 'FULL_DURATION',
           amount: NaN,
           entryTimestamp: 1663024156,
-          revisions: [],
+          revisions: undefined,
         },
       },
       {
@@ -128,7 +128,7 @@ describe('budgetHelpers', () => {
           duration: 'FULL_DURATION',
           amount: Infinity,
           entryTimestamp: 1663024156,
-          revisions: [],
+          revisions: undefined,
         },
       },
       {
@@ -140,7 +140,7 @@ describe('budgetHelpers', () => {
           duration: 'FULL_DURATION',
           amount: 1,
           entryTimestamp: -1,
-          revisions: [],
+          revisions: undefined,
         },
       },
       {
@@ -152,7 +152,7 @@ describe('budgetHelpers', () => {
           duration: 'FULL_DURATION',
           amount: 1,
           entryTimestamp: Infinity,
-          revisions: [],
+          revisions: undefined,
         },
       },
       {
@@ -164,13 +164,13 @@ describe('budgetHelpers', () => {
           duration: 'FULL_DURATION',
           amount: 1,
           entryTimestamp: null,
-          revisions: [],
+          revisions: undefined,
         },
       },
     ];
     test.each(invalidValidationInputs)('It throws error if input is invalid', (input) => {
       expect(() => {
-        budgetHelpers.validate(input);
+        budgetHelpers.validate.all(input);
       }).toThrow();
     });
   });
@@ -188,12 +188,12 @@ describe('budgetHelpers', () => {
             duration: 'MONTH',
             amount: 5,
             entryTimestamp: 1663012853,
-            revisions: [],
+            revisions: undefined,
           },
           calculatedTotalAmount: 0,
           calculatedLendedAmount: 0,
         } as IBudget;
-        budgetHelpers.sanitize(input);
+        budgetHelpers.sanitize.all(input);
         expect(input.name).toBe('Budget 1');
         expect(input.description).toBe('Budget for risky loans.');
       }
@@ -203,7 +203,7 @@ describe('budgetHelpers', () => {
           name: '  Budget 1',
           description: ' Budget for risky loans.  ',
         } as IBudget;
-        budgetHelpers.sanitize(input);
+        budgetHelpers.sanitize.all(input);
         expect(input.name).toBe('Budget 1');
         expect(input.description).toBe('Budget for risky loans.');
       }
@@ -221,7 +221,7 @@ describe('budgetHelpers', () => {
           duration: 'MONTH',
           amount: 5,
           entryTimestamp: 1663012853,
-          revisions: [],
+          revisions: undefined,
         },
         calculatedTotalAmount: 0,
         calculatedLendedAmount: 0,
@@ -235,7 +235,7 @@ describe('budgetHelpers', () => {
           duration: 'WEEK',
           amount: 0,
           entryTimestamp: 1663055253,
-          revisions: [],
+          revisions: undefined,
         },
         calculatedTotalAmount: 0,
         calculatedLendedAmount: 0,
@@ -249,7 +249,7 @@ describe('budgetHelpers', () => {
           duration: 'FULL_DURATION',
           amount: 2,
           entryTimestamp: 1663012853,
-          revisions: [],
+          revisions: undefined,
         },
         calculatedTotalAmount: 0,
         calculatedLendedAmount: 0,
@@ -271,7 +271,7 @@ describe('budgetHelpers', () => {
           duration: 'MONTH',
           amount: 5,
           entryTimestamp: 1663012853,
-          revisions: [],
+          revisions: undefined,
         },
         calculatedTotalAmount: 0,
         calculatedLendedAmount: 0,
@@ -286,7 +286,7 @@ describe('budgetHelpers', () => {
           duration: 'MONTH',
           amount: 5,
           entryTimestamp: 1663012853,
-          revisions: [],
+          revisions: undefined,
         },
         calculatedTotalAmount: 0,
         calculatedLendedAmount: 0,
@@ -301,7 +301,7 @@ describe('budgetHelpers', () => {
           duration: 'MONTH',
           amount: 5,
           entryTimestamp: 1663012853,
-          revisions: [],
+          revisions: undefined,
         },
         calculatedTotalAmount: 0,
         calculatedLendedAmount: 0,
@@ -316,7 +316,7 @@ describe('budgetHelpers', () => {
           duration: 'MONTH',
           amount: 5,
           entryTimestamp: 1663012853,
-          revisions: [],
+          revisions: undefined,
         },
         calculatedTotalAmount: 0,
         calculatedLendedAmount: 0,
@@ -330,7 +330,7 @@ describe('budgetHelpers', () => {
           duration: 'MONTH',
           amount: 5,
           entryTimestamp: 1663012853,
-          revisions: [],
+          revisions: undefined,
         },
         calculatedTotalAmount: 0,
         calculatedLendedAmount: 0,
@@ -345,7 +345,7 @@ describe('budgetHelpers', () => {
           duration: 'MONTH',
           amount: 5,
           entryTimestamp: 1663012853,
-          revisions: [],
+          revisions: undefined,
         },
         calculatedTotalAmount: 0,
         calculatedLendedAmount: 0,
@@ -360,7 +360,7 @@ describe('budgetHelpers', () => {
           duration: 'MONTH',
           amount: 5,
           entryTimestamp: 1663012853,
-          revisions: [],
+          revisions: undefined,
         },
         calculatedTotalAmount: 0,
         calculatedLendedAmount: 0,
@@ -392,7 +392,7 @@ describe('budgetHelpers', () => {
           duration: NaN,
           amount: 5,
           entryTimestamp: 1663012853,
-          revisions: [],
+          revisions: undefined,
         },
         calculatedTotalAmount: 0,
         calculatedLendedAmount: 0,
@@ -407,7 +407,7 @@ describe('budgetHelpers', () => {
           duration: "'WEEK",
           amount: 5,
           entryTimestamp: NaN,
-          revisions: [],
+          revisions: undefined,
         },
         calculatedTotalAmount: 0,
         calculatedLendedAmount: 0,
@@ -422,7 +422,7 @@ describe('budgetHelpers', () => {
           duration: 'MONTH',
           amount: 5,
           entryTimestamp: 1663012853,
-          revisions: [],
+          revisions: undefined,
         },
         calculatedTotalAmount: NaN,
         calculatedLendedAmount: 0,
@@ -437,7 +437,7 @@ describe('budgetHelpers', () => {
           duration: 'MONTH',
           amount: 5,
           entryTimestamp: 1663012853,
-          revisions: [],
+          revisions: undefined,
         },
         calculatedTotalAmount: 10,
         calculatedLendedAmount: false,

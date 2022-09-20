@@ -19,7 +19,7 @@ const app: Application = express();
 app.use(express.json());
 app.use(
   '/graphql',
-  graphqlHTTP(async (req, res, graphQLParams) => {
+  graphqlHTTP(async (req, res) => {
     return {
       schema: schema,
       graphiql: true,
@@ -28,4 +28,4 @@ app.use(
   }),
 );
 
-app.listen(4000);
+app.listen(9000);

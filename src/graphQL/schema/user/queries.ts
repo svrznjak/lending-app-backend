@@ -9,7 +9,7 @@ export default new GraphQLObjectType({
     user: {
       type: userType,
       args: { authId: { type: new GraphQLNonNull(GraphQLID) } },
-      async resolve(parent: any, args: any, context: any): Promise<IUser> {
+      async resolve(_parent: any, _args: any, context: any): Promise<IUser> {
         const authId = await context.getCurrentUserAuthIdOrThrowValidationError();
         return await getUserByAuthId(authId);
       },

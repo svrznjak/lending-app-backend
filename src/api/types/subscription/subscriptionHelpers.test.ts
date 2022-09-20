@@ -7,7 +7,7 @@ describe('subscriptionHelpers.validateSubscription', () => {
       revenuecatId: '1dasf32fasdf32',
       type: 'FREE',
     };
-    subscriptionHelpers.validateSubscription(subscriptionValue);
+    subscriptionHelpers.validate.all(subscriptionValue);
     expect(subscriptionValue.revenuecatId).toBe('1dasf32fasdf32');
     expect(subscriptionValue.type).toBe('FREE');
   });
@@ -18,7 +18,7 @@ describe('subscriptionHelpers.validateSubscription', () => {
       type: 'ULTRA',
     };
     expect(() => {
-      subscriptionHelpers.validateSubscription(subscriptionValue);
+      subscriptionHelpers.validate.all(subscriptionValue);
     }).toThrow();
   });
   test('It throws error if subcription type is lowercase', () => {
@@ -27,7 +27,7 @@ describe('subscriptionHelpers.validateSubscription', () => {
       type: 'free',
     };
     expect(() => {
-      subscriptionHelpers.validateSubscription(subscriptionValue);
+      subscriptionHelpers.validate.all(subscriptionValue);
     }).toThrow();
   });
 });
