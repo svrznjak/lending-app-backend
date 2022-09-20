@@ -14,7 +14,7 @@ export async function createUser(userRegistrationInfo: IUserRegistrationInfo): P
     const newUser = await new UserModel({ ...userRegistrationInfo, authId: newUserAuthId }).save();
     return userHelpers.runtimeCast(newUser.toObject());
   } catch (err) {
-    await auth.deleteUserById(newUserAuthId);
+    await auth.deleteUserByAuthId(newUserAuthId);
     throw new Error('User saving failed... Reverting created firebase account.');
   }
 }

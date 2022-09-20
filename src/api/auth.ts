@@ -13,16 +13,16 @@ const createNewUserWithEmail = async function createNewAuthUserWithEmail(
   return newFirebaseUser.uid;
 };
 
-const getUserIdFromAuthHeader = async function getUserIdFromAuthHeader(authorizationHeader): Promise<string> {
+const getAuthIdFromAuthHeader = async function getAuthIdFromAuthHeader(authorizationHeader): Promise<string> {
   return (await getAuth().verifyIdToken(authorizationHeader || '')).user_id;
 };
 
-const deleteUserById = async function deleteAuthUserById(userId): Promise<void> {
+const deleteUserByAuthId = async function deleteUserByAuthId(userId): Promise<void> {
   return await getAuth().deleteUser(userId);
 };
 
 export default {
   createNewUserWithEmail,
-  getUserIdFromAuthHeader,
-  deleteUserById,
+  getAuthIdFromAuthHeader,
+  deleteUserByAuthId,
 };
