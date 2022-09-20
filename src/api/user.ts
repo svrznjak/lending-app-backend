@@ -12,7 +12,17 @@ export async function createUser(userRegistrationInfo: IUserRegistrationInfo): P
   const newUserAuthId = await auth.createNewUserWithEmail(userRegistrationInfo.email, userRegistrationInfo.password);
   try {
     const newUser = await new UserModel({ ...userRegistrationInfo, authId: newUserAuthId }).save();
-    return userHelpers.runtimeCast(newUser.toObject());
+    return userHelpers.runtimeCast({
+      _id: newUser._id.toString(),
+      name: newUser.name,
+      email: newUser.email,
+      authId: newUser.authId,
+      budgets: newUser.budgets,
+      loans: newUser.loans,
+      currency: newUser.currency,
+      language: newUser.language,
+      subscription: newUser.subscription,
+    });
   } catch (err) {
     await auth.deleteUserByAuthId(newUserAuthId);
     throw new Error('User saving failed... Reverting created firebase account.');

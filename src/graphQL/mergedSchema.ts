@@ -7,7 +7,10 @@ import userQueries from './schema/user/queries.js';
 const mergedQueries = new GraphQLObjectType({
   name: 'Queries',
   fields: (): any => ({
-    userQueries,
+    User: {
+      type: userQueries,
+      resolve: () => ({}),
+    },
   }),
 });
 
@@ -18,7 +21,10 @@ import userMutations from './schema/user/mutations.js';
 const mergedMutations = new GraphQLObjectType({
   name: 'Mutations',
   fields: (): any => ({
-    userMutations,
+    User: {
+      type: userMutations,
+      resolve: () => ({}),
+    },
   }),
 });
 

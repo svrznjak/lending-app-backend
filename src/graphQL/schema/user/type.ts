@@ -35,7 +35,7 @@ const budgetsType = new GraphQLObjectType({
   }),
 });
 const loansType = new GraphQLObjectType({
-  name: 'loansType',
+  name: 'LoansType',
   fields: (): any => ({
     _id: { type: new GraphQLNonNull(GraphQLID) },
     name: { type: new GraphQLNonNull(GraphQLString) },
@@ -70,7 +70,7 @@ const interestRateType = new GraphQLObjectType({
     type: {
       type: new GraphQLNonNull(
         new GraphQLEnumType({
-          name: 'type',
+          name: 'DurationType',
           values: {
             PERCENTAGE_PER_DURATION: { value: 'PERCENTAGE_PER_DURATION' },
             FIXED_PER_DURATION: { value: 'FIXED_PER_DURATION' },
@@ -103,7 +103,7 @@ const noteType = new GraphQLObjectType({
     _id: { type: new GraphQLNonNull(GraphQLID) },
     content: { type: new GraphQLNonNull(GraphQLString) },
     entryTimestamp: { type: new GraphQLNonNull(GraphQLInt) },
-    revisions: noteType,
+    revisions: { type: noteType },
   }),
 });
 const userSubscriptionType = new GraphQLObjectType({
@@ -113,7 +113,7 @@ const userSubscriptionType = new GraphQLObjectType({
     type: {
       type: new GraphQLNonNull(
         new GraphQLEnumType({
-          name: 'type',
+          name: 'subscriptionType',
           values: {
             FREE: { value: 'FREE' },
             STANDARD: { value: 'STANDARD' },
