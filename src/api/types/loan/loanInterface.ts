@@ -10,6 +10,7 @@ export interface ILoan {
   closesTimestamp: number;
   interestRate: IInterestRate;
   initialPrincipal: number;
+  status: 'ACTIVE' | 'PAUSED' | 'PAID' | 'CLOSED' | 'DEFAULTED';
   calculatedTotalPaidPrincipal: number;
   calculatedChargedInterest: number;
   calculatedPaidInterest: number;

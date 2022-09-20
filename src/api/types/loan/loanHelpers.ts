@@ -1,4 +1,4 @@
-import { isValidTimestamp, isValidAmountOfMoney } from './../../utils/inputValidator/inputValidator.js';
+import { isValidTimestamp, isValidAmountOfMoney, isValidOption } from './../../utils/inputValidator/inputValidator.js';
 import { ILoan } from './loanInterface.js';
 
 import { sanitizeText } from './../../utils/inputSanitizer/inputSanitizer.js';
@@ -76,10 +76,21 @@ export const loanHelpers = {
         throw new Error('(validation) initialPrincipal is invalid!');
       return initialPrincipal;
     },
+    status: function validateStatus(status: Pick<ILoan, 'status'>): Pick<ILoan, 'status'> {
+      if (
+        !isValidOption({
+          option: status.toString(),
+          validOptions: ['ACTIVE', 'PAUSED', 'PAID', 'CLOSED', 'DEFAULTED'],
+          caseSensitive: true,
+        })
+      )
+        throw new Error('(validation) status is invalid!');
+      return status;
+    },
   },
 
   sanitize: {
-    all: function sanitizeAll(loan: ILoan): void {
+    all: function sanitizeAll(loan: Partial<ILoan>): void {
       loan.name = this.name(loan.name);
       loan.description = this.description(loan.description);
     },
@@ -99,6 +110,7 @@ export const loanHelpers = {
     if (!Number.isFinite(loan.openedTimestamp)) throw new Error('Type of loan.openedTimestamp must be a number!');
     if (!Number.isFinite(loan.closesTimestamp)) throw new Error('Type of loan.closesTimestamp must be a number!');
     if (!Number.isFinite(loan.initialPrincipal)) throw new Error('Type of loan.initialPrincipal must be a number!');
+    if (!_.isString(loan.status)) throw new Error('Type of loan.staus must be a string!');
     if (!Number.isFinite(loan.calculatedTotalPaidPrincipal))
       throw new Error('Type of loan.calculatedTotalPaidPrincipal must be a number!');
     if (!Number.isFinite(loan.calculatedChargedInterest))
@@ -117,6 +129,7 @@ export const loanHelpers = {
       closesTimestamp: loan.closesTimestamp,
       interestRate: loan.interestRate,
       initialPrincipal: loan.initialPrincipal,
+      status: loan.status,
       calculatedTotalPaidPrincipal: loan.calculatedTotalPaidPrincipal,
       calculatedChargedInterest: loan.calculatedChargedInterest,
       calculatedPaidInterest: loan.calculatedPaidInterest,

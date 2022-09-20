@@ -1,4 +1,4 @@
-import _, { StringNullableChain } from 'lodash';
+import _ from 'lodash';
 import { IBudget } from './budgetInterface.js';
 
 import { sanitizeText } from './../../utils/inputSanitizer/inputSanitizer.js';
@@ -39,7 +39,7 @@ export const budgetHelpers = {
     },
   },
   sanitize: {
-    all: function sanitizeAll(budget: IBudget): void {
+    all: function sanitizeAll(budget: Partial<IBudget>): void {
       budget.name = this.name(budget.name);
       budget.description = this.description(budget.description);
     },

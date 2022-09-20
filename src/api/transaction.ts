@@ -11,9 +11,10 @@ export default {
       ITransaction,
       'userId' | 'transactionTimestamp' | 'description' | 'from' | 'to' | 'amount' | 'entryTimestamp'
     >,
+    options?,
   ): Promise<ITransaction> {
-    transactionHelpers.validate(transaction);
-    transactionHelpers.sanitize(transaction);
+    transactionHelpers.validate.all(transaction);
+    transactionHelpers.sanitize.all(transaction);
     const validatedTransaction = {
       _id: new mongoose.Types.ObjectId().toString(),
       ...transaction,
@@ -21,7 +22,9 @@ export default {
     } as ITransaction;
     transactionHelpers.runtimeCast(validatedTransaction);
     try {
-      const newTransactionInDB: any = await new TransactionModel(validatedTransaction).save();
+      const newTransactionInDB: any = await new TransactionModel(validatedTransaction).save({
+        session: options.session,
+      });
       const newTransaction: ITransaction = {
         _id: newTransactionInDB._id.toString(),
         userId: newTransactionInDB.userId.toString(),
@@ -49,8 +52,11 @@ export default {
     newTransaction: Pick<ITransaction, 'transactionTimestamp' | 'description' | 'amount' | 'entryTimestamp'>,
   ): Promise<ITransaction> {
     // check if newTransaction values are valid for entry
-    transactionHelpers.validate(newTransaction);
-    transactionHelpers.sanitize(newTransaction);
+    transactionHelpers.validate.transactionTimestamp(newTransaction.transactionTimestamp);
+    transactionHelpers.validate.description(newTransaction.description);
+    transactionHelpers.validate.amount(newTransaction.amount);
+    transactionHelpers.validate.entryTimestamp(newTransaction.entryTimestamp);
+    transactionHelpers.sanitize.all(newTransaction);
     // get old transaction
     const transaction: any = await TransactionModel.findById(transactionId);
     if (transaction === null) throw new Error('Transaction you wanted to edit, does not exist.');
@@ -100,7 +106,7 @@ export default {
   findTranasactionsFromAndTo: async function findTransactionsFromAndTo(
     transactionAddress: ITransactionAddress,
   ): Promise<ITransaction[]> {
-    let validatedTransactionAddress = transactionAddressHelpers.validate(transactionAddress);
+    let validatedTransactionAddress = transactionAddressHelpers.validate.all(transactionAddress);
     validatedTransactionAddress = transactionAddressHelpers.runtimeCast(transactionAddress);
     const transactions = await TransactionModel.find({
       $or: [
@@ -136,5 +142,32 @@ export default {
       };
       return transactionHelpers.runtimeCast(transactionObject);
     });
+  },
+  transferAmountFromBudgetToLoan: async function transferAmountFromBudgetToLoan(
+    { userId, budgetId, loanId, transactionTimestamp, description, amount, entryTimestamp },
+    { session },
+  ): Promise<ITransaction> {
+    const newTransaction = await this.add(
+      {
+        userId,
+        transactionTimestamp,
+        description,
+        from: {
+          datatype: 'BUDGET',
+          addressId: budgetId,
+        },
+        to: {
+          datatype: 'LOAN',
+          addressId: loanId,
+        },
+        amount,
+        entryTimestamp,
+      } as Pick<
+        ITransaction,
+        'userId' | 'transactionTimestamp' | 'description' | 'from' | 'to' | 'amount' | 'entryTimestamp'
+      >,
+      { session },
+    );
+    return newTransaction;
   },
 };

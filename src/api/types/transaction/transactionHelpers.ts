@@ -44,7 +44,7 @@ export const transactionHelpers = {
   },
 
   sanitize: {
-    all: function sanitizeAll(transaction: ITransaction): void {
+    all: function sanitizeAll(transaction: Partial<ITransaction>): void {
       transaction.description = this.description(transaction.description);
     },
     description: function sanitizeDescription(description: string): string {
