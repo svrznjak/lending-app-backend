@@ -11,13 +11,14 @@ export default {
   create: async function createBudget(
     userId: string,
     budget: Pick<IBudget, 'name' | 'description' | 'defaultInterestRate'>,
+    options?,
   ): Promise<IBudget> {
     try {
       budgetHelpers.validate.all(budget);
       budgetHelpers.sanitize.all(budget);
       const userFromDB = await UserModel.findOne({ _id: userId });
       userFromDB.budgets.push(budget);
-      await userFromDB.save();
+      await userFromDB.save(options);
       const newBudget = userFromDB.budgets[userFromDB.budgets.length - 1];
       return newBudget.toObject();
     } catch (err) {
@@ -43,7 +44,9 @@ export default {
     transactionTimestamp: number;
     description: string;
     amount: number;
-  }): Promise<ITransaction> {
+    },
+    options?,
+  ): Promise<ITransaction> {
     const newTransaction: Pick<
       ITransaction,
       'userId' | 'transactionTimestamp' | 'description' | 'from' | 'to' | 'amount' | 'entryTimestamp'
@@ -62,7 +65,7 @@ export default {
       amount: amount,
       entryTimestamp: new Date().getTime(),
     };
-    return await transaction.add(newTransaction);
+    return await transaction.add(newTransaction, options);
   },
 
   // As a lender, I want to withdraw funds from the budget, so that I can make use of interest or move it to another budget.

@@ -22,9 +22,7 @@ export default {
     } as ITransaction;
     transactionHelpers.runtimeCast(validatedTransaction);
     try {
-      const newTransactionInDB: any = await new TransactionModel(validatedTransaction).save({
-        session: options.session,
-      });
+      const newTransactionInDB: any = await new TransactionModel(validatedTransaction).save(options);
       const newTransaction: ITransaction = {
         _id: newTransactionInDB._id.toString(),
         userId: newTransactionInDB.userId.toString(),
