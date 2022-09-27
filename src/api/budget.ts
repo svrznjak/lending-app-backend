@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import { budgetHelpers } from './types/budget/budgetHelpers.js';
 import { ITransaction } from './types/transaction/transactionInterface.js';
 import UserModel from './db/model/UserModel.js';
@@ -16,8 +17,16 @@ export default {
     try {
       budgetHelpers.validate.all(budget);
       budgetHelpers.sanitize.all(budget);
+      const newBudgetData: IBudget = {
+        _id: new mongoose.Types.ObjectId().toString(),
+        name: budget.name,
+        description: budget.description,
+        defaultInterestRate: budget.defaultInterestRate,
+        calculatedLendedAmount: 0,
+        calculatedTotalAmount: 0,
+      };
       const userFromDB = await UserModel.findOne({ _id: userId });
-      userFromDB.budgets.push(budget);
+      userFromDB.budgets.push(newBudgetData);
       await userFromDB.save(options);
       const newBudget = userFromDB.budgets[userFromDB.budgets.length - 1];
       return newBudget.toObject();
@@ -32,18 +41,19 @@ export default {
     return;
   },
   // As a lender, I want to add funds to the budget, so that I can later assign them to loans.
-  addAmountFromOutside: async function addAmountToBudgetFromOutside({
-    userId,
-    budgetId,
-    transactionTimestamp,
-    description,
-    amount,
-  }: {
-    userId: string;
-    budgetId: string;
-    transactionTimestamp: number;
-    description: string;
-    amount: number;
+  addAmountFromOutside: async function addAmountToBudgetFromOutside(
+    {
+      userId,
+      budgetId,
+      transactionTimestamp,
+      description,
+      amount,
+    }: {
+      userId: string;
+      budgetId: string;
+      transactionTimestamp: number;
+      description: string;
+      amount: number;
     },
     options?,
   ): Promise<ITransaction> {

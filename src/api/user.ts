@@ -9,23 +9,29 @@ export async function createUser(userRegistrationInfo: IUserRegistrationInfo): P
   userRegistrationInfoHelpers.validateUserRegistrationInfo(userRegistrationInfo);
   userRegistrationInfoHelpers.sanitizeUserRegistrationInfo(userRegistrationInfo);
 
-  const newUserAuthId = await auth.createNewUserWithEmail(userRegistrationInfo.email, userRegistrationInfo.password);
   try {
-    const newUser = await new UserModel({ ...userRegistrationInfo, authId: newUserAuthId }).save();
-    return userHelpers.runtimeCast({
-      _id: newUser._id.toString(),
-      name: newUser.name,
-      email: newUser.email,
-      authId: newUser.authId,
-      budgets: newUser.budgets,
-      loans: newUser.loans,
-      currency: newUser.currency,
-      language: newUser.language,
-      subscription: newUser.subscription,
-    });
-  } catch (err) {
-    await auth.deleteUserByAuthId(newUserAuthId);
-    throw new Error('User saving failed... Reverting created firebase account.');
+    const newUserAuthId = await auth.createNewUserWithEmail(userRegistrationInfo.email, userRegistrationInfo.password);
+
+    try {
+      const newUser = await new UserModel({ ...userRegistrationInfo, authId: newUserAuthId }).save();
+      return userHelpers.runtimeCast({
+        _id: newUser._id.toString(),
+        name: newUser.name,
+        email: newUser.email,
+        authId: newUser.authId,
+        budgets: newUser.budgets,
+        loans: newUser.loans,
+        currency: newUser.currency,
+        language: newUser.language,
+        subscription: newUser.subscription,
+      });
+    } catch (err) {
+      await auth.deleteUserByAuthId(newUserAuthId);
+      throw new Error('User saving failed... Reverting created firebase account.');
+    }
+  } catch (err: any) {
+    console.log(err);
+    throw new Error(err.message);
   }
 }
 
@@ -33,8 +39,18 @@ export async function createUser(userRegistrationInfo: IUserRegistrationInfo): P
 export async function getUserByAuthId(authId: string): Promise<IUser | undefined> {
   try {
     const user = await UserModel.findOne({ authId: authId });
-    if (user === null) return undefined;
-    return userHelpers.runtimeCast(user.toObject());
+    if (user === null) throw new Error('User not found');
+    return userHelpers.runtimeCast({
+      _id: user._id.toString(),
+      name: user.name,
+      email: user.email,
+      authId: user.authId,
+      budgets: user.budgets,
+      loans: user.loans,
+      currency: user.currency,
+      language: user.language,
+      subscription: user.subscription,
+    });
   } catch (err) {
     throw new Error('User fetching failed...');
   }
@@ -43,8 +59,18 @@ export async function getUserByAuthId(authId: string): Promise<IUser | undefined
 export async function getUserById(id: string | object): Promise<IUser | undefined> {
   try {
     const user = await UserModel.findOne({ _id: id });
-    if (user === null) return undefined;
-    return userHelpers.runtimeCast(user.toObject());
+    if (user === null) throw new Error('User not found');
+    return userHelpers.runtimeCast({
+      _id: user._id.toString(),
+      name: user.name,
+      email: user.email,
+      authId: user.authId,
+      budgets: user.budgets,
+      loans: user.loans,
+      currency: user.currency,
+      language: user.language,
+      subscription: user.subscription,
+    });
   } catch (err) {
     throw new Error('User fetching failed...');
   }

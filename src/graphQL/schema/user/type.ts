@@ -1,6 +1,8 @@
 import {
   GraphQLEnumType,
+  GraphQLFloat,
   GraphQLID,
+  GraphQLInputObjectType,
   GraphQLInt,
   GraphQLList,
   GraphQLNonNull,
@@ -23,7 +25,7 @@ export const userType = new GraphQLObjectType({
   }),
 });
 
-const budgetsType = new GraphQLObjectType({
+export const budgetsType = new GraphQLObjectType({
   name: 'BudgetType',
   fields: (): any => ({
     _id: { type: new GraphQLNonNull(GraphQLID) },
@@ -41,8 +43,8 @@ const loansType = new GraphQLObjectType({
     name: { type: new GraphQLNonNull(GraphQLString) },
     description: { type: new GraphQLNonNull(GraphQLString) },
     notes: { type: new GraphQLList(noteType) },
-    openedTimestamp: { type: new GraphQLNonNull(GraphQLInt) },
-    closesTimestamp: { type: new GraphQLNonNull(GraphQLInt) },
+    openedTimestamp: { type: new GraphQLNonNull(GraphQLFloat) },
+    closesTimestamp: { type: new GraphQLNonNull(GraphQLFloat) },
     interestRate: { type: new GraphQLNonNull(interestRateType) },
     initialPrincipal: { type: new GraphQLNonNull(GraphQLInt) },
     status: {
@@ -64,7 +66,7 @@ const loansType = new GraphQLObjectType({
     calculatedPaidInterest: { type: new GraphQLNonNull(GraphQLInt) },
   }),
 });
-const interestRateType = new GraphQLObjectType({
+export const interestRateType = new GraphQLObjectType({
   name: 'InterestRateType',
   fields: (): any => ({
     type: {
@@ -93,7 +95,7 @@ const interestRateType = new GraphQLObjectType({
       ),
     },
     amount: { type: new GraphQLNonNull(GraphQLInt) },
-    entryTimestamp: { type: new GraphQLNonNull(GraphQLInt) },
+    entryTimestamp: { type: new GraphQLNonNull(GraphQLFloat) },
     revisions: { type: interestRateType },
   }),
 });
@@ -102,7 +104,7 @@ const noteType = new GraphQLObjectType({
   fields: (): any => ({
     _id: { type: new GraphQLNonNull(GraphQLID) },
     content: { type: new GraphQLNonNull(GraphQLString) },
-    entryTimestamp: { type: new GraphQLNonNull(GraphQLInt) },
+    entryTimestamp: { type: new GraphQLNonNull(GraphQLFloat) },
     revisions: { type: noteType },
   }),
 });
@@ -122,5 +124,37 @@ const userSubscriptionType = new GraphQLObjectType({
         }),
       ),
     },
+  }),
+});
+
+export const interestRateInputType = new GraphQLInputObjectType({
+  name: 'InterestRateInputType',
+  fields: (): any => ({
+    type: {
+      type: new GraphQLNonNull(
+        new GraphQLEnumType({
+          name: 'DurationTypeInput',
+          values: {
+            PERCENTAGE_PER_DURATION: { value: 'PERCENTAGE_PER_DURATION' },
+            FIXED_PER_DURATION: { value: 'FIXED_PER_DURATION' },
+          },
+        }),
+      ),
+    },
+    duration: {
+      type: new GraphQLNonNull(
+        new GraphQLEnumType({
+          name: 'DurationInput',
+          values: {
+            DAY: { value: 'DAY' },
+            WEEK: { value: 'WEEK' },
+            MONTH: { value: 'MONTH' },
+            YEAR: { value: 'YEAR' },
+            FULL_DURATION: { value: 'FULL_DURATION' },
+          },
+        }),
+      ),
+    },
+    amount: { type: new GraphQLNonNull(GraphQLInt) },
   }),
 });
