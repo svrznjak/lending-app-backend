@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import mongoose from 'mongoose';
+import cors from 'cors';
 import { graphqlHTTP } from 'express-graphql';
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -17,6 +18,7 @@ try {
 
 const app: Application = express();
 app.use(express.json());
+app.use(cors());
 app.use(
   '/graphql',
   graphqlHTTP(async (req, res) => {
