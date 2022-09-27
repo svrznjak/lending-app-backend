@@ -37,6 +37,7 @@
   "author": "Gregor Svržnjak",
   "license": "Private property! :D",
   "dependencies": {
+    "cors": "^2.8.5",
     "dotenv": "^16.0.2",
     "express": "^4.18.1",
     "express-graphql": "^0.12.0",
