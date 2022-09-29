@@ -168,14 +168,53 @@ export default {
   },
   // As a lender, I want to view information and transactions of the specific loan, so that I can make informed decisions.
   // As a lender, I want to search for loan transactions, so that I can find the specific transaction.
-  getTransactions: async function getLoanTransactions(loanId: string): Promise<ITransaction[]> {
-    return await transaction.findTranasactionsFromAndTo({
-      addressId: loanId,
-      datatype: 'LOAN',
-    });
+  getTransactions: async function getLoanTransactions(
+    loanId: string,
+    { pageNumber, pageSize }: { pageNumber?: number; pageSize?: number },
+  ): Promise<ITransaction[]> {
+    return await transaction.findTranasactionsFromAndTo(
+      {
+        addressId: loanId,
+        datatype: 'LOAN',
+      },
+      { pageNumber, pageSize },
+    );
   },
   makePayment: async function makeLoanPayment(
     userId: string,
+    loanId: string,
+    budgetId: string,
+    transactionTimestamp: number,
+    description: string,
+    amount: number,
+  ): Promise<ITransaction> {
+    // Get user
+    const user = await UserModel.findOne({ _id: userId });
+    if (user === null) throw new Error('User does not exist!');
+    // Get loan
+    const loan: any = await user.loans.id(loanId);
+    if (loan === null) throw new Error('loan does not exist!');
+
+    const budget: any = await user.budgets.id(budgetId);
+    if (budget === null) throw new Error('budget does not exist!');
+
+    transactionHelpers.validate.description(description);
+    description = transactionHelpers.sanitize.description(description);
+    transactionHelpers.validate.amount(amount);
+    return await transaction.transferAmountFromLoanToBudget({
+      userId: userId,
+      loanId: loanId,
+      budgetId: budgetId,
+      transactionTimestamp: transactionHelpers.validate.transactionTimestamp(transactionTimestamp),
+      description: description,
+      amount: amount,
+      entryTimestamp: transactionHelpers.validate.entryTimestamp(new Date().getTime()),
+    });
+  },
+
+  addFunds: async function addFundsToLoan(
+    userId: string,
+    budgetId: string,
     loanId: string,
     transactionTimestamp: number,
     description: string,
@@ -188,33 +227,24 @@ export default {
     const loan: any = await user.loans.id(loanId);
     if (loan === null) throw new Error('loan does not exist!');
 
-    transactionHelpers.validate.transactionTimestamp(transactionTimestamp);
+    const budget: any = await user.budgets.id(budgetId);
+    if (budget === null) throw new Error('budget does not exist!');
+
     transactionHelpers.validate.description(description);
     description = transactionHelpers.sanitize.description(description);
     transactionHelpers.validate.amount(amount);
-
-    const newTransaction: Pick<
-      ITransaction,
-      'userId' | 'transactionTimestamp' | 'description' | 'from' | 'to' | 'amount' | 'entryTimestamp'
-    > = {
+    return await transaction.transferAmountFromBudgetToLoan({
       userId: userId,
-      transactionTimestamp: transactionTimestamp,
+      loanId: loanId,
+      budgetId: budgetId,
+      transactionTimestamp: transactionHelpers.validate.transactionTimestamp(transactionTimestamp),
       description: description,
-      from: {
-        datatype: 'OUTSIDE',
-        addressId: '000000000000000000000000',
-      },
-      to: {
-        datatype: 'LOAN',
-        addressId: loanId,
-      },
       amount: amount,
       entryTimestamp: transactionHelpers.validate.entryTimestamp(new Date().getTime()),
-    };
-    return await transaction.add(newTransaction);
+    });
   },
 
-  addInterest: async function addInterestToLoan(
+  addManualInterest: async function addManualInterestToLoan(
     userId: string,
     loanId: string,
     transactionTimestamp: number,

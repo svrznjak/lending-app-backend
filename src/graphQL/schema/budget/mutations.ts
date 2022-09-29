@@ -3,7 +3,7 @@ import { GraphQLObjectType, GraphQLNonNull, GraphQLString, GraphQLInt, GraphQLID
 import { IBudget } from '../../../api/types/budget/budgetInterface.js';
 import { transactionHelpers } from '../../../api/types/transaction/transactionHelpers.js';
 import { getUserByAuthId } from '../../../api/user.js';
-import { interestRateInputType } from '../user/type.js';
+import { interestRateInputType } from '../interestRate/type.js';
 
 import Budget from '../../../api/budget.js';
 import { budgetsType } from './type.js';

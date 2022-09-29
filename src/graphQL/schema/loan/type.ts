@@ -7,7 +7,7 @@ import {
   GraphQLFloat,
   GraphQLEnumType,
 } from 'graphql';
-import { interestRateType } from '../user/type.js';
+import { interestRateType } from '../interestRate/type.js';
 import { noteType } from '../note/type.js';
 
 export const loansType = new GraphQLObjectType({

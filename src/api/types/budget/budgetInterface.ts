@@ -7,4 +7,5 @@ export interface IBudget {
   defaultInterestRate: IInterestRate;
   calculatedTotalAmount: number;
   calculatedLendedAmount: number;
+  isArchived: boolean;
 }

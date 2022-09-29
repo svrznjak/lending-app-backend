@@ -24,6 +24,7 @@ export default {
         defaultInterestRate: budget.defaultInterestRate,
         calculatedLendedAmount: 0,
         calculatedTotalAmount: 0,
+        isArchived: false,
       };
       const userFromDB = await UserModel.findOne({ _id: userId });
       userFromDB.budgets.push(newBudgetData);
@@ -42,6 +43,7 @@ export default {
         },
         calculatedLendedAmount: newBudget.calculatedLendedAmount,
         calculatedTotalAmount: newBudget.calculatedTotalAmount,
+        isArchived: newBudget.isArchived,
       });
     } catch (err) {
       console.log(err);
@@ -140,11 +142,17 @@ export default {
     return createdTransaction;
   },
   // As a lender, I want to view transactions related to budget, so that I can make decisions.
-  getTransactions: async function getBudgetTransactions(budgetId: string): Promise<ITransaction[]> {
-    return await transaction.findTranasactionsFromAndTo({
-      addressId: budgetId,
-      datatype: 'BUDGET',
-    });
+  getTransactions: async function getBudgetTransactions(
+    budgetId: string,
+    { pageNumber, pageSize }: { pageNumber?: number; pageSize?: number },
+  ): Promise<ITransaction[]> {
+    return await transaction.findTranasactionsFromAndTo(
+      {
+        addressId: budgetId,
+        datatype: 'BUDGET',
+      },
+      { pageNumber, pageSize },
+    );
   },
   // As a lender, I want to export budget data and transactions, so that I can archive them or import them to other software.
   export: function joinBudetTransactionsIntoAccountingTable(): void {
@@ -160,6 +168,7 @@ export default {
     defaultInterestRateType,
     defaultInterestRateDuration,
     defaultInterestRateAmount,
+    isArchived,
   }: {
     userId: string;
     budgetId: string;
@@ -168,6 +177,7 @@ export default {
     defaultInterestRateType?: string;
     defaultInterestRateDuration?: string;
     defaultInterestRateAmount?: number;
+    isArchived?: boolean;
   }): Promise<IBudget> {
     // Get user
     const user = await UserModel.findOne({ _id: userId });
@@ -216,6 +226,7 @@ export default {
       },
       calculatedTotalAmount: budget.calculatedTotalAmount,
       calculatedLendedAmount: budget.calculatedLendedAmount,
+      isArchived: budget.isArchived,
     });
     await user.save();
     return changedBudget;

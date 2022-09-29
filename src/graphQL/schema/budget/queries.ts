@@ -1,3 +1,4 @@
+import { paginationType } from './../commonTypes.js';
 import { ITransaction } from './../../../api/types/transaction/transactionInterface.js';
 import { transactionType } from './../transaction/type.js';
 import { GraphQLID, GraphQLList, GraphQLNonNull, GraphQLObjectType } from 'graphql';
@@ -11,6 +12,7 @@ export default new GraphQLObjectType({
       type: new GraphQLList(transactionType),
       args: {
         budgetId: { type: new GraphQLNonNull(GraphQLID) },
+        pagination: { type: paginationType },
       },
       async resolve(_parent: any, args: any, context: any): Promise<ITransaction[]> {
         const authId = await context.getCurrentUserAuthIdOrThrowValidationError();
@@ -18,7 +20,10 @@ export default new GraphQLObjectType({
         if (user.budgets.find((budget) => (budget._id === args.budgetId) == undefined))
           throw new Error('Unauthorized/budget-does-not-exist');
 
-        return await budget.getTransactions(args.budgetId);
+        return await budget.getTransactions(args.budgetId, {
+          pageSize: args.pagination.pageSize,
+          pageNumber: args.pagination.pageNumber,
+        });
       },
     },
   }),

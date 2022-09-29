@@ -3,7 +3,7 @@ import { transactionHelpers } from './types/transaction/transactionHelpers.js';
 import { ITransaction } from './types/transaction/transactionInterface.js';
 import { ITransactionAddress } from './types/transactionAddress/transactionAddressInterface.js';
 import { transactionAddressHelpers } from './types/transactionAddress/transactionAddressHelpers.js';
-import mongoose from 'mongoose';
+import mongoose, { SessionOption } from 'mongoose';
 
 export default {
   add: async function addTransaction(
@@ -103,9 +103,16 @@ export default {
   },
   findTranasactionsFromAndTo: async function findTransactionsFromAndTo(
     transactionAddress: ITransactionAddress,
+    { pageNumber, pageSize }: { pageNumber?: number; pageSize?: number },
   ): Promise<ITransaction[]> {
     let validatedTransactionAddress = transactionAddressHelpers.validate.all(transactionAddress);
     validatedTransactionAddress = transactionAddressHelpers.runtimeCast(transactionAddress);
+
+    if (pageNumber === undefined) {
+      pageNumber = 0;
+      pageSize = Infinity;
+    }
+
     const transactions = await TransactionModel.find({
       $or: [
         {
@@ -119,6 +126,8 @@ export default {
       ],
     })
       .sort({ transactionTimestamp: -1 })
+      .skip(pageSize * pageNumber)
+      .limit(pageSize)
       .lean()
       .exec();
     return transactions.map((transaction: any) => {
@@ -144,7 +153,7 @@ export default {
   },
   transferAmountFromBudgetToLoan: async function transferAmountFromBudgetToLoan(
     { userId, budgetId, loanId, transactionTimestamp, description, amount, entryTimestamp },
-    { session },
+    options?: { session?: SessionOption },
   ): Promise<ITransaction> {
     const newTransaction = await this.add(
       {
@@ -165,7 +174,34 @@ export default {
         ITransaction,
         'userId' | 'transactionTimestamp' | 'description' | 'from' | 'to' | 'amount' | 'entryTimestamp'
       >,
-      { session },
+      options,
+    );
+    return newTransaction;
+  },
+  transferAmountFromLoanToBudget: async function transferAmountFromLoanToBudget(
+    { userId, loanId, budgetId, transactionTimestamp, description, amount, entryTimestamp },
+    options?,
+  ): Promise<ITransaction> {
+    const newTransaction = await this.add(
+      {
+        userId,
+        transactionTimestamp,
+        description,
+        from: {
+          datatype: 'LOAN',
+          addressId: loanId,
+        },
+        to: {
+          datatype: 'BUDGET',
+          addressId: budgetId,
+        },
+        amount,
+        entryTimestamp,
+      } as Pick<
+        ITransaction,
+        'userId' | 'transactionTimestamp' | 'description' | 'from' | 'to' | 'amount' | 'entryTimestamp'
+      >,
+      options,
     );
     return newTransaction;
   },

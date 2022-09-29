@@ -60,6 +60,7 @@ export const budgetHelpers = {
       throw new Error('Type of budget.calculatedTotalAmount must be a number!');
     if (!Number.isFinite(budget.calculatedLendedAmount))
       throw new Error('Type of budget.calculatedLendedAmount must be a number!');
+    if (!_.isBoolean(budget.isArchived)) throw new Error('Type of budget.isArchived must be a boolean!');
 
     interestRateHelpers.runtimeCast(budget.defaultInterestRate);
 
@@ -70,6 +71,7 @@ export const budgetHelpers = {
       defaultInterestRate: budget.defaultInterestRate,
       calculatedTotalAmount: budget.calculatedTotalAmount,
       calculatedLendedAmount: budget.calculatedLendedAmount,
+      isArchived: budget.isArchived,
     };
   },
 };

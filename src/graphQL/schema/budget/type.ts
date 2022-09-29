@@ -1,5 +1,5 @@
-import { GraphQLObjectType, GraphQLNonNull, GraphQLID, GraphQLString, GraphQLFloat } from 'graphql';
-import { interestRateType } from '../user/type.js';
+import { GraphQLObjectType, GraphQLNonNull, GraphQLID, GraphQLString, GraphQLFloat, GraphQLBoolean } from 'graphql';
+import { interestRateType } from '../interestRate/type.js';
 
 export const budgetsType = new GraphQLObjectType({
   name: 'BudgetType',
@@ -10,5 +10,6 @@ export const budgetsType = new GraphQLObjectType({
     defaultInterestRate: { type: new GraphQLNonNull(interestRateType) },
     calculatedTotalAmount: { type: new GraphQLNonNull(GraphQLFloat) },
     calculatedLendedAmount: { type: new GraphQLNonNull(GraphQLFloat) },
+    isArchived: { type: new GraphQLNonNull(GraphQLBoolean) },
   }),
 });
