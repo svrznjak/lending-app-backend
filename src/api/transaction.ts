@@ -118,6 +118,7 @@ export default {
         },
       ],
     })
+      .sort({ transactionTimestamp: -1 })
       .lean()
       .exec();
     return transactions.map((transaction: any) => {

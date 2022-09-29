@@ -21,7 +21,7 @@ export default {
 
     // Calculate twice and check results
     const result1 = n1 - n2;
-    const result2 = n2 - n1;
+    const result2 = n1 - n2;
 
     if (result1 !== result2)
       throw new Error(`Subtract Paranoid computation failed! This should not happen. n1: ${n1} , n2: ${n2}`);

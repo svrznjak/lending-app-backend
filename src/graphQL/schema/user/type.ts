@@ -32,8 +32,8 @@ export const budgetsType = new GraphQLObjectType({
     name: { type: new GraphQLNonNull(GraphQLString) },
     description: { type: new GraphQLNonNull(GraphQLString) },
     defaultInterestRate: { type: new GraphQLNonNull(interestRateType) },
-    calculatedTotalAmount: { type: new GraphQLNonNull(GraphQLInt) },
-    calculatedLendedAmount: { type: new GraphQLNonNull(GraphQLInt) },
+    calculatedTotalAmount: { type: new GraphQLNonNull(GraphQLFloat) },
+    calculatedLendedAmount: { type: new GraphQLNonNull(GraphQLFloat) },
   }),
 });
 const loansType = new GraphQLObjectType({
@@ -46,7 +46,7 @@ const loansType = new GraphQLObjectType({
     openedTimestamp: { type: new GraphQLNonNull(GraphQLFloat) },
     closesTimestamp: { type: new GraphQLNonNull(GraphQLFloat) },
     interestRate: { type: new GraphQLNonNull(interestRateType) },
-    initialPrincipal: { type: new GraphQLNonNull(GraphQLInt) },
+    initialPrincipal: { type: new GraphQLNonNull(GraphQLFloat) },
     status: {
       type: new GraphQLNonNull(
         new GraphQLEnumType({
@@ -61,9 +61,9 @@ const loansType = new GraphQLObjectType({
         }),
       ),
     },
-    calculatedTotalPaidPrincipal: { type: new GraphQLNonNull(GraphQLInt) },
-    calculatedChargedInterest: { type: new GraphQLNonNull(GraphQLInt) },
-    calculatedPaidInterest: { type: new GraphQLNonNull(GraphQLInt) },
+    calculatedTotalPaidPrincipal: { type: new GraphQLNonNull(GraphQLFloat) },
+    calculatedChargedInterest: { type: new GraphQLNonNull(GraphQLFloat) },
+    calculatedPaidInterest: { type: new GraphQLNonNull(GraphQLFloat) },
   }),
 });
 export const interestRateType = new GraphQLObjectType({

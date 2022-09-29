@@ -2,6 +2,7 @@ import { GraphQLSchema, GraphQLObjectType } from 'graphql';
 
 // Import queries from seperate datatypes
 import userQueries from './schema/user/queries.js';
+import budgetQueries from './schema/budget/queries.js';
 
 // Merge imported queries into GraphQLObjectType
 const mergedQueries = new GraphQLObjectType({
@@ -11,11 +12,16 @@ const mergedQueries = new GraphQLObjectType({
       type: userQueries,
       resolve: () => ({}),
     },
+    Budget: {
+      type: budgetQueries,
+      resolve: () => ({}),
+    },
   }),
 });
 
 // Import mutations from seperate datatypes
 import userMutations from './schema/user/mutations.js';
+import budgetMutations from './schema/budget/mutations.js';
 
 // Merge imported mutations into GraphQLObjectType
 const mergedMutations = new GraphQLObjectType({
@@ -23,6 +29,10 @@ const mergedMutations = new GraphQLObjectType({
   fields: (): any => ({
     User: {
       type: userMutations,
+      resolve: () => ({}),
+    },
+    Budget: {
+      type: budgetMutations,
       resolve: () => ({}),
     },
   }),

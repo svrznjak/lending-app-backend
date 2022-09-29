@@ -28,8 +28,21 @@ export default {
       const userFromDB = await UserModel.findOne({ _id: userId });
       userFromDB.budgets.push(newBudgetData);
       await userFromDB.save(options);
-      const newBudget = userFromDB.budgets[userFromDB.budgets.length - 1];
-      return newBudget.toObject();
+      const newBudget: any = userFromDB.budgets[userFromDB.budgets.length - 1];
+      return budgetHelpers.runtimeCast({
+        _id: newBudget._id.toString(),
+        name: newBudget.name,
+        description: newBudget.description,
+        defaultInterestRate: {
+          type: newBudget.defaultInterestRate.type,
+          duration: newBudget.defaultInterestRate.duration,
+          amount: newBudget.defaultInterestRate.amount,
+          entryTimestamp: newBudget.defaultInterestRate.entryTimestamp,
+          revisions: newBudget.defaultInterestRate.revisions,
+        },
+        calculatedLendedAmount: newBudget.calculatedLendedAmount,
+        calculatedTotalAmount: newBudget.calculatedTotalAmount,
+      });
     } catch (err) {
       console.log(err);
       throw new Error('Budget creation failed!');
@@ -41,7 +54,7 @@ export default {
     return;
   },
   // As a lender, I want to add funds to the budget, so that I can later assign them to loans.
-  addAmountFromOutside: async function addAmountToBudgetFromOutside(
+  addFundsFromOutside: async function addFundsToBudgetFromOutside(
     {
       userId,
       budgetId,
@@ -75,23 +88,35 @@ export default {
       amount: amount,
       entryTimestamp: new Date().getTime(),
     };
-    return await transaction.add(newTransaction, options);
+    const createdTransaction = await transaction.add(newTransaction, options);
+
+    return createdTransaction;
   },
 
   // As a lender, I want to withdraw funds from the budget, so that I can make use of interest or move it to another budget.
-  withdrawAmountToOutside: async function withdrawAmountFromBudgetToOutside({
-    userId,
-    budgetId,
-    transactionTimestamp,
-    description,
-    amount,
-  }: {
-    userId: string;
-    budgetId: string;
-    transactionTimestamp: number;
-    description: string;
-    amount: number;
-  }): Promise<ITransaction> {
+  withdrawFundsToOutside: async function withdrawFundsFromBudgetToOutside(
+    {
+      userId,
+      budgetId,
+      transactionTimestamp,
+      description,
+      amount,
+    }: {
+      userId: string;
+      budgetId: string;
+      transactionTimestamp: number;
+      description: string;
+      amount: number;
+    },
+    options?,
+  ): Promise<ITransaction> {
+    // Get user
+    const user = await UserModel.findOne({ _id: userId });
+    if (user === null) throw new Error('User does not exist!');
+    // Get budget
+    const budget: any = await user.budgets.id(budgetId);
+    if (budget === null) throw new Error('Budget does not exist!');
+
     const newTransaction: Pick<
       ITransaction,
       'userId' | 'transactionTimestamp' | 'description' | 'from' | 'to' | 'amount' | 'entryTimestamp'
@@ -110,7 +135,9 @@ export default {
       amount: amount,
       entryTimestamp: new Date().getTime(),
     };
-    return await transaction.add(newTransaction);
+    const createdTransaction = await transaction.add(newTransaction, options);
+
+    return createdTransaction;
   },
   // As a lender, I want to view transactions related to budget, so that I can make decisions.
   getTransactions: async function getBudgetTransactions(budgetId: string): Promise<ITransaction[]> {
@@ -193,10 +220,24 @@ export default {
     await user.save();
     return changedBudget;
   },
-  recalculateCalculatedValues: async function recalculateCalculatedBudgetValues(Mongo_budget): Promise<boolean> {
+  recalculateCalculatedValues: async function recalculateCalculatedBudgetValues({
+    userId,
+    budgetId,
+  }: {
+    userId: string;
+    budgetId: string;
+  }): Promise<IBudget> {
     // Optimizations possible for calculations at scale
+
+    // Get user
+    const user = await UserModel.findOne({ _id: userId });
+    if (user === null) throw new Error('User does not exist!');
+    // Get budget
+    const budget: any = await user.budgets.id(budgetId);
+    if (budget === null) throw new Error('Budget does not exist!');
+
     // get all transactions
-    const budgetTransactions = await this.getTransactions(Mongo_budget._id.toString());
+    const budgetTransactions = await this.getTransactions(budget._id.toString());
 
     // initialize variables
     let newCalculatedTotalAmount = 0;
@@ -216,11 +257,24 @@ export default {
     });
 
     // save calculations to DB
-    Mongo_budget.calculatedTotalAmount = newCalculatedTotalAmount;
-    Mongo_budget.calculatedLendedAmount = newCalculatedLendedAmount;
+    budget.calculatedTotalAmount = newCalculatedTotalAmount;
+    budget.calculatedLendedAmount = newCalculatedLendedAmount;
 
     // TODO : I think this wont work because budget is subdocument
-    Mongo_budget.save();
-    return true;
+    user.save();
+    return budgetHelpers.runtimeCast({
+      _id: budget._id.toString(),
+      name: budget.name,
+      description: budget.description,
+      defaultInterestRate: {
+        type: budget.defaultInterestRate.type,
+        duration: budget.defaultInterestRate.duration,
+        amount: budget.defaultInterestRate.amount,
+        entryTimestamp: budget.defaultInterestRate.entryTimestamp,
+        revisions: budget.defaultInterestRate.revisions,
+      },
+      calculatedLendedAmount: budget.calculatedLendedAmount,
+      calculatedTotalAmount: budget.calculatedTotalAmount,
+    });
   },
 };
