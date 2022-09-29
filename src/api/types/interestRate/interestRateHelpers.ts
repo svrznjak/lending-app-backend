@@ -36,6 +36,17 @@ export const interestRateHelpers = {
         throw new Error('(validation) duration is invalid!');
       return duration;
     },
+    expectedPayments: function validateExpectedPayments(expectedPayments: string): string {
+      if (
+        !isValidOption({
+          option: expectedPayments,
+          validOptions: ['ONE_TIME', 'DAILY', 'WEEKLY', 'MONTHLY', 'YEARLY'],
+          caseSensitive: true,
+        })
+      )
+        throw new Error('(validation) duration is invalid!');
+      return expectedPayments;
+    },
     amount: function validateAmount(amount: number): number {
       if (!isValidAmountOfMoney({ amount: amount })) throw new Error('(validation) amount is invalid!');
       return amount;
@@ -51,7 +62,11 @@ export const interestRateHelpers = {
       throw new Error('Type of interestRate must be an object!');
     if (!_.isString(interestRate.type)) throw new Error('Type of interestRate.type must be a string!');
     if (!_.isString(interestRate.duration)) throw new Error('Type of interestRate.duration must be a string!');
+    if (!_.isString(interestRate.expectedPayments))
+      throw new Error('Type of interestRate.expectedPayments must be a string!');
     if (!Number.isFinite(interestRate.amount)) throw new Error('Type of interestRate.amount must be a number!');
+    if (!_.isBoolean(interestRate.isCompounding))
+      throw new Error('Type of interestRate.isCompounding must be a boolean!');
     if (!Number.isFinite(interestRate.entryTimestamp))
       throw new Error('Type of interestRate.entryTimestamp must be a number!');
     if (!_.isPlainObject(interestRate.revisions) && interestRate.revisions !== undefined)
@@ -59,7 +74,9 @@ export const interestRateHelpers = {
     return {
       type: interestRate.type,
       duration: interestRate.duration,
+      expectedPayments: interestRate.expectedPayments,
       amount: interestRate.amount,
+      isCompounding: interestRate.isCompouding,
       entryTimestamp: interestRate.entryTimestamp,
       revisions: interestRate.revisions,
     };

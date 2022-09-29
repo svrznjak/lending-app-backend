@@ -1,14 +1,6 @@
-import {
-  GraphQLEnumType,
-  GraphQLFloat,
-  GraphQLID,
-  GraphQLInputObjectType,
-  GraphQLInt,
-  GraphQLList,
-  GraphQLNonNull,
-  GraphQLObjectType,
-  GraphQLString,
-} from 'graphql';
+import { GraphQLEnumType, GraphQLID, GraphQLList, GraphQLNonNull, GraphQLObjectType, GraphQLString } from 'graphql';
+import { budgetsType } from '../budget/type.js';
+import { loansType } from '../loan/type.js';
 
 export const userType = new GraphQLObjectType({
   name: 'UserType',
@@ -25,89 +17,6 @@ export const userType = new GraphQLObjectType({
   }),
 });
 
-export const budgetsType = new GraphQLObjectType({
-  name: 'BudgetType',
-  fields: (): any => ({
-    _id: { type: new GraphQLNonNull(GraphQLID) },
-    name: { type: new GraphQLNonNull(GraphQLString) },
-    description: { type: new GraphQLNonNull(GraphQLString) },
-    defaultInterestRate: { type: new GraphQLNonNull(interestRateType) },
-    calculatedTotalAmount: { type: new GraphQLNonNull(GraphQLFloat) },
-    calculatedLendedAmount: { type: new GraphQLNonNull(GraphQLFloat) },
-  }),
-});
-const loansType = new GraphQLObjectType({
-  name: 'LoansType',
-  fields: (): any => ({
-    _id: { type: new GraphQLNonNull(GraphQLID) },
-    name: { type: new GraphQLNonNull(GraphQLString) },
-    description: { type: new GraphQLNonNull(GraphQLString) },
-    notes: { type: new GraphQLList(noteType) },
-    openedTimestamp: { type: new GraphQLNonNull(GraphQLFloat) },
-    closesTimestamp: { type: new GraphQLNonNull(GraphQLFloat) },
-    interestRate: { type: new GraphQLNonNull(interestRateType) },
-    initialPrincipal: { type: new GraphQLNonNull(GraphQLFloat) },
-    status: {
-      type: new GraphQLNonNull(
-        new GraphQLEnumType({
-          name: 'type',
-          values: {
-            ACTIVE: { value: 'ACTIVE' },
-            PAUSED: { value: 'PAUSED' },
-            PAID: { value: 'PAID' },
-            CLOSED: { value: 'CLOSED' },
-            DEFAULTED: { value: 'DEFAULTED' },
-          },
-        }),
-      ),
-    },
-    calculatedTotalPaidPrincipal: { type: new GraphQLNonNull(GraphQLFloat) },
-    calculatedChargedInterest: { type: new GraphQLNonNull(GraphQLFloat) },
-    calculatedPaidInterest: { type: new GraphQLNonNull(GraphQLFloat) },
-  }),
-});
-export const interestRateType = new GraphQLObjectType({
-  name: 'InterestRateType',
-  fields: (): any => ({
-    type: {
-      type: new GraphQLNonNull(
-        new GraphQLEnumType({
-          name: 'DurationType',
-          values: {
-            PERCENTAGE_PER_DURATION: { value: 'PERCENTAGE_PER_DURATION' },
-            FIXED_PER_DURATION: { value: 'FIXED_PER_DURATION' },
-          },
-        }),
-      ),
-    },
-    duration: {
-      type: new GraphQLNonNull(
-        new GraphQLEnumType({
-          name: 'Duration',
-          values: {
-            DAY: { value: 'DAY' },
-            WEEK: { value: 'WEEK' },
-            MONTH: { value: 'MONTH' },
-            YEAR: { value: 'YEAR' },
-            FULL_DURATION: { value: 'FULL_DURATION' },
-          },
-        }),
-      ),
-    },
-    amount: { type: new GraphQLNonNull(GraphQLInt) },
-    entryTimestamp: { type: new GraphQLNonNull(GraphQLFloat) },
-    revisions: { type: interestRateType },
-  }),
-});
-const noteType = new GraphQLObjectType({
-  name: 'NoteType',
-  fields: (): any => ({
-    _id: { type: new GraphQLNonNull(GraphQLID) },
-    content: { type: new GraphQLNonNull(GraphQLString) },
-    entryTimestamp: { type: new GraphQLNonNull(GraphQLFloat) },
-    revisions: { type: noteType },
-  }),
-});
 const userSubscriptionType = new GraphQLObjectType({
   name: 'UserSubscriptionType',
   fields: (): any => ({
@@ -124,37 +33,5 @@ const userSubscriptionType = new GraphQLObjectType({
         }),
       ),
     },
-  }),
-});
-
-export const interestRateInputType = new GraphQLInputObjectType({
-  name: 'InterestRateInputType',
-  fields: (): any => ({
-    type: {
-      type: new GraphQLNonNull(
-        new GraphQLEnumType({
-          name: 'DurationTypeInput',
-          values: {
-            PERCENTAGE_PER_DURATION: { value: 'PERCENTAGE_PER_DURATION' },
-            FIXED_PER_DURATION: { value: 'FIXED_PER_DURATION' },
-          },
-        }),
-      ),
-    },
-    duration: {
-      type: new GraphQLNonNull(
-        new GraphQLEnumType({
-          name: 'DurationInput',
-          values: {
-            DAY: { value: 'DAY' },
-            WEEK: { value: 'WEEK' },
-            MONTH: { value: 'MONTH' },
-            YEAR: { value: 'YEAR' },
-            FULL_DURATION: { value: 'FULL_DURATION' },
-          },
-        }),
-      ),
-    },
-    amount: { type: new GraphQLNonNull(GraphQLInt) },
   }),
 });
