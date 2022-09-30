@@ -1,3 +1,4 @@
+import { BudgetSchema } from './db/schema/BudgetSchema.js';
 import mongoose from 'mongoose';
 import { budgetHelpers } from './types/budget/budgetHelpers.js';
 import { ITransaction } from './types/transaction/transactionInterface.js';
@@ -6,6 +7,7 @@ import transaction from './transaction.js';
 import { IBudget } from './types/budget/budgetInterface.js';
 import { interestRateHelpers } from './types/interestRate/interestRateHelpers.js';
 import paranoidCalculator from './utils/paranoidCalculator/paranoidCalculator.js';
+import BudgetModel from './db/model/BudgetModel.js';
 // As a lender, I want to create a budget, so that I can categorize my investments.
 
 export default {
@@ -19,6 +21,7 @@ export default {
       budgetHelpers.sanitize.all(budget);
       const newBudgetData: IBudget = {
         _id: new mongoose.Types.ObjectId().toString(),
+        userId: userId,
         name: budget.name,
         description: budget.description,
         defaultInterestRate: budget.defaultInterestRate,
@@ -26,12 +29,10 @@ export default {
         calculatedTotalAmount: 0,
         isArchived: false,
       };
-      const userFromDB = await UserModel.findOne({ _id: userId });
-      userFromDB.budgets.push(newBudgetData);
-      await userFromDB.save(options);
-      const newBudget: any = userFromDB.budgets[userFromDB.budgets.length - 1];
+      const newBudget: any = await new BudgetModel(newBudgetData).save(options);
       return budgetHelpers.runtimeCast({
         _id: newBudget._id.toString(),
+        userId: newBudget.userId.toString(),
         name: newBudget.name,
         description: newBudget.description,
         defaultInterestRate: {
@@ -51,9 +52,27 @@ export default {
     }
   },
   // As a lender, I want to view a list of budgets with basic information, so that I can have a general overview of my investments.
-  get: function getBudgets(): void {
-    throw new Error('Not implemented. User getUserById to obtain budgets.');
-    return;
+  get: async function getBudgets({ userId }: { userId: string }): Promise<IBudget[]> {
+    const Mongo_budgets: any = await BudgetModel.find({ userId: userId }).lean().exec();
+
+    return Mongo_budgets.map((Mongo_budget) => {
+      return budgetHelpers.runtimeCast({
+        _id: Mongo_budget._id.toString(),
+        userId: Mongo_budget.userId.toString(),
+        name: Mongo_budget.name,
+        description: Mongo_budget.description,
+        defaultInterestRate: {
+          type: Mongo_budget.defaultInterestRate.type,
+          duration: Mongo_budget.defaultInterestRate.duration,
+          amount: Mongo_budget.defaultInterestRate.amount,
+          entryTimestamp: Mongo_budget.defaultInterestRate.entryTimestamp,
+          revisions: Mongo_budget.defaultInterestRate.revisions,
+        },
+        calculatedLendedAmount: Mongo_budget.calculatedLendedAmount,
+        calculatedTotalAmount: Mongo_budget.calculatedTotalAmount,
+        isArchived: Mongo_budget.isArchived,
+      });
+    });
   },
   // As a lender, I want to add funds to the budget, so that I can later assign them to loans.
   addFundsFromOutside: async function addFundsToBudgetFromOutside(
@@ -116,7 +135,7 @@ export default {
     const user = await UserModel.findOne({ _id: userId });
     if (user === null) throw new Error('User does not exist!');
     // Get budget
-    const budget: any = await user.budgets.id(budgetId);
+    const budget: any = await BudgetModel.findOne({ _id: budgetId });
     if (budget === null) throw new Error('Budget does not exist!');
 
     const newTransaction: Pick<
@@ -161,7 +180,6 @@ export default {
   // As a lender, I want to change the existing budget name and description, so that I can set a more fitting name and description.
   // As a lender, I want to change the default interest rate, so that I can adapt my budget to current market conditions.
   edit: async function editBudgetInfo({
-    userId,
     budgetId,
     name,
     description,
@@ -172,7 +190,6 @@ export default {
     defaultInterestRateIsCompouding,
     isArchived,
   }: {
-    userId: string;
     budgetId: string;
     name?: string;
     description?: string;
@@ -183,11 +200,8 @@ export default {
     defaultInterestRateIsCompouding?: number;
     isArchived?: boolean;
   }): Promise<IBudget> {
-    // Get user
-    const user = await UserModel.findOne({ _id: userId });
-    if (user === null) throw new Error('User does not exist!');
     // Get budget
-    const budget: any = await user.budgets.id(budgetId);
+    const budget: any = await BudgetModel.findOne({ _id: budgetId });
     if (budget === null) throw new Error('Budget does not exist!');
 
     const newInfo: any = {};
@@ -199,6 +213,7 @@ export default {
       newInfo.description = budgetHelpers.validate.description(description);
       newInfo.description = budgetHelpers.sanitize.description(newInfo.description);
     }
+    if (isArchived !== undefined) newInfo.isArchived = isArchived;
     // check if defaultInterestRate needs to change
     if (
       defaultInterestRateType !== undefined ||
@@ -249,23 +264,18 @@ export default {
       calculatedLendedAmount: budget.calculatedLendedAmount,
       isArchived: budget.isArchived,
     });
-    await user.save();
+    await budget.save();
     return changedBudget;
   },
   recalculateCalculatedValues: async function recalculateCalculatedBudgetValues({
-    userId,
     budgetId,
   }: {
-    userId: string;
     budgetId: string;
   }): Promise<IBudget> {
     // Optimizations possible for calculations at scale
 
-    // Get user
-    const user = await UserModel.findOne({ _id: userId });
-    if (user === null) throw new Error('User does not exist!');
     // Get budget
-    const budget: any = await user.budgets.id(budgetId);
+    const budget: any = await BudgetModel.findOne({ _id: budgetId });
     if (budget === null) throw new Error('Budget does not exist!');
 
     // get all transactions
@@ -292,8 +302,7 @@ export default {
     budget.calculatedTotalAmount = newCalculatedTotalAmount;
     budget.calculatedLendedAmount = newCalculatedLendedAmount;
 
-    // TODO : I think this wont work because budget is subdocument
-    user.save();
+    await budget.save();
     return budgetHelpers.runtimeCast({
       _id: budget._id.toString(),
       name: budget.name,

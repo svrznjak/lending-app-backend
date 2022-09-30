@@ -16,6 +16,8 @@ import budget from './budget.js';
 import paranoidCalculator from './utils/paranoidCalculator/paranoidCalculator.js';
 import { transactionHelpers } from './types/transaction/transactionHelpers.js';
 import { amortizationInterval, IInterestRate } from './types/interestRate/interestRateInterface.js';
+import LoanModel from './db/model/LoanModel.js';
+import BudgetModel from './db/model/BudgetModel.js';
 
 interface fund {
   budgetId: string;
@@ -45,7 +47,7 @@ export default {
 
     // check if budgets have sufficient funds
     funds.forEach(async (fund) => {
-      const recalculatedBudget = await budget.recalculateCalculatedValues({ userId: userId, budgetId: fund.budgetId });
+      const recalculatedBudget = await budget.recalculateCalculatedValues({ budgetId: fund.budgetId });
 
       const avaiableFundsInBudget = paranoidCalculator.subtract(
         recalculatedBudget.calculatedTotalAmount,
@@ -56,6 +58,7 @@ export default {
 
     const loan: ILoan = loanHelpers.runtimeCast({
       _id: new mongoose.Types.ObjectId().toString(),
+      userId: userId,
       ...input,
       notes: [],
       status: 'ACTIVE',
@@ -89,7 +92,7 @@ export default {
 
       // recalculate affected budgets
       funds.forEach(async (fund) => {
-        await budget.recalculateCalculatedValues({ userId: userId, budgetId: fund.budgetId });
+        await budget.recalculateCalculatedValues({ budgetId: fund.budgetId });
       });
     } catch (err) {
       console.log(err);
@@ -120,7 +123,7 @@ export default {
     const user = await UserModel.findOne({ _id: userId });
     if (user === null) throw new Error('User does not exist!');
     // Get loan
-    const loan: any = await user.loans.id(loanId);
+    const loan: any = await LoanModel.findOne({ _id: loanId });
     if (loan === null) throw new Error('loan does not exist!');
 
     const newInfo: any = {};
@@ -139,6 +142,7 @@ export default {
 
     const changedloan: ILoan = loanHelpers.runtimeCast({
       _id: loan._id.toString(),
+      userId: loan.userId.toString(),
       name: loan.name,
       description: loan.description,
       notes: loan.notes,
@@ -158,8 +162,37 @@ export default {
       calculatedChargedInterest: loan.calculatedChargedInterest,
       calculatedPaidInterest: loan.calculatedPaidInterest,
     } as ILoan);
-    await user.save();
+    await loan.save();
     return changedloan;
+  },
+
+  get: async function getLoans({ userId }: { userId: string }): Promise<ILoan[]> {
+    const Mongo_loans: any = await LoanModel.find({ userId: userId }).lean().exec();
+
+    return Mongo_loans.map((Mongo_loan) => {
+      return loanHelpers.runtimeCast({
+        _id: Mongo_loan._id.toString(),
+        userId: Mongo_loan.userId.toString(),
+        name: Mongo_loan.name,
+        description: Mongo_loan.description,
+        notes: Mongo_loan.notes,
+        openedTimestamp: Mongo_loan.openedTimestamp,
+        closesTimestamp: Mongo_loan.closesTimestamp,
+        interestRate: {
+          type: Mongo_loan.interestRate.type,
+          duration: Mongo_loan.interestRate.duration,
+          expectedPayments: Mongo_loan.interestRate.expectedPayments,
+          amount: Mongo_loan.interestRate.amount,
+          isCompounding: Mongo_loan.interestRate.isCompouding,
+          entryTimestamp: Mongo_loan.interestRate.entryTimestamp,
+          revisions: Mongo_loan.interestRate.revisions.toObject(),
+        },
+        initialPrincipal: Mongo_loan.inititalPrincipal,
+        calculatedTotalPaidPrincipal: Mongo_loan.calculatedTotalPaidPrincipal,
+        calculatedChargedInterest: Mongo_loan.calculatedChargedInterest,
+        calculatedPaidInterest: Mongo_loan.calculatedPaidInterest,
+      });
+    });
   },
 
   changeInterestRate: async function changeLoanInterestRate() {
@@ -192,10 +225,10 @@ export default {
     const user = await UserModel.findOne({ _id: userId });
     if (user === null) throw new Error('User does not exist!');
     // Get loan
-    const loan: any = await user.loans.id(loanId);
+    const loan: any = await LoanModel.findOne({ _id: loanId });
     if (loan === null) throw new Error('loan does not exist!');
 
-    const budget: any = await user.budgets.id(budgetId);
+    const budget: any = await BudgetModel.findOne({ _id: budgetId });
     if (budget === null) throw new Error('budget does not exist!');
 
     transactionHelpers.validate.description(description);
@@ -224,10 +257,10 @@ export default {
     const user = await UserModel.findOne({ _id: userId });
     if (user === null) throw new Error('User does not exist!');
     // Get loan
-    const loan: any = await user.loans.id(loanId);
+    const loan: any = await LoanModel.findOne({ _id: loanId });
     if (loan === null) throw new Error('loan does not exist!');
 
-    const budget: any = await user.budgets.id(budgetId);
+    const budget: any = await BudgetModel.findOne({ _id: budgetId });
     if (budget === null) throw new Error('budget does not exist!');
 
     transactionHelpers.validate.description(description);
@@ -255,7 +288,7 @@ export default {
     const user = await UserModel.findOne({ _id: userId });
     if (user === null) throw new Error('User does not exist!');
     // Get loan
-    const loan: any = await user.loans.id(loanId);
+    const loan: any = await LoanModel.findOne({ _id: loanId });
     if (loan === null) throw new Error('loan does not exist!');
 
     transactionHelpers.validate.transactionTimestamp(transactionTimestamp);
@@ -294,7 +327,7 @@ export default {
     const user = await UserModel.findOne({ _id: userId });
     if (user === null) throw new Error('User does not exist!');
     // Get loan
-    const loan: any = await user.loans.id(loanId);
+    const loan: any = await LoanModel.findOne({ _id: loanId });
     if (loan === null) throw new Error('loan does not exist!');
     loanHelpers.validate.status(newStatus);
     loan.status = newStatus;
@@ -319,7 +352,7 @@ export default {
       calculatedChargedInterest: loan.calculatedChargedInterest,
       calculatedPaidInterest: loan.calculatedPaidInterest,
     } as ILoan);
-    await user.save();
+    await loan.save();
     return changedloan;
   },
   calculateExpetedAmortization: async function calculateExpectedLoanAmortization({

@@ -104,6 +104,7 @@ export const loanHelpers = {
   runtimeCast: function runtimeCast(loan: any): ILoan {
     if (typeof this !== 'object' || this === null) throw new Error('Type of loan must be an object!');
     if (!_.isString(loan._id)) throw new Error('Type of loan._id must be a string!');
+    if (!_.isString(loan.userId)) throw new Error('Type of loan.userId must be a string!');
     if (!_.isString(loan.name)) throw new Error('Type of loan.name must be a string!');
     if (!_.isString(loan.description)) throw new Error('Type of loan.description must be a string!');
     if (!Array.isArray(loan.notes)) throw new Error('Type of loan.notes must be an Array!');
@@ -122,6 +123,7 @@ export const loanHelpers = {
 
     return {
       _id: loan._id,
+      userId: loan.userId,
       name: loan.name,
       description: loan.description,
       notes: loan.notes,

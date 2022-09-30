@@ -14,6 +14,7 @@ export const loansType = new GraphQLObjectType({
   name: 'LoansType',
   fields: (): any => ({
     _id: { type: new GraphQLNonNull(GraphQLID) },
+    userId: { type: new GraphQLNonNull(GraphQLID) },
     name: { type: new GraphQLNonNull(GraphQLString) },
     description: { type: new GraphQLNonNull(GraphQLString) },
     notes: { type: new GraphQLList(noteType) },

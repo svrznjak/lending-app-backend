@@ -20,7 +20,9 @@ describe('Manual tests', () => {
       defaultInterestRate: {
         type: 'PERCENTAGE_PER_DURATION',
         duration: 'DAY',
+        expectedPayments: 'WEEKLY',
         amount: 5,
+        isCompounding: false,
         entryTimestamp: 2123145213123,
       },
     });

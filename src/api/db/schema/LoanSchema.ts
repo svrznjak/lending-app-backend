@@ -14,6 +14,10 @@ export const LoanSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     required: true,
   },
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    required: true,
+  },
   name: { type: String, required: true },
   description: { type: String, required: true },
   notes: { type: [NoteSchema], default: [], required: true },

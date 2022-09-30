@@ -26,8 +26,6 @@ export const userHelpers = {
     if (!_.isString(user.name)) throw new Error('Type of User.name must be a string!');
     if (!_.isString(user.email)) throw new Error('Type of User.email must be a string!');
     if (!_.isString(user.authId)) throw new Error('Type of User.authId must be a string!');
-    if (!Array.isArray(user.budgets)) throw new Error('Type of User.budgets must be an Array!');
-    if (!Array.isArray(user.loans)) throw new Error('Type of User.loans must be an Array!');
     if (!_.isString(user.currency)) throw new Error('Type of User.currency must be a string!');
     if (!_.isString(user.language)) throw new Error('Type of User.language must be a string!');
 
@@ -38,8 +36,6 @@ export const userHelpers = {
       name: user.name,
       email: user.email,
       authId: user.authId,
-      budgets: user.budgets,
-      loans: user.loans,
       currency: user.currency,
       language: user.language,
       subscription: user.subscription,

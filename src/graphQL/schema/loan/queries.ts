@@ -4,6 +4,7 @@ import { GraphQLID, GraphQLList, GraphQLNonNull, GraphQLObjectType } from 'graph
 import { getUserByAuthId } from '../../../api/user.js';
 import loan from '../../../api/loan.js';
 import { paginationType } from '../commonTypes.js';
+import LoanModel from '../../../api/db/model/LoanModel.js';
 
 export default new GraphQLObjectType({
   name: 'LoanQueries',
@@ -16,9 +17,10 @@ export default new GraphQLObjectType({
       },
       async resolve(_parent: any, args: any, context: any): Promise<ITransaction[]> {
         const authId = await context.getCurrentUserAuthIdOrThrowValidationError();
-        const user = await getUserByAuthId(authId);
-        if (user.loans.find((loan) => (loan._id === args.loanId) == undefined))
-          throw new Error('Unauthorized/budget-does-not-exist');
+        const Mongo_user = await getUserByAuthId(authId);
+        const Mongo_loan = await LoanModel.findOne({ _id: args.loanId });
+        if (Mongo_loan === null) throw new Error('Loan does not exist!');
+        if (Mongo_loan.userId.toString !== Mongo_user._id.toString()) throw new Error('Unauthorized');
 
         return await loan.getTransactions(args.loanId, {
           pageSize: args.pagination.pageSize,
