@@ -167,7 +167,9 @@ export default {
     description,
     defaultInterestRateType,
     defaultInterestRateDuration,
+    defaultInterestRateExpectedPayments,
     defaultInterestRateAmount,
+    defaultInterestRateIsCompouding,
     isArchived,
   }: {
     userId: string;
@@ -176,7 +178,9 @@ export default {
     description?: string;
     defaultInterestRateType?: string;
     defaultInterestRateDuration?: string;
+    defaultInterestRateExpectedPayments?: string;
     defaultInterestRateAmount?: number;
+    defaultInterestRateIsCompouding?: number;
     isArchived?: boolean;
   }): Promise<IBudget> {
     // Get user
@@ -199,17 +203,32 @@ export default {
     if (
       defaultInterestRateType !== undefined ||
       defaultInterestRateDuration !== undefined ||
-      defaultInterestRateAmount !== undefined
+      defaultInterestRateExpectedPayments !== undefined ||
+      defaultInterestRateAmount !== undefined ||
+      defaultInterestRateIsCompouding !== undefined
     ) {
       // push current defaultInterestRate into revisions
       newInfo.defaultInterestRate = budget.defaultInterestRate;
-      newInfo.defaultInterestRate.revisions = newInfo.defaultInterestRate;
+      newInfo.defaultInterestRate.revisions.push({
+        type: newInfo.defaultInterestRate.type,
+        duration: newInfo.defaultInterestRate.duration,
+        expectedPayments: newInfo.defaultInterestRate.expectedPayments,
+        amount: newInfo.defaultInterestRate.amount,
+        isCompounding: newInfo.defaultInterestRate.isCompounding,
+        entryTimestamp: newInfo.defaultInterestRate.entryTimestamp,
+      });
       if (defaultInterestRateType !== undefined)
         newInfo.defaultInterestRate.type = interestRateHelpers.validate.type(defaultInterestRateType);
       if (defaultInterestRateDuration !== undefined)
         newInfo.defaultInterestRate.duration = interestRateHelpers.validate.duration(defaultInterestRateDuration);
+      if (defaultInterestRateExpectedPayments !== undefined)
+        newInfo.defaultInterestRate.expectedPayments = interestRateHelpers.validate.expectedPayments(
+          defaultInterestRateExpectedPayments,
+        );
       if (defaultInterestRateAmount !== undefined)
         newInfo.defaultInterestRate.amount = interestRateHelpers.validate.amount(defaultInterestRateAmount);
+      if (defaultInterestRateIsCompouding !== undefined)
+        newInfo.defaultInterestRate.isCompouding = defaultInterestRateIsCompouding;
       newInfo.defaultInterestRate.entryTimestamp = interestRateHelpers.validate.entryTimestamp(new Date().getTime());
     }
     budget.set(newInfo);
@@ -220,7 +239,9 @@ export default {
       defaultInterestRate: {
         type: budget.defaultInterestRate.type,
         duration: budget.defaultInterestRate.duration,
+        expectedPayments: budget.defaultInterestRate.expectedPayments,
         amount: budget.defaultInterestRate.amount,
+        isCompouding: budget.defaultInterestRate.isCompounding,
         entryTimestamp: budget.defaultInterestRate.entryTimestamp,
         revisions: budget.defaultInterestRate.revisions.toObject(),
       },
@@ -280,7 +301,9 @@ export default {
       defaultInterestRate: {
         type: budget.defaultInterestRate.type,
         duration: budget.defaultInterestRate.duration,
+        expectedPayments: budget.defaultInterestRate.expectedPayments,
         amount: budget.defaultInterestRate.amount,
+        isCompouding: budget.defaultInterestRate.isCompouding,
         entryTimestamp: budget.defaultInterestRate.entryTimestamp,
         revisions: budget.defaultInterestRate.revisions,
       },
