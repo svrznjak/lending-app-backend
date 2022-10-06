@@ -3,6 +3,7 @@ import { INote } from '../note/noteInterface.js';
 
 export interface ILoan {
   _id: string;
+  userId: string;
   name: string;
   description: string;
   notes: [INote?];

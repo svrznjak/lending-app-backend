@@ -7,6 +7,7 @@ import { interestRateInputType } from '../interestRate/type.js';
 
 import Budget from '../../../api/budget.js';
 import { budgetsType } from './type.js';
+import BudgetModel from '../../../api/db/model/BudgetModel.js';
 export default new GraphQLObjectType({
   name: 'BudgetMutations',
   fields: (): any => ({
@@ -21,7 +22,7 @@ export default new GraphQLObjectType({
       },
       async resolve(_parent: any, args: any, context: any): Promise<IBudget> {
         const userAuthId = await context.getCurrentUserAuthIdOrThrowValidationError();
-        const user = await getUserByAuthId(userAuthId);
+        const Mongo_user = await getUserByAuthId(userAuthId);
         const now = transactionHelpers.validate.entryTimestamp(new Date().getTime());
         args.defaultInterestRate.entryTimestamp = now;
 
@@ -33,11 +34,11 @@ export default new GraphQLObjectType({
             description: args.description,
             defaultInterestRate: args.defaultInterestRate,
           };
-          const newBudget = await Budget.create(user._id.toString(), newBudgetInfo, { session });
+          const newBudget = await Budget.create(Mongo_user._id.toString(), newBudgetInfo, { session });
           if (args.initialAmount !== 0)
             await Budget.addFundsFromOutside(
               {
-                userId: user._id.toString(),
+                userId: Mongo_user._id.toString(),
                 budgetId: newBudget._id.toString(),
                 transactionTimestamp: now,
                 description: args.initialTransactionDescription,
@@ -48,7 +49,6 @@ export default new GraphQLObjectType({
 
           await session.commitTransaction();
           return Budget.recalculateCalculatedValues({
-            userId: user._id.toString(),
             budgetId: newBudget._id.toString(),
           });
         } catch (err: any) {
@@ -70,19 +70,20 @@ export default new GraphQLObjectType({
       },
       async resolve(_parent: any, args: any, context: any): Promise<IBudget> {
         const userAuthId = await context.getCurrentUserAuthIdOrThrowValidationError();
-        const user = await getUserByAuthId(userAuthId);
+        const Mongo_user = await getUserByAuthId(userAuthId);
+        const Mongo_budget: any = await BudgetModel.findById(args.budgetId);
+        if (Mongo_budget === null) throw new Error('Budget does not exist!');
+        if (Mongo_budget.userId.toString() !== Mongo_user._id.toString()) throw new Error('Unauthorized');
+
         try {
-          if (user.budgets.find((budget) => (budget._id === args.budgetId) == undefined))
-            throw new Error('Unauthorized/budget-does-not-exist');
           await Budget.addFundsFromOutside({
-            userId: user._id.toString(),
+            userId: Mongo_user._id.toString(),
             budgetId: args.budgetId,
             transactionTimestamp: args.transactionTimestamp,
             description: args.description,
             amount: args.amount,
           });
           return Budget.recalculateCalculatedValues({
-            userId: user._id.toString(),
             budgetId: args.budgetId,
           });
         } catch (err: any) {
@@ -101,19 +102,19 @@ export default new GraphQLObjectType({
       },
       async resolve(_parent: any, args: any, context: any): Promise<IBudget> {
         const userAuthId = await context.getCurrentUserAuthIdOrThrowValidationError();
-        const user = await getUserByAuthId(userAuthId);
+        const Mongo_user = await getUserByAuthId(userAuthId);
+        const Mongo_budget: any = await BudgetModel.findById(args.budgetId);
+        if (Mongo_budget === null) throw new Error('Budget does not exist!');
+        if (Mongo_budget.userId.toString() !== Mongo_user._id.toString()) throw new Error('Unauthorized');
         try {
-          if (user.budgets.find((budget) => (budget._id === args.budgetId) == undefined))
-            throw new Error('Unauthorized/budget-does-not-exist');
           await Budget.withdrawFundsToOutside({
-            userId: user._id.toString(),
+            userId: Mongo_user._id.toString(),
             budgetId: args.budgetId,
             transactionTimestamp: args.transactionTimestamp,
             description: args.description,
             amount: args.amount,
           });
           return Budget.recalculateCalculatedValues({
-            userId: user._id.toString(),
             budgetId: args.budgetId,
           });
         } catch (err: any) {

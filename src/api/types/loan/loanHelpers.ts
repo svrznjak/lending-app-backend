@@ -76,6 +76,10 @@ export const loanHelpers = {
         throw new Error('(validation) initialPrincipal is invalid!');
       return initialPrincipal;
     },
+    amount: function validateAmount(amount: number): number {
+      if (!isValidAmountOfMoney({ amount: amount })) throw new Error('(validation) amount is invalid!');
+      return amount;
+    },
     status: function validateStatus(status: Pick<ILoan, 'status'>): Pick<ILoan, 'status'> {
       if (
         !isValidOption({
@@ -104,13 +108,14 @@ export const loanHelpers = {
   runtimeCast: function runtimeCast(loan: any): ILoan {
     if (typeof this !== 'object' || this === null) throw new Error('Type of loan must be an object!');
     if (!_.isString(loan._id)) throw new Error('Type of loan._id must be a string!');
+    if (!_.isString(loan.userId)) throw new Error('Type of loan.userId must be a string!');
     if (!_.isString(loan.name)) throw new Error('Type of loan.name must be a string!');
     if (!_.isString(loan.description)) throw new Error('Type of loan.description must be a string!');
     if (!Array.isArray(loan.notes)) throw new Error('Type of loan.notes must be an Array!');
     if (!Number.isFinite(loan.openedTimestamp)) throw new Error('Type of loan.openedTimestamp must be a number!');
     if (!Number.isFinite(loan.closesTimestamp)) throw new Error('Type of loan.closesTimestamp must be a number!');
     if (!Number.isFinite(loan.initialPrincipal)) throw new Error('Type of loan.initialPrincipal must be a number!');
-    if (!_.isString(loan.status)) throw new Error('Type of loan.staus must be a string!');
+    if (!_.isString(loan.status)) throw new Error('Type of loan.status must be a string!');
     if (!Number.isFinite(loan.calculatedTotalPaidPrincipal))
       throw new Error('Type of loan.calculatedTotalPaidPrincipal must be a number!');
     if (!Number.isFinite(loan.calculatedChargedInterest))
@@ -122,6 +127,7 @@ export const loanHelpers = {
 
     return {
       _id: loan._id,
+      userId: loan.userId,
       name: loan.name,
       description: loan.description,
       notes: loan.notes,

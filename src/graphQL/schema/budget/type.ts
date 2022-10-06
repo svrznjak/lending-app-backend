@@ -5,6 +5,7 @@ export const budgetsType = new GraphQLObjectType({
   name: 'BudgetType',
   fields: (): any => ({
     _id: { type: new GraphQLNonNull(GraphQLID) },
+    userId: { type: new GraphQLNonNull(GraphQLID) },
     name: { type: new GraphQLNonNull(GraphQLString) },
     description: { type: new GraphQLNonNull(GraphQLString) },
     defaultInterestRate: { type: new GraphQLNonNull(interestRateType) },

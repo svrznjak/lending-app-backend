@@ -12,6 +12,6 @@ export interface amortizationInterval {
   fromDateTimestamp: number;
   toDateTimestamp: number;
   outstandingPrincipal: number;
-  interest?: number;
+  interest: number;
   principalPayment: number;
 }

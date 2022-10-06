@@ -1,28 +1,53 @@
-import { paginationType } from './../commonTypes.js';
+import { paginationInputType } from './../commonTypes.js';
 import { ITransaction } from './../../../api/types/transaction/transactionInterface.js';
 import { transactionType } from './../transaction/type.js';
 import { GraphQLID, GraphQLList, GraphQLNonNull, GraphQLObjectType } from 'graphql';
 import { getUserByAuthId } from '../../../api/user.js';
 import budget from '../../../api/budget.js';
+import BudgetModel from '../../../api/db/model/BudgetModel.js';
+import { budgetsType } from './type.js';
+import { IBudget } from '../../../api/types/budget/budgetInterface.js';
 
 export default new GraphQLObjectType({
   name: 'BudgetQueries',
   fields: (): any => ({
+    budget: {
+      type: budgetsType,
+      args: {
+        budgetId: { type: new GraphQLNonNull(GraphQLID) },
+      },
+      resolve: async (_parent: any, args: any, context: any): Promise<IBudget> => {
+        const authId = await context.getCurrentUserAuthIdOrThrowValidationError();
+        const user = await getUserByAuthId(authId);
+        return await budget.getOneFromUser({ userId: user._id, budgetId: args.budgetId });
+      },
+    },
+    budgets: {
+      type: new GraphQLList(budgetsType),
+      resolve: async (_parent: any, _args: any, context: any): Promise<IBudget[]> => {
+        const authId = await context.getCurrentUserAuthIdOrThrowValidationError();
+        const user = await getUserByAuthId(authId);
+
+        const budgets = await budget.getAllFromUser({ userId: user._id });
+        return budgets;
+      },
+    },
     transactions: {
       type: new GraphQLList(transactionType),
       args: {
         budgetId: { type: new GraphQLNonNull(GraphQLID) },
-        pagination: { type: paginationType },
+        pagination: { type: paginationInputType },
       },
       async resolve(_parent: any, args: any, context: any): Promise<ITransaction[]> {
         const authId = await context.getCurrentUserAuthIdOrThrowValidationError();
         const user = await getUserByAuthId(authId);
-        if (user.budgets.find((budget) => (budget._id === args.budgetId) == undefined))
-          throw new Error('Unauthorized/budget-does-not-exist');
+        const Mongo_budget: any = await BudgetModel.findOne({ _id: args.budgetId });
+        if (Mongo_budget === null) throw new Error('Budget does not exist!');
+        if (Mongo_budget.userId.toString() !== user._id) throw new Error('Unauthorized');
 
         return await budget.getTransactions(args.budgetId, {
-          pageSize: args.pagination.pageSize,
-          pageNumber: args.pagination.pageNumber,
+          pageSize: args.pagination?.pageSize,
+          pageNumber: args.pagination?.pageNumber,
         });
       },
     },

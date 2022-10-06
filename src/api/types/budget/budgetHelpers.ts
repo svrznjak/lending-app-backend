@@ -54,6 +54,7 @@ export const budgetHelpers = {
   runtimeCast: function runtimeCast(budget: any): IBudget {
     if (typeof this !== 'object' || this === null) throw new Error('Type of Budget must be an object!');
     if (!_.isString(budget._id)) throw new Error('Type of budget._id must be a string!');
+    if (!_.isString(budget.userId)) throw new Error('Type of budget.userId must be a string!');
     if (!_.isString(budget.name)) throw new Error('Type of budget.name must be a string!');
     if (!_.isString(budget.description)) throw new Error('Type of budget.description must be a string!');
     if (!Number.isFinite(budget.calculatedTotalAmount))
@@ -66,6 +67,7 @@ export const budgetHelpers = {
 
     return {
       _id: budget._id,
+      userId: budget.userId,
       name: budget.name,
       description: budget.description,
       defaultInterestRate: budget.defaultInterestRate,

@@ -20,7 +20,9 @@ describe('Manual tests', () => {
       defaultInterestRate: {
         type: 'PERCENTAGE_PER_DURATION',
         duration: 'DAY',
+        expectedPayments: 'WEEKLY',
         amount: 5,
+        isCompounding: false,
         entryTimestamp: 2123145213123,
       },
     });
@@ -29,7 +31,6 @@ describe('Manual tests', () => {
   });
   test('edit', async () => {
     const response = await budget.edit({
-      userId: '6319700ccac59dc8fdc9de05',
       budgetId: '63198303a720d8c914af7b78',
       name: 'new new name',
       defaultInterestRateAmount: 20,
@@ -39,14 +40,6 @@ describe('Manual tests', () => {
   });
   test('delete', async () => {
     const response = await transaction.delete('63245a9a918df28182c8b8e9');
-    console.log(response);
-    expect(true).toBeTruthy();
-  });
-  test('find', async () => {
-    const response = await transaction.findTranasactionsFromAndTo({
-      addressId: '6319700ccac59dc8fdc9de05',
-      datatype: 'BUDGET',
-    });
     console.log(response);
     expect(true).toBeTruthy();
   });

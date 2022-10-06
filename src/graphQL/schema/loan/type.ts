@@ -6,6 +6,7 @@ import {
   GraphQLList,
   GraphQLFloat,
   GraphQLEnumType,
+  GraphQLInputObjectType,
 } from 'graphql';
 import { interestRateType } from '../interestRate/type.js';
 import { noteType } from '../note/type.js';
@@ -14,6 +15,7 @@ export const loansType = new GraphQLObjectType({
   name: 'LoansType',
   fields: (): any => ({
     _id: { type: new GraphQLNonNull(GraphQLID) },
+    userId: { type: new GraphQLNonNull(GraphQLID) },
     name: { type: new GraphQLNonNull(GraphQLString) },
     description: { type: new GraphQLNonNull(GraphQLString) },
     notes: { type: new GraphQLList(noteType) },
@@ -41,8 +43,8 @@ export const loansType = new GraphQLObjectType({
   }),
 });
 
-export const fundType = new GraphQLObjectType({
-  name: 'FundType',
+export const fundInputType = new GraphQLInputObjectType({
+  name: 'FundInputType',
   fields: (): any => ({
     budgetId: { type: new GraphQLNonNull(GraphQLID) },
     amount: { type: new GraphQLNonNull(GraphQLFloat) },

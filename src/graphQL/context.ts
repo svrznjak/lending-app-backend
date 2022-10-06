@@ -2,6 +2,7 @@ import auth from '../api/auth.js';
 
 export default async (req: any, _res: any): Promise<object> => {
   return {
+    authHeader: req.headers.authorization || '',
     getCurrentUserAuthIdOrThrowValidationError: async (): Promise<string> => {
       try {
         return await auth.getAuthIdFromAuthHeader(req.headers.authorization || '');

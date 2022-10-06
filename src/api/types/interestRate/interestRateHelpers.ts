@@ -76,7 +76,7 @@ export const interestRateHelpers = {
       duration: interestRate.duration,
       expectedPayments: interestRate.expectedPayments,
       amount: interestRate.amount,
-      isCompounding: interestRate.isCompouding,
+      isCompounding: interestRate.isCompounding,
       entryTimestamp: interestRate.entryTimestamp,
       revisions: interestRate.revisions,
     };
