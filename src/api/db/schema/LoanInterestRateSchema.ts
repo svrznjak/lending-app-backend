@@ -17,7 +17,7 @@ const LoanInterestRate = new mongoose.Schema({
     required: true,
   },
   amount: { type: Number, required: true },
-  isCompound: { type: Boolean, required: true },
+  isCompounding: { type: Boolean, required: true },
   entryTimestamp: { type: Number, required: true },
 });
 

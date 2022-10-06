@@ -6,6 +6,31 @@ import { transactionAddressHelpers } from './types/transactionAddress/transactio
 import mongoose, { SessionOption } from 'mongoose';
 
 export default {
+  getOne: async function getOneTransaction({ transactionId }: { transactionId: string }): Promise<ITransaction> {
+    try {
+      const Mongo_transaction: any = await TransactionModel.findById(transactionId).lean();
+      if (Mongo_transaction === null) throw new Error('Transaction with searched _id does not exist');
+      return transactionHelpers.runtimeCast({
+        _id: Mongo_transaction._id.toString(),
+        userId: Mongo_transaction.userId.toString(),
+        transactionTimestamp: Mongo_transaction.transactionTimestamp,
+        description: Mongo_transaction.description,
+        from: {
+          datatype: Mongo_transaction.from.datatype,
+          addressId: Mongo_transaction.from.addressId.toString(),
+        },
+        to: {
+          datatype: Mongo_transaction.to.datatype,
+          addressId: Mongo_transaction.to.addressId.toString(),
+        },
+        amount: Mongo_transaction.amount,
+        entryTimestamp: Mongo_transaction.entryTimestamp,
+      });
+    } catch (err) {
+      console.log(err);
+      throw new Error('Transaction could not be fetchet from db!');
+    }
+  },
   add: async function addTransaction(
     transaction: Pick<
       ITransaction,
@@ -65,29 +90,39 @@ export default {
     transaction.description = newTransaction.description;
     transaction.amount = newTransaction.amount;
     transaction.entryTimestamp = newTransaction.entryTimestamp;
-    // verify transaction values
-    let editedTransaction: ITransaction = {
-      _id: transaction._id.toString(),
-      userId: transaction.userId.toString(),
-      transactionTimestamp: transaction.transactionTimestamp,
-      description: transaction.description,
-      from: {
-        datatype: transaction.from.datatype,
-        addressId: transaction.from.addressId.toString(),
-      },
-      to: {
-        datatype: transaction.to.datatype,
-        addressId: transaction.to.addressId.toString(),
-      },
-      amount: transaction.amount,
-      entryTimestamp: transaction.entryTimestamp,
-      revisions: transaction.revisions,
-    };
-    editedTransaction = transactionHelpers.runtimeCast(editedTransaction);
+
     // Save edited transaction into DB
     await transaction.save();
+
+    // Get edited transaction to check if everything is ok
+    const Mongo_editedTransaction: any = await TransactionModel.findById(transactionId).lean();
+    if (Mongo_editedTransaction.transactionTimestamp !== newTransaction.transactionTimestamp)
+      throw new Error('Major error!!!');
+    if (Mongo_editedTransaction.description !== newTransaction.description) throw new Error('Major error!!!');
+    if (Mongo_editedTransaction.amount !== newTransaction.amount) throw new Error('Major error!!!');
+    if (Mongo_editedTransaction.entryTimestamp !== newTransaction.entryTimestamp) throw new Error('Major error!!!');
+
+    // verify transaction values
+    const editedTransaction: ITransaction = {
+      _id: Mongo_editedTransaction._id.toString(),
+      userId: Mongo_editedTransaction.userId.toString(),
+      transactionTimestamp: Mongo_editedTransaction.transactionTimestamp,
+      description: Mongo_editedTransaction.description,
+      from: {
+        datatype: Mongo_editedTransaction.from.datatype,
+        addressId: Mongo_editedTransaction.from.addressId.toString(),
+      },
+      to: {
+        datatype: Mongo_editedTransaction.to.datatype,
+        addressId: Mongo_editedTransaction.to.addressId.toString(),
+      },
+      amount: Mongo_editedTransaction.amount,
+      entryTimestamp: Mongo_editedTransaction.entryTimestamp,
+      revisions: Mongo_editedTransaction.revisions,
+    };
+
     // return edited transaction
-    return editedTransaction;
+    return transactionHelpers.runtimeCast(editedTransaction);
   },
   delete: async function deleteTransaction(transactionId: string): Promise<boolean> {
     // const transaction = await TransactionModel.findById(transactionId);
@@ -103,15 +138,10 @@ export default {
   },
   findTranasactionsFromAndTo: async function findTransactionsFromAndTo(
     transactionAddress: ITransactionAddress,
-    { pageNumber, pageSize }: { pageNumber?: number; pageSize?: number },
+    { pageNumber = 0, pageSize = Infinity }: { pageNumber?: number; pageSize?: number },
   ): Promise<ITransaction[]> {
     let validatedTransactionAddress = transactionAddressHelpers.validate.all(transactionAddress);
     validatedTransactionAddress = transactionAddressHelpers.runtimeCast(transactionAddress);
-
-    if (pageNumber === undefined) {
-      pageNumber = 0;
-      pageSize = Infinity;
-    }
 
     const transactions = await TransactionModel.find({
       $or: [

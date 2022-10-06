@@ -3,8 +3,8 @@ import { GraphQLEnumType, GraphQLID, GraphQLList, GraphQLNonNull, GraphQLObjectT
 import { budgetsType } from '../budget/type.js';
 import { loansType } from '../loan/type.js';
 import { IUser } from '../../../api/types/user/userInterface.js';
-import Budget from '../../../api/budget.js';
-import Loan from '../../../api/loan.js';
+import Budgets from '../../../api/budget.js';
+import Loans from '../../../api/loan.js';
 import { ILoan } from '../../../api/types/loan/loanInterface.js';
 
 export const userType = new GraphQLObjectType({
@@ -17,13 +17,13 @@ export const userType = new GraphQLObjectType({
     budgets: {
       type: new GraphQLList(budgetsType),
       resolve: async (parent: IUser): Promise<IBudget[]> => {
-        return await Budget.get({ userId: parent._id });
+        return await Budgets.getAllFromUser({ userId: parent._id });
       },
     },
     loans: {
       type: new GraphQLList(loansType),
       resolve: async (parent: IUser): Promise<ILoan[]> => {
-        return await Loan.get({ userId: parent._id });
+        return await Loans.get({ userId: parent._id });
       },
     },
     currency: { type: new GraphQLNonNull(GraphQLString) },

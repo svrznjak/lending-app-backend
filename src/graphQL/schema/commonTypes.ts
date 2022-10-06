@@ -1,7 +1,7 @@
-import { GraphQLObjectType, GraphQLNonNull, GraphQLInt } from 'graphql';
+import { GraphQLInputObjectType, GraphQLInt } from 'graphql';
 
-export const paginationType = new GraphQLObjectType({
-  name: 'PaginationType',
+export const paginationInputType = new GraphQLInputObjectType({
+  name: 'PaginationInputType',
   fields: (): any => ({
     pageSize: { type: GraphQLInt },
     pageNumber: { type: GraphQLInt },

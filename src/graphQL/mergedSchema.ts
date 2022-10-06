@@ -3,6 +3,8 @@ import { GraphQLSchema, GraphQLObjectType } from 'graphql';
 // Import queries from seperate datatypes
 import userQueries from './schema/user/queries.js';
 import budgetQueries from './schema/budget/queries.js';
+import loanQueries from './schema/loan/queries.js';
+import transactionQueries from './schema/transaction/queries.js';
 
 // Merge imported queries into GraphQLObjectType
 const mergedQueries = new GraphQLObjectType({
@@ -16,12 +18,22 @@ const mergedQueries = new GraphQLObjectType({
       type: budgetQueries,
       resolve: () => ({}),
     },
+    Loan: {
+      type: loanQueries,
+      resolve: () => ({}),
+    },
+    Transaction: {
+      type: transactionQueries,
+      resolve: () => ({}),
+    },
   }),
 });
 
 // Import mutations from seperate datatypes
 import userMutations from './schema/user/mutations.js';
 import budgetMutations from './schema/budget/mutations.js';
+import loanMutations from './schema/loan/mutations.js';
+import transactionMutations from './schema/transaction/mutations.js';
 
 // Merge imported mutations into GraphQLObjectType
 const mergedMutations = new GraphQLObjectType({
@@ -33,6 +45,14 @@ const mergedMutations = new GraphQLObjectType({
     },
     Budget: {
       type: budgetMutations,
+      resolve: () => ({}),
+    },
+    Loan: {
+      type: loanMutations,
+      resolve: () => ({}),
+    },
+    Transaction: {
+      type: transactionMutations,
       resolve: () => ({}),
     },
   }),

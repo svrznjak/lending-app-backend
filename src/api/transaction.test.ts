@@ -43,12 +43,4 @@ describe('Manual tests', () => {
     console.log(response);
     expect(true).toBeTruthy();
   });
-  test('find', async () => {
-    const response = await transaction.findTranasactionsFromAndTo({
-      addressId: '6319700ccac59dc8fdc9de05',
-      datatype: 'BUDGET',
-    });
-    console.log(response);
-    expect(true).toBeTruthy();
-  });
 });

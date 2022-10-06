@@ -51,7 +51,7 @@ export const interestRateType = new GraphQLObjectType({
       ),
     },
     amount: { type: new GraphQLNonNull(GraphQLInt) },
-    isCompouding: { type: new GraphQLNonNull(GraphQLBoolean) },
+    isCompounding: { type: new GraphQLNonNull(GraphQLBoolean) },
     entryTimestamp: { type: new GraphQLNonNull(GraphQLFloat) },
   }),
 });
@@ -99,6 +99,6 @@ export const interestRateInputType = new GraphQLInputObjectType({
       ),
     },
     amount: { type: new GraphQLNonNull(GraphQLInt) },
-    isCompouding: { type: new GraphQLNonNull(GraphQLBoolean) },
+    isCompounding: { type: new GraphQLNonNull(GraphQLBoolean) },
   }),
 });

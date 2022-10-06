@@ -71,9 +71,9 @@ export default new GraphQLObjectType({
       async resolve(_parent: any, args: any, context: any): Promise<IBudget> {
         const userAuthId = await context.getCurrentUserAuthIdOrThrowValidationError();
         const Mongo_user = await getUserByAuthId(userAuthId);
-        const Mongo_budget = await BudgetModel.findById(args.budgetId);
+        const Mongo_budget: any = await BudgetModel.findById(args.budgetId);
         if (Mongo_budget === null) throw new Error('Budget does not exist!');
-        if (Mongo_budget.userId.toString !== Mongo_user._id.toString()) throw new Error('Unauthorized');
+        if (Mongo_budget.userId.toString() !== Mongo_user._id.toString()) throw new Error('Unauthorized');
 
         try {
           await Budget.addFundsFromOutside({
@@ -103,9 +103,9 @@ export default new GraphQLObjectType({
       async resolve(_parent: any, args: any, context: any): Promise<IBudget> {
         const userAuthId = await context.getCurrentUserAuthIdOrThrowValidationError();
         const Mongo_user = await getUserByAuthId(userAuthId);
-        const Mongo_budget = await BudgetModel.findById(args.budgetId);
+        const Mongo_budget: any = await BudgetModel.findById(args.budgetId);
         if (Mongo_budget === null) throw new Error('Budget does not exist!');
-        if (Mongo_budget.userId.toString !== Mongo_user._id.toString()) throw new Error('Unauthorized');
+        if (Mongo_budget.userId.toString() !== Mongo_user._id.toString()) throw new Error('Unauthorized');
         try {
           await Budget.withdrawFundsToOutside({
             userId: Mongo_user._id.toString(),
