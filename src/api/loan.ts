@@ -167,6 +167,32 @@ export default {
     await loan.save();
     return changedloan;
   },
+  getOneFromUser: async function getLoan({ userId, loanId }: { userId: string; loanId: string }): Promise<ILoan> {
+    const Mongo_loan: any = await LoanModel.findOne({ _id: loanId, userId: userId }).lean().exec();
+    return loanHelpers.runtimeCast({
+      _id: Mongo_loan._id.toString(),
+      userId: Mongo_loan.userId.toString(),
+      name: Mongo_loan.name,
+      description: Mongo_loan.description,
+      notes: Mongo_loan.notes,
+      openedTimestamp: Mongo_loan.openedTimestamp,
+      closesTimestamp: Mongo_loan.closesTimestamp,
+      interestRate: {
+        type: Mongo_loan.interestRate.type,
+        duration: Mongo_loan.interestRate.duration,
+        expectedPayments: Mongo_loan.interestRate.expectedPayments,
+        amount: Mongo_loan.interestRate.amount,
+        isCompounding: Mongo_loan.interestRate.isCompounding,
+        entryTimestamp: Mongo_loan.interestRate.entryTimestamp,
+        revisions: Mongo_loan.interestRate.revisions,
+      },
+      initialPrincipal: Mongo_loan.initialPrincipal,
+      status: Mongo_loan.status,
+      calculatedTotalPaidPrincipal: Mongo_loan.calculatedTotalPaidPrincipal,
+      calculatedChargedInterest: Mongo_loan.calculatedChargedInterest,
+      calculatedPaidInterest: Mongo_loan.calculatedPaidInterest,
+    });
+  },
 
   get: async function getLoans({ userId }: { userId: string }): Promise<ILoan[]> {
     const Mongo_loans: any = await LoanModel.find({ userId: userId }).lean().exec();
@@ -350,13 +376,19 @@ export default {
     });
   },
 
-  addManualInterest: async function addManualInterestToLoan(
-    userId: string,
-    loanId: string,
-    transactionTimestamp: number,
-    description: string,
-    amount: number,
-  ): Promise<ITransaction> {
+  addManualInterest: async function addManualInterestToLoan({
+    userId,
+    loanId,
+    transactionTimestamp,
+    description,
+    amount,
+  }: {
+    userId: string;
+    loanId: string;
+    transactionTimestamp: number;
+    description: string;
+    amount: number;
+  }): Promise<ITransaction> {
     // Get user
     const user = await UserModel.findOne({ _id: userId });
     if (user === null) throw new Error('User does not exist!');

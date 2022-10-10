@@ -36,7 +36,7 @@ export async function createUser(userRegistrationInfo: IUserRegistrationInfo): P
 // As a lender, I want to view my user account information, so that I can make appropriate changes.
 export async function getUserByAuthId(authId: string): Promise<IUser | undefined> {
   try {
-    const user = await UserModel.findOne({ authId: authId });
+    const user = await UserModel.findOne({ authId: authId }).lean();
     if (user === null) throw new Error('User not found');
     return userHelpers.runtimeCast({
       _id: user._id.toString(),

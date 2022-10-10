@@ -85,5 +85,35 @@ export default new GraphQLObjectType({
         }
       },
     },
+    addManualInterest: {
+      type: transactionType,
+      args: {
+        loanId: { type: new GraphQLNonNull(GraphQLID) },
+        description: { type: new GraphQLNonNull(GraphQLString) },
+        transactionTimestamp: { type: new GraphQLNonNull(GraphQLFloat) },
+        amount: { type: new GraphQLNonNull(GraphQLFloat) },
+      },
+      async resolve(_parent: any, args: any, context: any): Promise<ITransaction> {
+        const userAuthId = await context.getCurrentUserAuthIdOrThrowValidationError();
+        const user = await getUserByAuthId(userAuthId);
+
+        // get loan to check if loan with loanId exists for specified user userId
+        await Loan.getOneFromUser({ userId: user._id, loanId: args.loanId });
+
+        try {
+          const newTransaction = await Loan.addManualInterest({
+            userId: user._id,
+            loanId: args.loanId,
+            transactionTimestamp: args.transactionTimestamp,
+            description: args.description,
+            amount: args.amount,
+          });
+          return newTransaction;
+        } catch (err: any) {
+          console.log(err.message);
+          throw new Error(err);
+        }
+      },
+    },
   }),
 });

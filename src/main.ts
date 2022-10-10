@@ -11,6 +11,7 @@ import schema from './graphQL/mergedSchema.js';
 console.log('Firebase project id: ' + firebaseApp);
 
 try {
+  console.log(process.env.MONGO_CLOUD_URI);
   global.mongooseConnection = await mongoose.connect(process.env.MONGO_CLOUD_URI);
 } catch (err) {
   throw new Error('Failed to connect to MongoDB');
