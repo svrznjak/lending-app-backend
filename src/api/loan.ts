@@ -15,7 +15,11 @@ import { ITransaction } from './types/transaction/transactionInterface.js';
 import Budget from './budget.js';
 import paranoidCalculator from './utils/paranoidCalculator/paranoidCalculator.js';
 import { transactionHelpers } from './types/transaction/transactionHelpers.js';
-import { amortizationInterval, IInterestRate } from './types/interestRate/interestRateInterface.js';
+import {
+  IAmortizationInterval,
+  ITransactionInterval,
+  IInterestRate,
+} from './types/interestRate/interestRateInterface.js';
 import LoanModel from './db/model/LoanModel.js';
 import BudgetModel from './db/model/BudgetModel.js';
 
@@ -281,7 +285,7 @@ export default {
     });
 
     await Budget.recalculateCalculatedValues({ budgetId: budgetId });
-    // TODO await loan.recalculateCalculatedValues(budgetId);
+    await this.calculateInterest({ loanId: loanId });
 
     return newTransaction;
   },
@@ -460,7 +464,18 @@ export default {
     await loan.save();
     return changedloan;
   },
-  calculateInterest: async function calculateLoanInterest({ loanId }: { loanId: string }) {
+  recalculateCalculatedValues: async function recalculateLoanCalculatedValues({
+    loanId,
+  }: {
+    loanId: string;
+  }): Promise<void> {
+    const TRANSACTIONS_LIST = await generateTransactionsList({ loanId: loanId });
+  },
+  generateTransactionsList: async function generateLoanTransactionsList({
+    loanId,
+  }: {
+    loanId: string;
+  }): Promise<ITransactionInterval[]> {
     console.log(loanId);
 
     // Get loan
@@ -485,8 +500,9 @@ export default {
       pageSize: Infinity,
     });
 
-    const listOfTransactions: amortizationInterval[] = [];
+    const listOfTransactions: ITransactionInterval[] = [];
     let outstandingPrincipal = 0;
+    let outstandingInterest = 0;
     for (let i = loanTransactions.length - 1; i >= 0; i--) {
       const loanTransaction = loanTransactions[i];
       console.log(loanTransaction);
@@ -495,34 +511,60 @@ export default {
       let fromDateTimestamp;
       const toDateTimestamp = loanTransaction.transactionTimestamp;
       //if first iteration
-      if (i === loan.transactions.length - 1) {
+      if (i === loanTransactions.length - 1) {
         fromDateTimestamp = loanTransaction.transactionTimestamp;
       } else {
         fromDateTimestamp = loanTransactions[i + 1].transactionTimestamp;
       }
       const differenceInDays = differenceInCalendarDays(new Date(toDateTimestamp), new Date(fromDateTimestamp));
-      let interest = 0;
+      let interestCharge = 0;
 
       if (loan.interestRate.type === 'PERCENTAGE_PER_DURATION' && loan.interestRate.isCompounding) {
         const interestPercentagePerDay = interestPerDay / 100;
         for (let i = 0; i < differenceInDays; i++) {
-          interest += (outstandingPrincipal + interest) * interestPercentagePerDay;
+          interestCharge += (outstandingPrincipal + interestCharge) * interestPercentagePerDay;
         }
       } else if (loan.interestRate.type === 'PERCENTAGE_PER_DURATION' && !loan.interestRate.isCompounding) {
         const interestPercentagePerDay = interestPerDay / 100;
-        interest = outstandingPrincipal * interestPercentagePerDay * differenceInDays;
+        interestCharge = outstandingPrincipal * interestPercentagePerDay * differenceInDays;
       } else if (loan.interestRate.type === 'FIXED_PER_DURATION' && loan.interestRate.duration !== 'FULL_DURATION') {
-        interest = interestPerDay * differenceInDays;
+        interestCharge = interestPerDay * differenceInDays;
       }
+
+      // calculate principal payment and next outstandingPrincipal
+      let principalCharge: number;
+      if (loanTransaction.from.datatype === 'BUDGET') {
+        principalCharge = -loanTransaction.amount;
+        outstandingPrincipal = outstandingPrincipal - principalCharge;
+      } else if (loanTransaction.from.datatype === 'INTEREST') {
+        principalCharge = 0;
+        interestCharge += loanTransaction.amount;
+        outstandingInterest = outstandingInterest + interestCharge;
+      } else if (loanTransaction.from.datatype === 'LOAN') {
+        outstandingInterest = outstandingInterest + interestCharge;
+        if (loanTransaction.amount <= outstandingInterest) {
+          interestCharge = loanTransaction.amount;
+          outstandingInterest = outstandingInterest - interestCharge;
+          principalCharge = 0;
+        } else {
+          interestCharge = outstandingInterest;
+          outstandingInterest = outstandingInterest - interestCharge;
+          principalCharge = loanTransaction.amount - interestCharge;
+          outstandingPrincipal = outstandingPrincipal - principalCharge;
+        }
+      }
+
       listOfTransactions.push({
         fromDateTimestamp: fromDateTimestamp,
         toDateTimestamp: toDateTimestamp,
+        interestCharge: interestCharge,
+        principalCharge: principalCharge,
         outstandingPrincipal: outstandingPrincipal,
-        interest: interest,
-        principalPayment: loanTransaction.amount,
+        outstandingInterest: outstandingInterest,
       });
-      outstandingPrincipal = outstandingPrincipal - loanTransaction.amount;
     }
+    console.log(listOfTransactions);
+    return listOfTransactions;
   },
 
   calculateExpetedAmortization: async function calculateExpectedLoanAmortization({
@@ -535,9 +577,9 @@ export default {
     closesTimestamp: number;
     interestRate: Omit<IInterestRate, 'entryTimestamp' | 'revisions'>;
     amount: number;
-  }): Promise<amortizationInterval[]> {
+  }): Promise<IAmortizationInterval[]> {
     // TODO: validate inputs
-    const listOfPayments: amortizationInterval[] = [];
+    const listOfPayments: IAmortizationInterval[] = [];
     const loanDurationInDays = differenceInCalendarDays(new Date(closesTimestamp), new Date(openedTimestamp));
     const principalPaymentPerDay = amount / loanDurationInDays;
     const interestPerDay = normalizeInterestRateToDay(interestRate);

@@ -8,10 +8,19 @@ export interface IInterestRate {
   revisions?: IInterestRate;
 }
 
-export interface amortizationInterval {
+export interface IAmortizationInterval {
   fromDateTimestamp: number;
   toDateTimestamp: number;
   outstandingPrincipal: number;
   interest: number;
   principalPayment: number;
+}
+
+export interface ITransactionInterval {
+  fromDateTimestamp: number;
+  toDateTimestamp: number;
+  interestCharge: number;
+  principalCharge: number;
+  outstandingPrincipal: number;
+  outstandingInterest: number;
 }
