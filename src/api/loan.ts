@@ -184,21 +184,21 @@ export default {
     if (LoanCache.getCachedItem({ itemId: loanId })) {
       return LoanCache.getCachedItem({ itemId: loanId }) as ILoan;
     } else {
-      const recalculatedLoan = await this.recalculateCalculatedValues({ loan: Mongo_loan });
+      const recalculatedLoan = await this.recalculateCalculatedValues({ Mongo_loan: Mongo_loan });
       LoanCache.setCachedItem({ itemId: loanId, value: recalculatedLoan });
       return recalculatedLoan;
     }
   },
 
   getAllFromUser: async function getLoans({ userId }: { userId: string }): Promise<ILoan[]> {
-    const Mongo_loans: any = await LoanModel.find({ userId: userId }).lean().exec();
+    const Mongo_loans: any = await LoanModel.find({ userId: userId }).exec();
     const returnValue: ILoan[] = [];
     for (let i = 0; i < Mongo_loans.length; i++) {
       const LOAN_ID = Mongo_loans[i]._id.toString();
       if (LoanCache.getCachedItem({ itemId: LOAN_ID })) {
         returnValue.push(LoanCache.getCachedItem({ itemId: LOAN_ID }) as ILoan);
       } else {
-        const recalculatedLoan = await this.recalculateCalculatedValues({ loan: Mongo_loans[i] });
+        const recalculatedLoan = await this.recalculateCalculatedValues({ Mongo_loan: Mongo_loans[i] });
         LoanCache.setCachedItem({ itemId: LOAN_ID, value: recalculatedLoan });
         returnValue.push(recalculatedLoan);
       }
@@ -289,7 +289,10 @@ export default {
     });
 
     await Budget.recalculateCalculatedValues({ Mongo_budget: Mongo_budget });
-    LoanCache.setCachedItem({ itemId: loanId, value: await this.recalculateCalculatedValues({ loan: Mongo_loan }) });
+    LoanCache.setCachedItem({
+      itemId: loanId,
+      value: await this.recalculateCalculatedValues({ Mongo_loan: Mongo_loan }),
+    });
 
     return newTransaction;
   },
@@ -325,7 +328,10 @@ export default {
       entryTimestamp: transactionHelpers.validate.entryTimestamp(new Date().getTime()),
     });
     await Budget.recalculateCalculatedValues({ Mongo_budget: Mongo_budget });
-    LoanCache.setCachedItem({ itemId: loanId, value: await this.recalculateCalculatedValues({ loan: Mongo_loan }) });
+    LoanCache.setCachedItem({
+      itemId: loanId,
+      value: await this.recalculateCalculatedValues({ Mongo_loan: Mongo_loan }),
+    });
     return NEW_TRANSACTION;
   },
 
@@ -346,8 +352,8 @@ export default {
     const user = await UserModel.findOne({ _id: userId });
     if (user === null) throw new Error('User does not exist!');
     // Get loan
-    const loan: any = await LoanModel.findOne({ _id: loanId });
-    if (loan === null) throw new Error('loan does not exist!');
+    const Mongo_loan: any = await LoanModel.findOne({ _id: loanId });
+    if (Mongo_loan === null) throw new Error('loan does not exist!');
 
     transactionHelpers.validate.transactionTimestamp(transactionTimestamp);
     transactionHelpers.validate.description(description);
@@ -374,7 +380,10 @@ export default {
     };
     const NEW_TRANSACTION = await transaction.add(newTransactionInfo);
 
-    LoanCache.setCachedItem({ itemId: loanId, value: await this.recalculateCalculatedValues({ loan: loan }) });
+    LoanCache.setCachedItem({
+      itemId: loanId,
+      value: await this.recalculateCalculatedValues({ Mongo_loan: Mongo_loan }),
+    });
     return NEW_TRANSACTION;
   },
 
@@ -427,7 +436,7 @@ export default {
     let calculatedChargedInterest = 0;
     let calculatedPaidInterest = 0;
     const TRANSACTIONS_LIST = await this.generateTransactionsList({
-      loanId: Mongo_loan._id,
+      loanId: Mongo_loan._id.toString(),
       interestRate: Mongo_loan.interestRate,
     });
     if (TRANSACTIONS_LIST.length > 0) {
