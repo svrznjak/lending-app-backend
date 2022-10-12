@@ -23,6 +23,7 @@ import {
 } from './types/interestRate/interestRateInterface.js';
 import LoanModel from './db/model/LoanModel.js';
 import BudgetModel from './db/model/BudgetModel.js';
+import LoanCache from './cache/loanCache.js';
 
 interface fund {
   budgetId: string;
@@ -173,37 +174,28 @@ export default {
     return changedloan;
   },
   getOneFromUser: async function getLoan({ userId, loanId }: { userId: string; loanId: string }): Promise<ILoan> {
-    const Mongo_loan: any = await LoanModel.findOne({ _id: loanId, userId: userId }).lean().exec();
-    return loanHelpers.runtimeCast({
-      _id: Mongo_loan._id.toString(),
-      userId: Mongo_loan.userId.toString(),
-      name: Mongo_loan.name,
-      description: Mongo_loan.description,
-      notes: Mongo_loan.notes,
-      openedTimestamp: Mongo_loan.openedTimestamp,
-      closesTimestamp: Mongo_loan.closesTimestamp,
-      interestRate: {
-        type: Mongo_loan.interestRate.type,
-        duration: Mongo_loan.interestRate.duration,
-        expectedPayments: Mongo_loan.interestRate.expectedPayments,
-        amount: Mongo_loan.interestRate.amount,
-        isCompounding: Mongo_loan.interestRate.isCompounding,
-        entryTimestamp: Mongo_loan.interestRate.entryTimestamp,
-        revisions: Mongo_loan.interestRate.revisions,
-      },
-      initialPrincipal: Mongo_loan.initialPrincipal,
-      status: Mongo_loan.status,
-      calculatedTotalPaidPrincipal: Mongo_loan.calculatedTotalPaidPrincipal,
-      calculatedChargedInterest: Mongo_loan.calculatedChargedInterest,
-      calculatedPaidInterest: Mongo_loan.calculatedPaidInterest,
-    });
+    const Mongo_loan: any = await LoanModel.findOne({ _id: loanId, userId: userId }).exec();
+    if (LoanCache.getCachedItem({ itemId: loanId })) {
+      return LoanCache.getCachedItem({ itemId: loanId }) as ILoan;
+    } else {
+      const recalculatedLoan = await this.recalculateCalculatedValues({ loan: Mongo_loan });
+      LoanCache.setCachedItem({ itemId: loanId, value: recalculatedLoan });
+      return recalculatedLoan;
+    }
   },
 
-  get: async function getLoans({ userId }: { userId: string }): Promise<ILoan[]> {
+  getAllFromUser: async function getLoans({ userId }: { userId: string }): Promise<ILoan[]> {
     const Mongo_loans: any = await LoanModel.find({ userId: userId }).lean().exec();
     const returnValue: ILoan[] = [];
     for (let i = 0; i < Mongo_loans.length; i++) {
-      returnValue.push(await this.recalculateCalculatedValues({ loanId: Mongo_loans[i]._id.toString() }));
+      const LOAN_ID = Mongo_loans[i]._id.toString();
+      if (LoanCache.getCachedItem({ itemId: LOAN_ID })) {
+        returnValue.push(LoanCache.getCachedItem({ itemId: LOAN_ID }) as ILoan);
+      } else {
+        const recalculatedLoan = await this.recalculateCalculatedValues({ loan: Mongo_loans[i] });
+        LoanCache.setCachedItem({ itemId: LOAN_ID, value: recalculatedLoan });
+        returnValue.push(recalculatedLoan);
+      }
     }
     return returnValue;
     /* return await Mongo_loans.map(async (Mongo_loan) => {
@@ -271,8 +263,8 @@ export default {
     const user = await UserModel.findOne({ _id: userId });
     if (user === null) throw new Error('User does not exist!');
     // Get loan
-    const loan: any = await LoanModel.findOne({ _id: loanId });
-    if (loan === null) throw new Error('loan does not exist!');
+    const Mongo_loan: any = await LoanModel.findOne({ _id: loanId });
+    if (Mongo_loan === null) throw new Error('loan does not exist!');
 
     const budget: any = await BudgetModel.findOne({ _id: budgetId });
     if (budget === null) throw new Error('budget does not exist!');
@@ -291,7 +283,7 @@ export default {
     });
 
     await Budget.recalculateCalculatedValues({ budgetId: budgetId });
-    await this.recalculateCalculatedValues({ loanId: loanId });
+    LoanCache.setCachedItem({ itemId: loanId, value: await this.recalculateCalculatedValues({ loan: Mongo_loan }) });
 
     return newTransaction;
   },
@@ -308,8 +300,8 @@ export default {
     const user = await UserModel.findOne({ _id: userId });
     if (user === null) throw new Error('User does not exist!');
     // Get loan
-    const loan: any = await LoanModel.findOne({ _id: loanId });
-    if (loan === null) throw new Error('loan does not exist!');
+    const Mongo_loan: any = await LoanModel.findOne({ _id: loanId });
+    if (Mongo_loan === null) throw new Error('loan does not exist!');
 
     const budget: any = await BudgetModel.findOne({ _id: budgetId });
     if (budget === null) throw new Error('budget does not exist!');
@@ -317,7 +309,7 @@ export default {
     transactionHelpers.validate.description(description);
     description = transactionHelpers.sanitize.description(description);
     transactionHelpers.validate.amount(amount);
-    return await transaction.transferAmountFromBudgetToLoan({
+    const NEW_TRANSACTION = await transaction.transferAmountFromBudgetToLoan({
       userId: userId,
       loanId: loanId,
       budgetId: budgetId,
@@ -326,6 +318,9 @@ export default {
       amount: amount,
       entryTimestamp: transactionHelpers.validate.entryTimestamp(new Date().getTime()),
     });
+    await Budget.recalculateCalculatedValues({ budgetId: budgetId });
+    LoanCache.setCachedItem({ itemId: loanId, value: await this.recalculateCalculatedValues({ loan: Mongo_loan }) });
+    return NEW_TRANSACTION;
   },
 
   addManualInterest: async function addManualInterestToLoan({
@@ -353,7 +348,7 @@ export default {
     description = transactionHelpers.sanitize.description(description);
     transactionHelpers.validate.amount(amount);
 
-    const newTransaction: Pick<
+    const newTransactionInfo: Pick<
       ITransaction,
       'userId' | 'transactionTimestamp' | 'description' | 'from' | 'to' | 'amount' | 'entryTimestamp'
     > = {
@@ -371,7 +366,10 @@ export default {
       amount: amount,
       entryTimestamp: transactionHelpers.validate.entryTimestamp(new Date().getTime()),
     };
-    return await transaction.add(newTransaction);
+    const NEW_TRANSACTION = await transaction.add(newTransactionInfo);
+
+    LoanCache.setCachedItem({ itemId: loanId, value: await this.recalculateCalculatedValues({ loan: loan }) });
+    return NEW_TRANSACTION;
   },
 
   // As a lender, I want to change the status of the loan, so that status reflects the real world.
@@ -415,17 +413,17 @@ export default {
     return changedloan;
   },
   recalculateCalculatedValues: async function recalculateLoanCalculatedValues({
-    loanId,
+    Mongo_loan,
   }: {
-    loanId: string;
+    Mongo_loan: any;
   }): Promise<ILoan> {
-    // Get loan
-    const loan: any = await LoanModel.findOne({ _id: loanId });
-    if (loan === null) throw new Error('Loan does not exist!');
     let calculatedTotalPaidPrincipal = 0;
     let calculatedChargedInterest = 0;
     let calculatedPaidInterest = 0;
-    const TRANSACTIONS_LIST = await this.generateTransactionsList({ loanId: loanId, interestRate: loan.interestRate });
+    const TRANSACTIONS_LIST = await this.generateTransactionsList({
+      loanId: Mongo_loan._id,
+      interestRate: Mongo_loan.interestRate,
+    });
     if (TRANSACTIONS_LIST.length > 0) {
       for (let i = 0; i < TRANSACTIONS_LIST.length; i++) {
         const TRANSACTION = TRANSACTIONS_LIST[i];
@@ -434,33 +432,33 @@ export default {
       }
       calculatedChargedInterest += TRANSACTIONS_LIST[TRANSACTIONS_LIST.length - 1].outstandingInterest;
     }
-    loan.calculatedTotalPaidPrincipal = calculatedTotalPaidPrincipal;
-    loan.calculatedChargedInterest = calculatedChargedInterest;
-    loan.calculatedPaidInterest = calculatedPaidInterest;
+    Mongo_loan.calculatedTotalPaidPrincipal = calculatedTotalPaidPrincipal;
+    Mongo_loan.calculatedChargedInterest = calculatedChargedInterest;
+    Mongo_loan.calculatedPaidInterest = calculatedPaidInterest;
     const CHANGED_LOAN = loanHelpers.runtimeCast({
-      _id: loan._id.toString(),
-      userId: loan.userId.toString(),
-      name: loan.name,
-      description: loan.description,
-      notes: loan.notes,
-      openedTimestamp: loan.openedTimestamp,
-      closesTimestamp: loan.closesTimestamp,
+      _id: Mongo_loan._id.toString(),
+      userId: Mongo_loan.userId.toString(),
+      name: Mongo_loan.name,
+      description: Mongo_loan.description,
+      notes: Mongo_loan.notes,
+      openedTimestamp: Mongo_loan.openedTimestamp,
+      closesTimestamp: Mongo_loan.closesTimestamp,
       interestRate: {
-        type: loan.interestRate.type,
-        duration: loan.interestRate.duration,
-        expectedPayments: loan.interestRate.expectedPayments,
-        amount: loan.interestRate.amount,
-        isCompounding: loan.interestRate.isCompounding,
-        entryTimestamp: loan.interestRate.entryTimestamp,
-        revisions: loan.interestRate.revisions,
+        type: Mongo_loan.interestRate.type,
+        duration: Mongo_loan.interestRate.duration,
+        expectedPayments: Mongo_loan.interestRate.expectedPayments,
+        amount: Mongo_loan.interestRate.amount,
+        isCompounding: Mongo_loan.interestRate.isCompounding,
+        entryTimestamp: Mongo_loan.interestRate.entryTimestamp,
+        revisions: Mongo_loan.interestRate.revisions,
       },
-      initialPrincipal: loan.initialPrincipal,
-      status: loan.status,
-      calculatedTotalPaidPrincipal: loan.calculatedTotalPaidPrincipal,
-      calculatedChargedInterest: loan.calculatedChargedInterest,
-      calculatedPaidInterest: loan.calculatedPaidInterest,
+      initialPrincipal: Mongo_loan.initialPrincipal,
+      status: Mongo_loan.status,
+      calculatedTotalPaidPrincipal: Mongo_loan.calculatedTotalPaidPrincipal,
+      calculatedChargedInterest: Mongo_loan.calculatedChargedInterest,
+      calculatedPaidInterest: Mongo_loan.calculatedPaidInterest,
     } as ILoan);
-    await loan.save();
+    await Mongo_loan.save();
     return CHANGED_LOAN;
   },
   generateTransactionsList: async function generateLoanTransactionsList({

@@ -16,7 +16,7 @@ export default new GraphQLObjectType({
       resolve: async (_parent: any, _args: any, context: any): Promise<ILoan[]> => {
         const authId = await context.getCurrentUserAuthIdOrThrowValidationError();
         const user = await getUserByAuthId(authId);
-        return await loan.get({ userId: user._id });
+        return await loan.getAllFromUser({ userId: user._id });
       },
     },
     transactions: {
