@@ -49,7 +49,7 @@ export default new GraphQLObjectType({
 
           await session.commitTransaction();
           return Budget.recalculateCalculatedValues({
-            budgetId: newBudget._id.toString(),
+            Mongo_budget: newBudget,
           });
         } catch (err: any) {
           await session.abortTransaction();
@@ -84,7 +84,7 @@ export default new GraphQLObjectType({
             amount: args.amount,
           });
           return Budget.recalculateCalculatedValues({
-            budgetId: args.budgetId,
+            Mongo_budget: Mongo_budget,
           });
         } catch (err: any) {
           console.log(err.message);
@@ -115,7 +115,7 @@ export default new GraphQLObjectType({
             amount: args.amount,
           });
           return Budget.recalculateCalculatedValues({
-            budgetId: args.budgetId,
+            Mongo_budget: Mongo_budget,
           });
         } catch (err: any) {
           console.log(err.message);
