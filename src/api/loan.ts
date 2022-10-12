@@ -54,7 +54,10 @@ export default {
     // check if budgets have sufficient funds
 
     for (let i = 0; i < funds.length; i++) {
-      const recalculatedBudget = await Budget.recalculateCalculatedValues({ budgetId: funds[i].budgetId });
+      const Mongo_budget: any = await BudgetModel.findOne({ _id: funds[i].budgetId });
+      if (Mongo_budget === null) throw new Error('budget does not exist!');
+
+      const recalculatedBudget = await Budget.recalculateCalculatedValues({ Mongo_budget: Mongo_budget });
 
       const avaiableFundsInBudget = paranoidCalculator.subtract(
         recalculatedBudget.calculatedTotalAmount,
@@ -99,7 +102,10 @@ export default {
 
       // recalculate affected budgets
       await funds.forEach(async (fund) => {
-        await Budget.recalculateCalculatedValues({ budgetId: fund.budgetId });
+        const Mongo_budget: any = await BudgetModel.findOne({ _id: fund.budgetId });
+        if (Mongo_budget === null) throw new Error('budget does not exist!');
+
+        await Budget.recalculateCalculatedValues({ Mongo_budget: Mongo_budget });
       });
       console.log(newLoan);
     } catch (err) {
@@ -266,8 +272,8 @@ export default {
     const Mongo_loan: any = await LoanModel.findOne({ _id: loanId });
     if (Mongo_loan === null) throw new Error('loan does not exist!');
 
-    const budget: any = await BudgetModel.findOne({ _id: budgetId });
-    if (budget === null) throw new Error('budget does not exist!');
+    const Mongo_budget: any = await BudgetModel.findOne({ _id: budgetId });
+    if (Mongo_budget === null) throw new Error('budget does not exist!');
 
     transactionHelpers.validate.description(description);
     description = transactionHelpers.sanitize.description(description);
@@ -282,7 +288,7 @@ export default {
       entryTimestamp: transactionHelpers.validate.entryTimestamp(new Date().getTime()),
     });
 
-    await Budget.recalculateCalculatedValues({ budgetId: budgetId });
+    await Budget.recalculateCalculatedValues({ Mongo_budget: Mongo_budget });
     LoanCache.setCachedItem({ itemId: loanId, value: await this.recalculateCalculatedValues({ loan: Mongo_loan }) });
 
     return newTransaction;
@@ -303,8 +309,8 @@ export default {
     const Mongo_loan: any = await LoanModel.findOne({ _id: loanId });
     if (Mongo_loan === null) throw new Error('loan does not exist!');
 
-    const budget: any = await BudgetModel.findOne({ _id: budgetId });
-    if (budget === null) throw new Error('budget does not exist!');
+    const Mongo_budget: any = await BudgetModel.findOne({ _id: budgetId });
+    if (Mongo_budget === null) throw new Error('budget does not exist!');
 
     transactionHelpers.validate.description(description);
     description = transactionHelpers.sanitize.description(description);
@@ -318,7 +324,7 @@ export default {
       amount: amount,
       entryTimestamp: transactionHelpers.validate.entryTimestamp(new Date().getTime()),
     });
-    await Budget.recalculateCalculatedValues({ budgetId: budgetId });
+    await Budget.recalculateCalculatedValues({ Mongo_budget: Mongo_budget });
     LoanCache.setCachedItem({ itemId: loanId, value: await this.recalculateCalculatedValues({ loan: Mongo_loan }) });
     return NEW_TRANSACTION;
   },

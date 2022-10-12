@@ -300,18 +300,17 @@ export default {
     return changedBudget;
   },
   recalculateCalculatedValues: async function recalculateCalculatedBudgetValues({
-    budgetId,
+    Mongo_budget,
   }: {
-    budgetId: string;
+    Mongo_budget: any;
   }): Promise<IBudget> {
     // Optimizations possible for calculations at scale
 
-    // Get budget
-    const budget: any = await BudgetModel.findOne({ _id: budgetId });
-    if (budget === null) throw new Error('Budget does not exist!');
-
     // get all transactions
-    const budgetTransactions = await this.getTransactions(budget._id.toString(), { pageNumber: 0, pageSize: Infinity });
+    const budgetTransactions = await this.getTransactions(Mongo_budget._id.toString(), {
+      pageNumber: 0,
+      pageSize: Infinity,
+    });
 
     // initialize variables
     let newCalculatedTotalAmount = 0;
@@ -331,27 +330,27 @@ export default {
     });
 
     // save calculations to DB
-    budget.calculatedTotalAmount = newCalculatedTotalAmount;
-    budget.calculatedLendedAmount = newCalculatedLendedAmount;
+    Mongo_budget.calculatedTotalAmount = newCalculatedTotalAmount;
+    Mongo_budget.calculatedLendedAmount = newCalculatedLendedAmount;
 
-    await budget.save();
+    await Mongo_budget.save();
     return budgetHelpers.runtimeCast({
-      _id: budget._id.toString(),
-      userId: budget.userId.toString(),
-      name: budget.name,
-      description: budget.description,
+      _id: Mongo_budget._id.toString(),
+      userId: Mongo_budget.userId.toString(),
+      name: Mongo_budget.name,
+      description: Mongo_budget.description,
       defaultInterestRate: {
-        type: budget.defaultInterestRate.type,
-        duration: budget.defaultInterestRate.duration,
-        expectedPayments: budget.defaultInterestRate.expectedPayments,
-        amount: budget.defaultInterestRate.amount,
-        isCompounding: budget.defaultInterestRate.isCompounding,
-        entryTimestamp: budget.defaultInterestRate.entryTimestamp,
-        revisions: budget.defaultInterestRate.revisions,
+        type: Mongo_budget.defaultInterestRate.type,
+        duration: Mongo_budget.defaultInterestRate.duration,
+        expectedPayments: Mongo_budget.defaultInterestRate.expectedPayments,
+        amount: Mongo_budget.defaultInterestRate.amount,
+        isCompounding: Mongo_budget.defaultInterestRate.isCompounding,
+        entryTimestamp: Mongo_budget.defaultInterestRate.entryTimestamp,
+        revisions: Mongo_budget.defaultInterestRate.revisions,
       },
-      calculatedLendedAmount: budget.calculatedLendedAmount,
-      calculatedTotalAmount: budget.calculatedTotalAmount,
-      isArchived: budget.isArchived,
+      calculatedLendedAmount: Mongo_budget.calculatedLendedAmount,
+      calculatedTotalAmount: Mongo_budget.calculatedTotalAmount,
+      isArchived: Mongo_budget.isArchived,
     });
   },
 };
