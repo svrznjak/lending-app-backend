@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import {
   //add,
+  differenceInHours,
   differenceInCalendarDays,
   eachDayOfInterval,
   eachWeekOfInterval,
@@ -200,8 +201,13 @@ export default {
 
   get: async function getLoans({ userId }: { userId: string }): Promise<ILoan[]> {
     const Mongo_loans: any = await LoanModel.find({ userId: userId }).lean().exec();
-
-    return Mongo_loans.map((Mongo_loan) => {
+    const returnValue: ILoan[] = [];
+    for (let i = 0; i < Mongo_loans.length; i++) {
+      returnValue.push(await this.recalculateCalculatedValues({ loanId: Mongo_loans[i]._id.toString() }));
+    }
+    return returnValue;
+    /* return await Mongo_loans.map(async (Mongo_loan) => {
+      return await this.recalculateCalculatedValues({ loanId: Mongo_loan._id.toString() });
       return loanHelpers.runtimeCast({
         _id: Mongo_loan._id.toString(),
         userId: Mongo_loan.userId.toString(),
@@ -225,7 +231,7 @@ export default {
         calculatedChargedInterest: Mongo_loan.calculatedChargedInterest,
         calculatedPaidInterest: Mongo_loan.calculatedPaidInterest,
       });
-    });
+    });*/
   },
 
   changeInterestRate: async function changeLoanInterestRate() {
@@ -285,68 +291,10 @@ export default {
     });
 
     await Budget.recalculateCalculatedValues({ budgetId: budgetId });
-    await this.calculateInterest({ loanId: loanId });
+    await this.recalculateCalculatedValues({ loanId: loanId });
 
     return newTransaction;
   },
-
-  /*  recalculateTotalValues: async function recalculateLoanTotalValues({ loanId }: { loanId: string }): Promise<ILoan> {
-    console.log(loanId);
-    // Optimizations possible for calculations at scale
-
-    // Get loan
-    const loan: any = await LoanModel.findOne({ _id: loanId });
-    if (loan === null) throw new Error('Loan does not exist!');
-
-    // get all transactions
-    const loanTransactions = await this.getTransactions(loan._id.toString(), { pageNumber: 0, pageSize: Infinity });
-
-    // initialize variables
-    let totalPaid = 0;
-    let totalManualInterest = 0;
-    /*  
-    calculatedTotalPaidPrincipal = totalPaid - calculatedChargedInterest 
-    calculatedChargedInterest: interest FromPaymentToPayment until yesterday + totalManualInterest
-    calculatedPaidInterest = 
-    */
-
-  // Loop and add to variables
-  /*loanTransactions.forEach((transaction) => {
-      if (transaction.from.datatype === 'BUDGET' && transaction.to.datatype === 'LOAN') {
-        totalPaid = paranoidCalculator.add(totalPaid, transaction.amount);
-      } else if (transaction.from.datatype === 'LOAN' && transaction.to.datatype === 'BUDGET') {
-        totalPaid = paranoidCalculator.subtract(totalPaid, transaction.amount);
-      } else if (transaction.from.datatype === 'LOAN' && transaction.to.datatype === 'INTEREST') {
-        totalManualInterest = paranoidCalculator.add(totalManualInterest, transaction.amount);
-      }
-    });
-
-    // save calculations to DB
-    loan.calculatedTotalAmount = newCalculatedTotalAmount;
-    loan.calculatedLendedAmount = newCalculatedLendedAmount;
-
-    await loan.save();
-    return budgetHelpers.runtimeCast({
-      _id: loan._id.toString(),
-      userId: loan.userId.toString(),
-      name: loan.name,
-      description: loan.description,
-      defaultInterestRate: {
-        type: loan.defaultInterestRate.type,
-        duration: loan.defaultInterestRate.duration,
-        expectedPayments: loan.defaultInterestRate.expectedPayments,
-        amount: loan.defaultInterestRate.amount,
-        isCompounding: loan.defaultInterestRate.isCompounding,
-        entryTimestamp: loan.defaultInterestRate.entryTimestamp,
-        revisions: loan.defaultInterestRate.revisions,
-      },
-      calculatedLendedAmount: loan.calculatedLendedAmount,
-      calculatedTotalAmount: loan.calculatedTotalAmount,
-      isArchived: loan.isArchived,
-    });
-    throw new Error('not implemented');
-    return false;
-  },*/
 
   addFunds: async function addFundsToLoan(
     userId: string,
@@ -442,6 +390,7 @@ export default {
     loan.status = newStatus;
     const changedloan: ILoan = loanHelpers.runtimeCast({
       _id: loan._id.toString(),
+      userId: loan.userId.toString(),
       name: loan.name,
       description: loan.description,
       notes: loan.notes,
@@ -456,7 +405,8 @@ export default {
         entryTimestamp: loan.interestRate.entryTimestamp,
         revisions: loan.interestRate.revisions,
       },
-      initialPrincipal: loan.inititalPrincipal,
+      initialPrincipal: loan.initialPrincipal,
+      status: loan.status,
       calculatedTotalPaidPrincipal: loan.calculatedTotalPaidPrincipal,
       calculatedChargedInterest: loan.calculatedChargedInterest,
       calculatedPaidInterest: loan.calculatedPaidInterest,
@@ -468,21 +418,61 @@ export default {
     loanId,
   }: {
     loanId: string;
-  }): Promise<void> {
-    const TRANSACTIONS_LIST = await generateTransactionsList({ loanId: loanId });
+  }): Promise<ILoan> {
+    // Get loan
+    const loan: any = await LoanModel.findOne({ _id: loanId });
+    if (loan === null) throw new Error('Loan does not exist!');
+    let calculatedTotalPaidPrincipal = 0;
+    let calculatedChargedInterest = 0;
+    let calculatedPaidInterest = 0;
+    const TRANSACTIONS_LIST = await this.generateTransactionsList({ loanId: loanId, interestRate: loan.interestRate });
+    if (TRANSACTIONS_LIST.length > 0) {
+      for (let i = 0; i < TRANSACTIONS_LIST.length; i++) {
+        const TRANSACTION = TRANSACTIONS_LIST[i];
+        if (TRANSACTION.principalCharge > 0) calculatedTotalPaidPrincipal += TRANSACTION.principalCharge;
+        calculatedPaidInterest += TRANSACTION.interestCharge;
+      }
+      calculatedChargedInterest += TRANSACTIONS_LIST[TRANSACTIONS_LIST.length - 1].outstandingInterest;
+    }
+    loan.calculatedTotalPaidPrincipal = calculatedTotalPaidPrincipal;
+    loan.calculatedChargedInterest = calculatedChargedInterest;
+    loan.calculatedPaidInterest = calculatedPaidInterest;
+    const CHANGED_LOAN = loanHelpers.runtimeCast({
+      _id: loan._id.toString(),
+      userId: loan.userId.toString(),
+      name: loan.name,
+      description: loan.description,
+      notes: loan.notes,
+      openedTimestamp: loan.openedTimestamp,
+      closesTimestamp: loan.closesTimestamp,
+      interestRate: {
+        type: loan.interestRate.type,
+        duration: loan.interestRate.duration,
+        expectedPayments: loan.interestRate.expectedPayments,
+        amount: loan.interestRate.amount,
+        isCompounding: loan.interestRate.isCompounding,
+        entryTimestamp: loan.interestRate.entryTimestamp,
+        revisions: loan.interestRate.revisions,
+      },
+      initialPrincipal: loan.initialPrincipal,
+      status: loan.status,
+      calculatedTotalPaidPrincipal: loan.calculatedTotalPaidPrincipal,
+      calculatedChargedInterest: loan.calculatedChargedInterest,
+      calculatedPaidInterest: loan.calculatedPaidInterest,
+    } as ILoan);
+    await loan.save();
+    return CHANGED_LOAN;
   },
   generateTransactionsList: async function generateLoanTransactionsList({
     loanId,
+    interestRate,
   }: {
     loanId: string;
+    interestRate: IInterestRate;
   }): Promise<ITransactionInterval[]> {
-    console.log(loanId);
-
-    // Get loan
-    const loan: any = await LoanModel.findOne({ _id: loanId }).lean().exec();
-    if (loan === null) throw new Error('Loan does not exist!');
-    const interestPerDay = normalizeInterestRateToDay(loan.interestRate);
-
+    const INTEREST_PER_DAY = normalizeInterestRateToDay(interestRate);
+    const INTEREST_PER_HOUR = INTEREST_PER_DAY / 24;
+    const INTEREST_PERCENTAGE_PER_HOUR = INTEREST_PER_HOUR / 100;
     /* 
     // get all changes to interestRate
     const loanInterestRates = [loan.interestRate];
@@ -495,17 +485,31 @@ export default {
     }
     */
     // get all transactions
-    const loanTransactions: ITransaction[] = await this.getTransactions(loan._id.toString(), {
+    const loanTransactions: ITransaction[] = await this.getTransactions(loanId, {
       pageNumber: 0,
       pageSize: Infinity,
     });
+    if (loanTransactions.length === 0) return [];
+    // add another empty loan transaction for now in order to calculate interest until now
+    // POSSIBLE SOURCE OF BUGS IS DATA STRUCTURE IS CHANGED
+    const NOW = new Date().getTime();
+    if (loanTransactions[0].transactionTimestamp < NOW)
+      loanTransactions.unshift({
+        _id: '',
+        userId: '',
+        transactionTimestamp: NOW,
+        description: '',
+        from: { datatype: 'INTEREST', addressId: '' },
+        to: { datatype: 'INTEREST', addressId: '' },
+        amount: 0,
+        entryTimestamp: NOW,
+      });
 
     const listOfTransactions: ITransactionInterval[] = [];
     let outstandingPrincipal = 0;
     let outstandingInterest = 0;
     for (let i = loanTransactions.length - 1; i >= 0; i--) {
       const loanTransaction = loanTransactions[i];
-      console.log(loanTransaction);
 
       //
       let fromDateTimestamp;
@@ -516,19 +520,20 @@ export default {
       } else {
         fromDateTimestamp = loanTransactions[i + 1].transactionTimestamp;
       }
-      const differenceInDays = differenceInCalendarDays(new Date(toDateTimestamp), new Date(fromDateTimestamp));
+      // for calculating interest daily const differenceInDays = differenceInCalendarDays(new Date(toDateTimestamp), new Date(fromDateTimestamp));
+      const DIFFERENCE_IN_HOURS = differenceInHours(new Date(toDateTimestamp), new Date(fromDateTimestamp));
       let interestCharge = 0;
 
-      if (loan.interestRate.type === 'PERCENTAGE_PER_DURATION' && loan.interestRate.isCompounding) {
-        const interestPercentagePerDay = interestPerDay / 100;
-        for (let i = 0; i < differenceInDays; i++) {
-          interestCharge += (outstandingPrincipal + interestCharge) * interestPercentagePerDay;
+      if (interestRate.type === 'PERCENTAGE_PER_DURATION' && interestRate.isCompounding) {
+        // for daily calculation // const interestPercentagePerDay = interestPerDay / 100;
+        for (let i = 0; i < DIFFERENCE_IN_HOURS; i++) {
+          interestCharge += (outstandingPrincipal + interestCharge) * INTEREST_PERCENTAGE_PER_HOUR;
         }
-      } else if (loan.interestRate.type === 'PERCENTAGE_PER_DURATION' && !loan.interestRate.isCompounding) {
-        const interestPercentagePerDay = interestPerDay / 100;
-        interestCharge = outstandingPrincipal * interestPercentagePerDay * differenceInDays;
-      } else if (loan.interestRate.type === 'FIXED_PER_DURATION' && loan.interestRate.duration !== 'FULL_DURATION') {
-        interestCharge = interestPerDay * differenceInDays;
+      } else if (interestRate.type === 'PERCENTAGE_PER_DURATION' && !interestRate.isCompounding) {
+        // for daily calculation // const interestPercentagePerDay = interestPerDay / 100;
+        interestCharge = outstandingPrincipal * INTEREST_PERCENTAGE_PER_HOUR * DIFFERENCE_IN_HOURS;
+      } else if (interestRate.type === 'FIXED_PER_DURATION' && interestRate.duration !== 'FULL_DURATION') {
+        interestCharge = INTEREST_PER_HOUR * DIFFERENCE_IN_HOURS;
       }
 
       // calculate principal payment and next outstandingPrincipal
@@ -563,7 +568,6 @@ export default {
         outstandingInterest: outstandingInterest,
       });
     }
-    console.log(listOfTransactions);
     return listOfTransactions;
   },
 
@@ -664,7 +668,6 @@ export default {
 
     // get amount of durations between fromDate and toDate
     // multiply durations by interestRate.Amount
-    console.log(listOfPayments);
     return listOfPayments;
   },
   // As a lender, I want to export loan data and transactions, so that I can archive them or import them to other software.
