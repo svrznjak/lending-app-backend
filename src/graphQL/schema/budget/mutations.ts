@@ -22,41 +22,20 @@ export default new GraphQLObjectType({
       },
       async resolve(_parent: any, args: any, context: any): Promise<IBudget> {
         const userAuthId = await context.getCurrentUserAuthIdOrThrowValidationError();
-        const Mongo_user = await getUserByAuthId(userAuthId);
+        const user = await getUserByAuthId(userAuthId);
         const now = transactionHelpers.validate.entryTimestamp(new Date().getTime());
         args.defaultInterestRate.entryTimestamp = now;
 
-        const session = await global.mongooseConnection.startSession();
         try {
-          session.startTransaction();
           const newBudgetInfo: Pick<IBudget, 'name' | 'description' | 'defaultInterestRate'> = {
             name: args.name,
             description: args.description,
             defaultInterestRate: args.defaultInterestRate,
           };
-          const newBudget = await Budget.create(Mongo_user._id.toString(), newBudgetInfo, { session });
-          if (args.initialAmount !== 0)
-            await Budget.addFundsFromOutside(
-              {
-                userId: Mongo_user._id.toString(),
-                budgetId: newBudget._id.toString(),
-                transactionTimestamp: now,
-                description: args.initialTransactionDescription,
-                amount: args.initialAmount,
-              },
-              { session },
-            );
-
-          await session.commitTransaction();
-          return Budget.recalculateCalculatedValues({
-            Mongo_budget: newBudget,
-          });
+          return await Budget.create(user._id, newBudgetInfo, args.initialAmount, args.initialTransactionDescription);
         } catch (err: any) {
-          await session.abortTransaction();
           console.log(err.message);
           throw new Error(err);
-        } finally {
-          await session.endSession();
         }
       },
     },

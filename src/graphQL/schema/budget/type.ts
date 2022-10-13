@@ -9,8 +9,9 @@ export const budgetsType = new GraphQLObjectType({
     name: { type: new GraphQLNonNull(GraphQLString) },
     description: { type: new GraphQLNonNull(GraphQLString) },
     defaultInterestRate: { type: new GraphQLNonNull(interestRateType) },
-    calculatedTotalAmount: { type: new GraphQLNonNull(GraphQLFloat) },
-    calculatedLendedAmount: { type: new GraphQLNonNull(GraphQLFloat) },
+    calculatedTotalInvestedAmount: { type: new GraphQLNonNull(GraphQLFloat) },
+    calculatedTotalWithdrawnAmount: { type: new GraphQLNonNull(GraphQLFloat) },
+    calculatedTotalAvailableAmount: { type: new GraphQLNonNull(GraphQLFloat) },
     isArchived: { type: new GraphQLNonNull(GraphQLBoolean) },
   }),
 });

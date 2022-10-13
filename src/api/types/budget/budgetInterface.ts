@@ -6,7 +6,8 @@ export interface IBudget {
   name: string;
   description: string;
   defaultInterestRate: IInterestRate;
-  calculatedTotalAmount: number;
-  calculatedLendedAmount: number;
+  calculatedTotalInvestedAmount: number;
+  calculatedTotalWithdrawnAmount: number;
+  calculatedTotalAvailableAmount: number;
   isArchived: boolean;
 }

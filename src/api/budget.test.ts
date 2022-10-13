@@ -14,18 +14,23 @@ describe('Manual tests', () => {
     mongoose.connection.close();
   });
   test('add', async () => {
-    const response = await budget.create('6319700ccac59dc8fdc9de05', {
-      name: 'Test',
-      description: 'Test',
-      defaultInterestRate: {
-        type: 'PERCENTAGE_PER_DURATION',
-        duration: 'DAY',
-        expectedPayments: 'WEEKLY',
-        amount: 5,
-        isCompounding: false,
-        entryTimestamp: 2123145213123,
+    const response = await budget.create(
+      '6319700ccac59dc8fdc9de05',
+      {
+        name: 'Test',
+        description: 'Test',
+        defaultInterestRate: {
+          type: 'PERCENTAGE_PER_DURATION',
+          duration: 'DAY',
+          expectedPayments: 'WEEKLY',
+          amount: 5,
+          isCompounding: false,
+          entryTimestamp: 2123145213123,
+        },
       },
-    });
+      1000,
+      'FIRST TRANSACTION',
+    );
     console.log(response);
     expect(true).toBeTruthy();
   });

@@ -14,7 +14,8 @@ export const BudgetSchema = new mongoose.Schema({
   name: { type: String, required: true },
   description: { type: String, required: true },
   defaultInterestRate: { type: LoanInterestRateSchema },
-  calculatedTotalAmount: { type: Number },
-  calculatedLendedAmount: { type: Number },
+  calculatedTotalInvestedAmount: { type: Number },
+  calculatedTotalWithdrawnAmount: { type: Number },
+  calculatedTotalAvailableAmount: { type: Number },
   isArchived: { type: Boolean, required: true },
 });

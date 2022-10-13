@@ -1,3 +1,4 @@
+import { transactionHelpers } from './types/transaction/transactionHelpers.js';
 import mongoose from 'mongoose';
 import { budgetHelpers } from './types/budget/budgetHelpers.js';
 import { ITransaction } from './types/transaction/transactionInterface.js';
@@ -12,23 +13,54 @@ export default {
   // As a lender, I want to create a budget, so that I can categorize my investments.
   create: async function createBudget(
     userId: string,
-    budget: Pick<IBudget, 'name' | 'description' | 'defaultInterestRate'>,
-    options?,
+    input: Pick<IBudget, 'name' | 'description' | 'defaultInterestRate'>,
+    inititalTransactionAmount: number,
+    initialTransactionDescription: string,
   ): Promise<IBudget> {
+    // do check on inputs
+    budgetHelpers.validate.all(input);
+    budgetHelpers.sanitize.all(input);
+
+    // Get user and check if user even exists
+    const user: any = await UserModel.findOne({ _id: userId });
+    if (user === null) throw new Error('User with provided userId was not found!');
+
+    const budget: IBudget = budgetHelpers.runtimeCast({
+      _id: new mongoose.Types.ObjectId().toString(),
+      userId: userId,
+      name: input.name,
+      description: input.description,
+      defaultInterestRate: input.defaultInterestRate,
+      calculatedTotalWithdrawnAmount: 0,
+      calculatedTotalInvestedAmount: inititalTransactionAmount,
+      calculatedTotalAvailableAmount: 0,
+      isArchived: false,
+    });
+
+    const session = await global.mongooseConnection.startSession();
     try {
-      budgetHelpers.validate.all(budget);
-      budgetHelpers.sanitize.all(budget);
-      const newBudgetData: IBudget = {
-        _id: new mongoose.Types.ObjectId().toString(),
-        userId: userId,
-        name: budget.name,
-        description: budget.description,
-        defaultInterestRate: budget.defaultInterestRate,
-        calculatedLendedAmount: 0,
-        calculatedTotalAmount: 0,
-        isArchived: false,
-      };
-      const newBudget: any = await new BudgetModel(newBudgetData).save(options);
+      session.startTransaction();
+
+      // create budget in db
+      const newBudget: any = await new BudgetModel(budget).save({ session });
+
+      // add initial transaction if added
+      if (inititalTransactionAmount !== 0) {
+        await this.addFundsFromOutside(
+          {
+            userId: userId,
+            budgetId: newBudget._id.toString(),
+            transactionTimestamp: transactionHelpers.validate.transactionTimestamp(new Date().getTime()),
+            description: initialTransactionDescription,
+            amount: inititalTransactionAmount,
+          },
+          { session },
+        );
+      }
+
+      await session.commitTransaction();
+
+      // return casted budget
       return budgetHelpers.runtimeCast({
         _id: newBudget._id.toString(),
         userId: newBudget.userId.toString(),
@@ -43,13 +75,17 @@ export default {
           entryTimestamp: newBudget.defaultInterestRate.entryTimestamp,
           revisions: newBudget.defaultInterestRate.revisions,
         },
-        calculatedLendedAmount: newBudget.calculatedLendedAmount,
-        calculatedTotalAmount: newBudget.calculatedTotalAmount,
+        calculatedTotalWithdrawnAmount: newBudget.calculatedTotalWithdrawnAmount,
+        calculatedTotalInvestedAmount: newBudget.calculatedTotalInvestedAmount,
+        calculatedTotalAvailableAmount: newBudget.calculatedTotalAvailableAmount,
         isArchived: newBudget.isArchived,
       });
     } catch (err) {
       console.log(err);
+      await session.abortTransaction();
       throw new Error('Budget creation failed!');
+    } finally {
+      session.endSession();
     }
   },
   getOneFromUser: async function getBudget({
@@ -75,8 +111,9 @@ export default {
         entryTimestamp: Mongo_budget.defaultInterestRate.entryTimestamp,
         revisions: Mongo_budget.defaultInterestRate.revisions,
       },
-      calculatedLendedAmount: Mongo_budget.calculatedLendedAmount,
-      calculatedTotalAmount: Mongo_budget.calculatedTotalAmount,
+      calculatedTotalWithdrawnAmount: Mongo_budget.calculatedTotalWithdrawnAmount,
+      calculatedTotalInvestedAmount: Mongo_budget.calculatedTotalInvestedAmount,
+      calculatedTotalAvailableAmount: Mongo_budget.calculatedTotalAvailableAmount,
       isArchived: Mongo_budget.isArchived,
     });
   },
@@ -99,8 +136,9 @@ export default {
           entryTimestamp: Mongo_budget.defaultInterestRate.entryTimestamp,
           revisions: Mongo_budget.defaultInterestRate.revisions,
         },
-        calculatedLendedAmount: Mongo_budget.calculatedLendedAmount,
-        calculatedTotalAmount: Mongo_budget.calculatedTotalAmount,
+        calculatedTotalWithdrawnAmount: Mongo_budget.calculatedTotalWithdrawnAmount,
+        calculatedTotalInvestedAmount: Mongo_budget.calculatedTotalInvestedAmount,
+        calculatedTotalAvailableAmount: Mongo_budget.calculatedTotalAvailableAmount,
         isArchived: Mongo_budget.isArchived,
       });
     });
@@ -292,8 +330,9 @@ export default {
         entryTimestamp: budget.defaultInterestRate.entryTimestamp,
         revisions: budget.defaultInterestRate.revisions,
       },
-      calculatedTotalAmount: budget.calculatedTotalAmount,
-      calculatedLendedAmount: budget.calculatedLendedAmount,
+      calculatedTotalInvestedAmount: budget.calculatedTotalInvestedAmount,
+      calculatedTotalWithdrawnAmount: budget.calculatedTotalWithdrawnAmount,
+      calculatedTotalAvailableAmount: budget.calculatedTotalAvailableAmount,
       isArchived: budget.isArchived,
     });
     await budget.save();
@@ -313,25 +352,37 @@ export default {
     });
 
     // initialize variables
-    let newCalculatedTotalAmount = 0;
-    let newCalculatedLendedAmount = 0;
+    let newCalculatedTotalInvestedAmount = 0;
+    let newCalculatedTotalWithdrawnAmount = 0;
+    let newCalculatedTotalAvailableAmount = 0;
 
     // Loop and add to variables
     budgetTransactions.forEach((transaction) => {
       if (transaction.to.datatype === 'BUDGET' && transaction.from.datatype === 'OUTSIDE') {
-        newCalculatedTotalAmount = paranoidCalculator.add(newCalculatedTotalAmount, transaction.amount);
+        newCalculatedTotalInvestedAmount = paranoidCalculator.add(newCalculatedTotalInvestedAmount, transaction.amount);
       } else if (transaction.to.datatype === 'OUTSIDE' && transaction.from.datatype === 'BUDGET') {
-        newCalculatedTotalAmount = paranoidCalculator.subtract(newCalculatedTotalAmount, transaction.amount);
+        newCalculatedTotalWithdrawnAmount = paranoidCalculator.add(
+          newCalculatedTotalWithdrawnAmount,
+          transaction.amount,
+        );
       } else if (transaction.to.datatype === 'LOAN' && transaction.from.datatype === 'BUDGET') {
-        newCalculatedLendedAmount = paranoidCalculator.subtract(newCalculatedLendedAmount, transaction.amount);
+        newCalculatedTotalAvailableAmount = paranoidCalculator.add(
+          newCalculatedTotalAvailableAmount,
+          transaction.amount,
+        );
       } else if (transaction.to.datatype === 'BUDGET' && transaction.from.datatype === 'LOAN') {
-        newCalculatedLendedAmount = paranoidCalculator.add(newCalculatedLendedAmount, transaction.amount);
+        newCalculatedTotalAvailableAmount = paranoidCalculator.subtract(
+          newCalculatedTotalAvailableAmount,
+          transaction.amount,
+        );
       }
     });
 
     // save calculations to DB
-    Mongo_budget.calculatedTotalAmount = newCalculatedTotalAmount;
-    Mongo_budget.calculatedLendedAmount = newCalculatedLendedAmount;
+    Mongo_budget.calculatedTotalInvestedAmount = newCalculatedTotalInvestedAmount;
+    Mongo_budget.calculatedTotalWithdrawnAmount = newCalculatedTotalWithdrawnAmount;
+    Mongo_budget.calculatedTotalAvailableAmount =
+      newCalculatedTotalInvestedAmount - newCalculatedTotalWithdrawnAmount - newCalculatedTotalAvailableAmount;
 
     await Mongo_budget.save();
     return budgetHelpers.runtimeCast({
@@ -348,8 +399,9 @@ export default {
         entryTimestamp: Mongo_budget.defaultInterestRate.entryTimestamp,
         revisions: Mongo_budget.defaultInterestRate.revisions,
       },
-      calculatedLendedAmount: Mongo_budget.calculatedLendedAmount,
-      calculatedTotalAmount: Mongo_budget.calculatedTotalAmount,
+      calculatedTotalWithdrawnAmount: Mongo_budget.calculatedTotalWithdrawnAmount,
+      calculatedTotalInvestedAmount: Mongo_budget.calculatedTotalInvestedAmount,
+      calculatedTotalAvailableAmount: Mongo_budget.calculatedTotalAvailableAmount,
       isArchived: Mongo_budget.isArchived,
     });
   },

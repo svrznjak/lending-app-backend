@@ -4,6 +4,10 @@ import { ITransaction } from './types/transaction/transactionInterface.js';
 import { ITransactionAddress } from './types/transactionAddress/transactionAddressInterface.js';
 import { transactionAddressHelpers } from './types/transactionAddress/transactionAddressHelpers.js';
 import mongoose, { SessionOption } from 'mongoose';
+import Budget from './budget.js';
+import BudgetModel from './db/model/BudgetModel.js';
+import Loan from './loan.js';
+import LoanModel from './db/model/LoanModel.js';
 
 export default {
   getOne: async function getOneTransaction({ transactionId }: { transactionId: string }): Promise<ITransaction> {
@@ -103,7 +107,7 @@ export default {
     if (Mongo_editedTransaction.entryTimestamp !== newTransaction.entryTimestamp) throw new Error('Major error!!!');
 
     // verify transaction values
-    const editedTransaction: ITransaction = {
+    const editedTransaction: ITransaction = transactionHelpers.runtimeCast({
       _id: Mongo_editedTransaction._id.toString(),
       userId: Mongo_editedTransaction.userId.toString(),
       transactionTimestamp: Mongo_editedTransaction.transactionTimestamp,
@@ -119,10 +123,30 @@ export default {
       amount: Mongo_editedTransaction.amount,
       entryTimestamp: Mongo_editedTransaction.entryTimestamp,
       revisions: Mongo_editedTransaction.revisions,
-    };
+    });
+    if (editedTransaction.from.datatype === 'BUDGET') {
+      const Mongo_budget: any = await BudgetModel.findOne({ _id: editedTransaction.from.addressId });
+      if (Mongo_budget === null) throw new Error('budget does not exist!');
+      await Budget.recalculateCalculatedValues({ Mongo_budget: Mongo_budget });
+    }
+    if (editedTransaction.to.datatype === 'BUDGET') {
+      const Mongo_budget: any = await BudgetModel.findOne({ _id: editedTransaction.to.addressId });
+      if (Mongo_budget === null) throw new Error('budget does not exist!');
+      await Budget.recalculateCalculatedValues({ Mongo_budget: Mongo_budget });
+    }
+    if (editedTransaction.from.datatype === 'LOAN') {
+      const Mongo_loan: any = await LoanModel.findOne({ _id: editedTransaction.from.addressId });
+      if (Mongo_loan === null) throw new Error('loan does not exist!');
+      await Loan.recalculateCalculatedValues({ Mongo_loan: Mongo_loan });
+    }
+    if (editedTransaction.to.datatype === 'LOAN') {
+      const Mongo_loan: any = await LoanModel.findOne({ _id: editedTransaction.to.addressId });
+      if (Mongo_loan === null) throw new Error('loan does not exist!');
+      await Loan.recalculateCalculatedValues({ Mongo_loan: Mongo_loan });
+    }
 
     // return edited transaction
-    return transactionHelpers.runtimeCast(editedTransaction);
+    return editedTransaction;
   },
   delete: async function deleteTransaction(transactionId: string): Promise<boolean> {
     // const transaction = await TransactionModel.findById(transactionId);

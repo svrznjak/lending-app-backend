@@ -14,7 +14,6 @@ import { loanHelpers } from './types/loan/loanHelpers.js';
 import { ILoan } from './types/loan/loanInterface.js';
 import { ITransaction } from './types/transaction/transactionInterface.js';
 import Budget from './budget.js';
-import paranoidCalculator from './utils/paranoidCalculator/paranoidCalculator.js';
 import { transactionHelpers } from './types/transaction/transactionHelpers.js';
 import {
   IAmortizationInterval,
@@ -59,11 +58,7 @@ export default {
 
       const recalculatedBudget = await Budget.recalculateCalculatedValues({ Mongo_budget: Mongo_budget });
 
-      const avaiableFundsInBudget = paranoidCalculator.subtract(
-        recalculatedBudget.calculatedTotalAmount,
-        recalculatedBudget.calculatedLendedAmount,
-      );
-      if (avaiableFundsInBudget < funds[i].amount)
+      if (recalculatedBudget.calculatedTotalAvailableAmount < funds[i].amount)
         throw new Error(`Budget (id: ${funds[i].budgetId}) has insufficient funds.`);
     }
 
@@ -278,11 +273,16 @@ export default {
     transactionHelpers.validate.description(description);
     description = transactionHelpers.sanitize.description(description);
     transactionHelpers.validate.amount(amount);
+    transactionHelpers.validate.transactionTimestamp(transactionTimestamp);
+    if (transactionTimestamp < Mongo_loan.openedTimestamp)
+      throw new Error('Transaction should not happen before loan start');
+    if (transactionTimestamp > new Date().getTime()) throw new Error('Transaction should not happen in the future');
+
     const newTransaction = await transaction.transferAmountFromLoanToBudget({
       userId: userId,
       loanId: loanId,
       budgetId: budgetId,
-      transactionTimestamp: transactionHelpers.validate.transactionTimestamp(transactionTimestamp),
+      transactionTimestamp: transactionTimestamp,
       description: description,
       amount: amount,
       entryTimestamp: transactionHelpers.validate.entryTimestamp(new Date().getTime()),

@@ -57,10 +57,12 @@ export const budgetHelpers = {
     if (!_.isString(budget.userId)) throw new Error('Type of budget.userId must be a string!');
     if (!_.isString(budget.name)) throw new Error('Type of budget.name must be a string!');
     if (!_.isString(budget.description)) throw new Error('Type of budget.description must be a string!');
-    if (!Number.isFinite(budget.calculatedTotalAmount))
-      throw new Error('Type of budget.calculatedTotalAmount must be a number!');
-    if (!Number.isFinite(budget.calculatedLendedAmount))
-      throw new Error('Type of budget.calculatedLendedAmount must be a number!');
+    if (!Number.isFinite(budget.calculatedTotalInvestedAmount))
+      throw new Error('Type of budget.calculatedTotalInvestedAmount must be a number!');
+    if (!Number.isFinite(budget.calculatedTotalWithdrawnAmount))
+      throw new Error('Type of budget.calculatedTotalWithdrawnAmount must be a number!');
+    if (!Number.isFinite(budget.calculatedTotalAvailableAmount))
+      throw new Error('Type of budget.calculatedTotalAvailableAmount must be a number!');
     if (!_.isBoolean(budget.isArchived)) throw new Error('Type of budget.isArchived must be a boolean!');
 
     interestRateHelpers.runtimeCast(budget.defaultInterestRate);
@@ -71,8 +73,9 @@ export const budgetHelpers = {
       name: budget.name,
       description: budget.description,
       defaultInterestRate: budget.defaultInterestRate,
-      calculatedTotalAmount: budget.calculatedTotalAmount,
-      calculatedLendedAmount: budget.calculatedLendedAmount,
+      calculatedTotalInvestedAmount: budget.calculatedTotalInvestedAmount,
+      calculatedTotalWithdrawnAmount: budget.calculatedTotalWithdrawnAmount,
+      calculatedTotalAvailableAmount: budget.calculatedTotalAvailableAmount,
       isArchived: budget.isArchived,
     };
   },

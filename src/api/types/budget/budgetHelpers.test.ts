@@ -216,8 +216,9 @@ describe('budgetHelpers', () => {
             entryTimestamp: 1663012853,
             revisions: undefined,
           },
-          calculatedTotalAmount: 0,
-          calculatedLendedAmount: 0,
+          calculatedTotalInvestedAmount: 0,
+          calculatedTotalWithdrawnAmount: 0,
+          calculatedTotalAvailableAmount: 0,
         } as IBudget;
         budgetHelpers.sanitize.all(input);
         expect(input.name).toBe('Budget 1');
@@ -249,8 +250,9 @@ describe('budgetHelpers', () => {
           entryTimestamp: 1663012853,
           revisions: undefined,
         },
-        calculatedTotalAmount: 0,
-        calculatedLendedAmount: 0,
+        calculatedTotalInvestedAmount: 0,
+        calculatedTotalWithdrawnAmount: 0,
+        calculatedTotalAvailableAmount: 0,
       },
       {
         _id: 'xxx',
@@ -263,8 +265,9 @@ describe('budgetHelpers', () => {
           entryTimestamp: 1663055253,
           revisions: undefined,
         },
-        calculatedTotalAmount: 0,
-        calculatedLendedAmount: 0,
+        calculatedTotalInvestedAmount: 0,
+        calculatedTotalWithdrawnAmount: 0,
+        calculatedTotalAvailableAmount: 0,
       },
       {
         _id: 'xxx',
@@ -277,8 +280,9 @@ describe('budgetHelpers', () => {
           entryTimestamp: 1663012853,
           revisions: undefined,
         },
-        calculatedTotalAmount: 0,
-        calculatedLendedAmount: 0,
+        calculatedTotalInvestedAmount: 0,
+        calculatedTotalWithdrawnAmount: 0,
+        calculatedTotalAvailableAmount: 0,
       },
     ];
 
@@ -299,8 +303,9 @@ describe('budgetHelpers', () => {
           entryTimestamp: 1663012853,
           revisions: undefined,
         },
-        calculatedTotalAmount: 0,
-        calculatedLendedAmount: 0,
+        calculatedTotalInvestedAmount: 0,
+        calculatedTotalWithdrawnAmount: 0,
+        calculatedTotalAvailableAmount: 0,
       },
       {
         // Name is undefined
@@ -314,8 +319,9 @@ describe('budgetHelpers', () => {
           entryTimestamp: 1663012853,
           revisions: undefined,
         },
-        calculatedTotalAmount: 0,
-        calculatedLendedAmount: 0,
+        calculatedTotalInvestedAmount: 0,
+        calculatedTotalWithdrawnAmount: 0,
+        calculatedTotalAvailableAmount: 0,
       },
       {
         // Name is null
@@ -329,8 +335,9 @@ describe('budgetHelpers', () => {
           entryTimestamp: 1663012853,
           revisions: undefined,
         },
-        calculatedTotalAmount: 0,
-        calculatedLendedAmount: 0,
+        calculatedTotalInvestedAmount: 0,
+        calculatedTotalWithdrawnAmount: 0,
+        calculatedTotalAvailableAmount: 0,
       },
       {
         // Name is object
@@ -344,8 +351,9 @@ describe('budgetHelpers', () => {
           entryTimestamp: 1663012853,
           revisions: undefined,
         },
-        calculatedTotalAmount: 0,
-        calculatedLendedAmount: 0,
+        calculatedTotalInvestedAmount: 0,
+        calculatedTotalWithdrawnAmount: 0,
+        calculatedTotalAvailableAmount: 0,
       },
       {
         // Description is missing from object
@@ -358,8 +366,9 @@ describe('budgetHelpers', () => {
           entryTimestamp: 1663012853,
           revisions: undefined,
         },
-        calculatedTotalAmount: 0,
-        calculatedLendedAmount: 0,
+        calculatedTotalInvestedAmount: 0,
+        calculatedTotalWithdrawnAmount: 0,
+        calculatedTotalAvailableAmount: 0,
       },
       {
         // Description is undefined
@@ -373,8 +382,9 @@ describe('budgetHelpers', () => {
           entryTimestamp: 1663012853,
           revisions: undefined,
         },
-        calculatedTotalAmount: 0,
-        calculatedLendedAmount: 0,
+        calculatedTotalInvestedAmount: 0,
+        calculatedTotalWithdrawnAmount: 0,
+        calculatedTotalAvailableAmount: 0,
       },
       {
         // Description is null
@@ -388,16 +398,18 @@ describe('budgetHelpers', () => {
           entryTimestamp: 1663012853,
           revisions: undefined,
         },
-        calculatedTotalAmount: 0,
-        calculatedLendedAmount: 0,
+        calculatedTotalInvestedAmount: 0,
+        calculatedTotalWithdrawnAmount: 0,
+        calculatedTotalAvailableAmount: 0,
       },
       {
         // defaultInterestRate is missing from object
         _id: 'xxx',
         name: 'Budget one',
         description: 'My best budget.',
-        calculatedTotalAmount: 0,
-        calculatedLendedAmount: 0,
+        calculatedTotalInvestedAmount: 0,
+        calculatedTotalWithdrawnAmount: 0,
+        calculatedTotalAvailableAmount: 0,
       },
       {
         // defaultInterestRate is string
@@ -405,8 +417,9 @@ describe('budgetHelpers', () => {
         name: 'Budget one',
         description: 'My best budget.',
         defaultInterestRate: '10% per year',
-        calculatedTotalAmount: 0,
-        calculatedLendedAmount: 0,
+        calculatedTotalInvestedAmount: 0,
+        calculatedTotalWithdrawnAmount: 0,
+        calculatedTotalAvailableAmount: 0,
       },
       {
         // defaultInterestRate.duration is NaN
@@ -420,8 +433,9 @@ describe('budgetHelpers', () => {
           entryTimestamp: 1663012853,
           revisions: undefined,
         },
-        calculatedTotalAmount: 0,
-        calculatedLendedAmount: 0,
+        calculatedTotalInvestedAmount: 0,
+        calculatedTotalWithdrawnAmount: 0,
+        calculatedTotalAvailableAmount: 0,
       },
       {
         // defaultInterestRate.duration is NaN
@@ -435,11 +449,12 @@ describe('budgetHelpers', () => {
           entryTimestamp: NaN,
           revisions: undefined,
         },
-        calculatedTotalAmount: 0,
-        calculatedLendedAmount: 0,
+        calculatedTotalInvestedAmount: 0,
+        calculatedTotalWithdrawnAmount: 0,
+        calculatedTotalAvailableAmount: 0,
       },
       {
-        // calculatedTotalAmount is NaN
+        // calculatedTotalInvestedAmount is NaN
         _id: 'xxx',
         name: 'Budget one',
         description: 'My best budget.',
@@ -450,11 +465,12 @@ describe('budgetHelpers', () => {
           entryTimestamp: 1663012853,
           revisions: undefined,
         },
-        calculatedTotalAmount: NaN,
-        calculatedLendedAmount: 0,
+        calculatedTotalInvestedAmount: NaN,
+        calculatedTotalWithdrawnAmount: 0,
+        calculatedTotalAvailableAmount: 0,
       },
       {
-        // calculatedLendedAmount is false
+        // calculatedTotalWithdrawnAmount is false
         _id: 'xxx',
         name: 'Budget one',
         description: 'My best budget.',
@@ -465,8 +481,25 @@ describe('budgetHelpers', () => {
           entryTimestamp: 1663012853,
           revisions: undefined,
         },
-        calculatedTotalAmount: 10,
-        calculatedLendedAmount: false,
+        calculatedTotalInvestedAmount: 10,
+        calculatedTotalWithdrawnAmount: false,
+        calculatedTotalAvailableAmount: 0,
+      },
+      {
+        // calculatedTotalAvailableAmount is false
+        _id: 'xxx',
+        name: 'Budget one',
+        description: 'My best budget.',
+        defaultInterestRate: {
+          type: 'PERCENTAGE_PER_DURATION',
+          duration: 'MONTH',
+          amount: 5,
+          entryTimestamp: 1663012853,
+          revisions: undefined,
+        },
+        calculatedTotalInvestedAmount: 10,
+        calculatedTotalWithdrawnAmount: 0,
+        calculatedTotalAvailableAmount: false,
       },
     ];
 
