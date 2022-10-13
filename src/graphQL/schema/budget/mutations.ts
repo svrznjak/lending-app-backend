@@ -102,5 +102,47 @@ export default new GraphQLObjectType({
         }
       },
     },
+    archiveBudget: {
+      type: budgetsType,
+      args: {
+        budgetId: { type: new GraphQLNonNull(GraphQLID) },
+      },
+      async resolve(_parent: any, args: any, context: any): Promise<IBudget> {
+        const userAuthId = await context.getCurrentUserAuthIdOrThrowValidationError();
+        const user = await getUserByAuthId(userAuthId);
+        const budget: any = await Budget.getOneFromUser({ userId: user._id, budgetId: args.budgetId });
+
+        try {
+          return await Budget.setIsArchived({
+            budgetId: budget._id,
+            isArchived: true,
+          });
+        } catch (err: any) {
+          console.log(err.message);
+          throw new Error(err);
+        }
+      },
+    },
+    unarchiveBudget: {
+      type: budgetsType,
+      args: {
+        budgetId: { type: new GraphQLNonNull(GraphQLID) },
+      },
+      async resolve(_parent: any, args: any, context: any): Promise<IBudget> {
+        const userAuthId = await context.getCurrentUserAuthIdOrThrowValidationError();
+        const user = await getUserByAuthId(userAuthId);
+        const budget: any = await Budget.getOneFromUser({ userId: user._id, budgetId: args.budgetId });
+
+        try {
+          return await Budget.setIsArchived({
+            budgetId: budget._id,
+            isArchived: false,
+          });
+        } catch (err: any) {
+          console.log(err.message);
+          throw new Error(err);
+        }
+      },
+    },
   }),
 });

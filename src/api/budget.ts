@@ -246,6 +246,42 @@ export default {
   export: function joinBudetTransactionsIntoAccountingTable(): void {
     return;
   },
+
+  setIsArchived: async function setBudgetIsArchived({
+    budgetId,
+    isArchived,
+  }: {
+    budgetId: string;
+    isArchived: boolean;
+  }): Promise<IBudget> {
+    // get budget and check if it exists
+    const budget: any = await BudgetModel.findOne({ _id: budgetId });
+    if (budget === null) throw new Error('Budget does not exist!');
+
+    budget.isArchived = isArchived;
+    const changedBudget = budgetHelpers.runtimeCast({
+      _id: budget._id.toString(),
+      userId: budget.userId.toString(),
+      name: budget.name,
+      description: budget.description,
+      defaultInterestRate: {
+        type: budget.defaultInterestRate.type,
+        duration: budget.defaultInterestRate.duration,
+        expectedPayments: budget.defaultInterestRate.expectedPayments,
+        amount: budget.defaultInterestRate.amount,
+        isCompounding: budget.defaultInterestRate.isCompounding,
+        entryTimestamp: budget.defaultInterestRate.entryTimestamp,
+        revisions: budget.defaultInterestRate.revisions,
+      },
+      calculatedTotalInvestedAmount: budget.calculatedTotalInvestedAmount,
+      calculatedTotalWithdrawnAmount: budget.calculatedTotalWithdrawnAmount,
+      calculatedTotalAvailableAmount: budget.calculatedTotalAvailableAmount,
+      isArchived: budget.isArchived,
+    });
+    await budget.save();
+    return changedBudget;
+  },
+
   // As a lender, I want to change the existing budget name and description, so that I can set a more fitting name and description.
   // As a lender, I want to change the default interest rate, so that I can adapt my budget to current market conditions.
   edit: async function editBudgetInfo({
