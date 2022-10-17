@@ -8,6 +8,7 @@ import Budget from './budget.js';
 import BudgetModel from './db/model/BudgetModel.js';
 import Loan from './loan.js';
 import LoanModel from './db/model/LoanModel.js';
+import LoanCache from './cache/loanCache.js';
 
 export default {
   getOne: async function getOneTransaction({ transactionId }: { transactionId: string }): Promise<ITransaction> {
@@ -152,8 +153,46 @@ export default {
     // const transaction = await TransactionModel.findById(transactionId);
     // if (!transaction) throw new Error('Transaction you wanted to delete was not found!');
     try {
-      const response = await TransactionModel.findByIdAndDelete(transactionId).lean();
-      if (response === null) throw new Error('Transaction you wanted to delete was not found!');
+      const deletedTransaction: ITransaction = await TransactionModel.findByIdAndDelete(transactionId).lean();
+      if (deletedTransaction === null) throw new Error('Transaction you wanted to delete was not found!');
+      if (deletedTransaction.from.datatype === 'BUDGET') {
+        Budget.recalculateCalculatedValues({
+          Mongo_budget: await BudgetModel.findOne({
+            _id: deletedTransaction.from.addressId,
+            userId: deletedTransaction.userId,
+          }).exec(),
+        });
+      }
+      if (deletedTransaction.to.datatype === 'BUDGET') {
+        Budget.recalculateCalculatedValues({
+          Mongo_budget: await BudgetModel.findOne({
+            _id: deletedTransaction.to.addressId,
+            userId: deletedTransaction.userId,
+          }).exec(),
+        });
+      }
+      if (deletedTransaction.from.datatype === 'LOAN') {
+        LoanCache.setCachedItem({
+          itemId: deletedTransaction.to.addressId,
+          value: await Loan.recalculateCalculatedValues({
+            Mongo_loan: await LoanModel.findOne({
+              _id: deletedTransaction.from.addressId,
+              userId: deletedTransaction.userId,
+            }).exec(),
+          }),
+        });
+      }
+      if (deletedTransaction.to.datatype === 'LOAN') {
+        LoanCache.setCachedItem({
+          itemId: deletedTransaction.to.addressId,
+          value: await Loan.recalculateCalculatedValues({
+            Mongo_loan: await LoanModel.findOne({
+              _id: deletedTransaction.to.addressId,
+              userId: deletedTransaction.userId,
+            }).exec(),
+          }),
+        });
+      }
       return true;
     } catch (err) {
       console.log(err);
