@@ -39,6 +39,36 @@ export default new GraphQLObjectType({
         }
       },
     },
+    editBudget: {
+      type: budgetsType,
+      args: {
+        budgetId: { type: new GraphQLNonNull(GraphQLID) },
+        name: { type: new GraphQLNonNull(GraphQLString) },
+        description: { type: new GraphQLNonNull(GraphQLString) },
+        defaultInterestRate: { type: new GraphQLNonNull(interestRateInputType) },
+      },
+      async resolve(_parent: any, args: any, context: any): Promise<IBudget> {
+        await context.getCurrentUserAuthIdOrThrowValidationError();
+        const now = transactionHelpers.validate.entryTimestamp(new Date().getTime());
+        args.defaultInterestRate.entryTimestamp = now;
+
+        try {
+          return await Budget.edit({
+            budgetId: args.budgetId,
+            name: args.name,
+            description: args.description,
+            defaultInterestRateType: args.defaultInterestRate.type,
+            defaultInterestRateDuration: args.defaultInterestRate.duration,
+            defaultInterestRateAmount: args.defaultInterestRate.amount,
+            defaultInterestRateExpectedPayments: args.defaultInterestRate.expectedPayments,
+            defaultInterestRateIsCompounding: args.defaultInterestRate.isCompounding,
+          });
+        } catch (err: any) {
+          console.log(err.message);
+          throw new Error(err);
+        }
+      },
+    },
     addFundsToBudget: {
       type: budgetsType,
       args: {
