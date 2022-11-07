@@ -702,3 +702,58 @@ function normalizeInterestRateToDay(interestRate: Omit<IInterestRate, 'entryTime
     throw new Error('Error when calculating daily interest rate!');
   }
 }
+
+/**
+ * Calculates amount that has to be paid for each loan payment.
+ * @param  {number} LOAN_AMOUNT - Is positive amount of loan given (without the interest)
+ * @param  {number} INTEREST_PERCENTAGE_PER_PAYMENT - Is positive percentage of interest per payment.
+ * For example: If yearly interest rate is 5% and there are 12 payments in a year,
+ * then INTEREST_PERCENTAGE_PER_PAYMENT is (5 / 12) / 100.
+ * Note: If loan is compounding then interest rate should be adjusted to Equivalent Interest Rate (https://www.calculatorsoup.com/calculators/financial/equivalent-interest-rate-calculator.php)
+ * @param  {number} NUMBER_OF_PAYMENTS - Represents a positive total number of payments in whole loan duration.
+ * @returns number
+ */
+export function calculateLoanPaymentAmount(
+  LOAN_AMOUNT: number,
+  INTEREST_PERCENTAGE_PER_PAYMENT: number,
+  NUMBER_OF_PAYMENTS: number,
+): number {
+  if (LOAN_AMOUNT <= 0) throw new Error('LOAN_AMOUNT should be greater than 0');
+  if (INTEREST_PERCENTAGE_PER_PAYMENT <= 0) throw new Error('INTEREST_PERCENTAGE_PER_PAYMENT should be greater than 0');
+  if (NUMBER_OF_PAYMENTS <= 0) throw new Error('NUMBER_OF_PAYMENTS should be greater than 0');
+
+  // Link to forumula: https://www.calculatorsoup.com/calculators/financial/loan-calculator-simple.php
+  return (
+    (LOAN_AMOUNT * (INTEREST_PERCENTAGE_PER_PAYMENT * (1 + INTEREST_PERCENTAGE_PER_PAYMENT) ** NUMBER_OF_PAYMENTS)) /
+    ((1 + INTEREST_PERCENTAGE_PER_PAYMENT) ** NUMBER_OF_PAYMENTS - 1)
+  );
+}
+
+/**
+ * Calculate interest rate for compounding interest rate. All params are bound to a unspecified period (ex. year or week).
+ * @param  {number} INTEREST_RATE_PERCENTAGE_PER_PERIOD - Positive number of percentage in decimals (ex. 5% is 0.05)
+ * @param  {number} NUMBER_OF_COMPOUNDINGS_PER_PERIOD - Positive number of compoundings.
+ * For example: If period is YEAR and compounding is monthly then NUMBER_OF_COMPOUNDINGS_PER_PERIOD is 12.
+ * @param  {number} NUMBER_OF_PAYMENTS_PER_PERIOD - Positive number of payments per period.
+ * For example: If period is YEAR and payments are monthly then number of payments is 12.
+ * @returns number
+ */
+export function calculateEquivalentInterestRate(
+  INTEREST_RATE_PERCENTAGE_PER_PERIOD: number,
+  NUMBER_OF_COMPOUNDINGS_PER_PERIOD: number,
+  NUMBER_OF_PAYMENTS_PER_PERIOD: number,
+): number {
+  if (INTEREST_RATE_PERCENTAGE_PER_PERIOD <= 0)
+    throw new Error('INTEREST_RATE_PERCENTAGE_PER_PERIOD should be greater than 0');
+  if (NUMBER_OF_COMPOUNDINGS_PER_PERIOD <= 0)
+    throw new Error('NUMBER_OF_COMPOUNDINGS_PER_PERIOD should be greater than 0');
+  if (NUMBER_OF_PAYMENTS_PER_PERIOD <= 0) throw new Error('NUMBER_OF_PAYMENTS_PER_PERIOD should be greater than 0');
+
+  // Link to formula and online calculator: https://www.calculatorsoup.com/calculators/financial/equivalent-interest-rate-calculator.php
+  return (
+    NUMBER_OF_PAYMENTS_PER_PERIOD *
+    ((1 + INTEREST_RATE_PERCENTAGE_PER_PERIOD / NUMBER_OF_COMPOUNDINGS_PER_PERIOD) **
+      (NUMBER_OF_COMPOUNDINGS_PER_PERIOD / NUMBER_OF_PAYMENTS_PER_PERIOD) -
+      1)
+  );
+}
