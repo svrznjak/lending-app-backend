@@ -435,17 +435,23 @@ export default {
     let calculatedTotalPaidPrincipal = 0;
     let calculatedChargedInterest = 0;
     let calculatedPaidInterest = 0;
+
+    // get all transactions
+    const loanTransactions: ITransaction[] = await this.getTransactions(Mongo_loan._id.toString(), {
+      pageNumber: 0,
+      pageSize: Infinity,
+    });
     const TRANSACTIONS_LIST = await this.generateTransactionsList({
-      loanId: Mongo_loan._id.toString(),
+      loanTransactions: loanTransactions,
       interestRate: Mongo_loan.interestRate,
     });
     if (TRANSACTIONS_LIST.length > 0) {
       for (let i = 0; i < TRANSACTIONS_LIST.length; i++) {
         const TRANSACTION = TRANSACTIONS_LIST[i];
         if (TRANSACTION.principalCharge > 0) calculatedTotalPaidPrincipal += TRANSACTION.principalCharge;
-        calculatedPaidInterest += TRANSACTION.interestCharge;
+        if (TRANSACTION.interestCharge > 0) calculatedChargedInterest += TRANSACTION.interestCharge;
+        if (TRANSACTION.interestCharge < 0) calculatedPaidInterest -= TRANSACTION.interestCharge;
       }
-      calculatedChargedInterest += TRANSACTIONS_LIST[TRANSACTIONS_LIST.length - 1].outstandingInterest;
     }
     Mongo_loan.calculatedTotalPaidPrincipal = calculatedTotalPaidPrincipal;
     Mongo_loan.calculatedChargedInterest = calculatedChargedInterest;
@@ -477,15 +483,39 @@ export default {
     return CHANGED_LOAN;
   },
   generateTransactionsList: async function generateLoanTransactionsList({
-    loanId,
+    loanTransactions,
     interestRate,
   }: {
-    loanId: string;
+    loanTransactions: ITransaction[];
     interestRate: IInterestRate;
   }): Promise<ITransactionInterval[]> {
-    const INTEREST_PER_DAY = normalizeInterestRateToDay(interestRate);
-    const INTEREST_PER_HOUR = INTEREST_PER_DAY / 24;
-    const INTEREST_PERCENTAGE_PER_HOUR = INTEREST_PER_HOUR / 100;
+    // return empty if no transactions are present in loan
+    if (loanTransactions.length === 0) return [];
+
+    // get loanId
+    let loanId = '';
+    if (loanTransactions[0].to.datatype === 'LOAN') loanId = loanTransactions[0].to.addressId;
+    else if (loanTransactions[0].from.datatype === 'LOAN') loanId = loanTransactions[0].from.addressId;
+    else throw new Error('Transaction does not include LOAN');
+
+    // check if loanTransactions are in correct order (transactionTimestamp from newest to oldest)
+    for (let i = 1; i < loanTransactions.length - 1; i++) {
+      if (loanTransactions[i].transactionTimestamp < loanTransactions[i + 1].transactionTimestamp)
+        throw new Error('Transactions are not passed in correct order');
+    }
+
+    const IS_FIXED_AMOUNT_INTEREST =
+      interestRate.duration === 'FULL_DURATION' && interestRate.type === 'FIXED_PER_DURATION';
+
+    let interest_per_day = 0;
+    let interest_per_hour = 0;
+    let interest_percentage_per_hour = 0;
+
+    if (!IS_FIXED_AMOUNT_INTEREST) {
+      interest_per_day = normalizeInterestRateToDay(interestRate);
+      interest_per_hour = interest_per_day / 24;
+      interest_percentage_per_hour = interest_per_hour / 100;
+    }
     /* 
     // get all changes to interestRate
     const loanInterestRates = [loan.interestRate];
@@ -497,12 +527,27 @@ export default {
       revisionOfInterestRate = revisionOfInterestRate.revisions;
     }
     */
-    // get all transactions
-    const loanTransactions: ITransaction[] = await this.getTransactions(loanId, {
-      pageNumber: 0,
-      pageSize: Infinity,
-    });
-    if (loanTransactions.length === 0) return [];
+
+    // add fixed amount interest to loan
+    if (IS_FIXED_AMOUNT_INTEREST) {
+      loanTransactions.push({
+        _id: '',
+        userId: '',
+        transactionTimestamp: loanTransactions[loanTransactions.length - 1].transactionTimestamp,
+        description: 'fixed-interest',
+        from: {
+          datatype: 'INTEREST',
+          addressId: '000000000000000000000000',
+        },
+        to: {
+          datatype: 'LOAN',
+          addressId: loanId,
+        },
+        amount: interestRate.amount,
+        entryTimestamp: loanTransactions[loanTransactions.length - 1].transactionTimestamp,
+      });
+    }
+
     // add another empty loan transaction for now in order to calculate interest until now
     // POSSIBLE SOURCE OF BUGS IS DATA STRUCTURE IS CHANGED
     const NOW = new Date().getTime();
@@ -537,18 +582,17 @@ export default {
       const DIFFERENCE_IN_HOURS = differenceInHours(new Date(toDateTimestamp), new Date(fromDateTimestamp));
       let interestCharge = 0;
 
-      if (interestRate.type === 'PERCENTAGE_PER_DURATION' && interestRate.isCompounding) {
-        // for daily calculation // const interestPercentagePerDay = interestPerDay / 100;
-        for (let i = 0; i < DIFFERENCE_IN_HOURS; i++) {
-          interestCharge += (outstandingPrincipal + interestCharge) * INTEREST_PERCENTAGE_PER_HOUR;
+      if (!IS_FIXED_AMOUNT_INTEREST) {
+        if (interestRate.type === 'PERCENTAGE_PER_DURATION' && interestRate.isCompounding) {
+          for (let i = 0; i < DIFFERENCE_IN_HOURS; i++) {
+            interestCharge += (outstandingPrincipal + interestCharge) * interest_percentage_per_hour;
+          }
+        } else if (interestRate.type === 'PERCENTAGE_PER_DURATION' && !interestRate.isCompounding) {
+          interestCharge = outstandingPrincipal * interest_percentage_per_hour * DIFFERENCE_IN_HOURS;
+        } else if (interestRate.type === 'FIXED_PER_DURATION' && interestRate.duration !== 'FULL_DURATION') {
+          interestCharge = interest_per_hour * DIFFERENCE_IN_HOURS;
         }
-      } else if (interestRate.type === 'PERCENTAGE_PER_DURATION' && !interestRate.isCompounding) {
-        // for daily calculation // const interestPercentagePerDay = interestPerDay / 100;
-        interestCharge = outstandingPrincipal * INTEREST_PERCENTAGE_PER_HOUR * DIFFERENCE_IN_HOURS;
-      } else if (interestRate.type === 'FIXED_PER_DURATION' && interestRate.duration !== 'FULL_DURATION') {
-        interestCharge = INTEREST_PER_HOUR * DIFFERENCE_IN_HOURS;
       }
-
       // calculate principal payment and next outstandingPrincipal
       let principalCharge: number;
       if (loanTransaction.from.datatype === 'BUDGET') {
@@ -561,11 +605,11 @@ export default {
       } else if (loanTransaction.from.datatype === 'LOAN') {
         outstandingInterest = outstandingInterest + interestCharge;
         if (loanTransaction.amount <= outstandingInterest) {
-          interestCharge = loanTransaction.amount;
-          outstandingInterest = outstandingInterest - interestCharge;
+          interestCharge = -loanTransaction.amount;
+          outstandingInterest = outstandingInterest + loanTransaction.amount;
           principalCharge = 0;
         } else {
-          interestCharge = outstandingInterest;
+          interestCharge = -outstandingInterest;
           outstandingInterest = outstandingInterest - interestCharge;
           principalCharge = loanTransaction.amount - interestCharge;
           outstandingPrincipal = outstandingPrincipal - principalCharge;
@@ -584,6 +628,7 @@ export default {
     return listOfTransactions;
   },
 
+  // TODO NOT WORKING...
   calculateExpetedAmortization: async function calculateExpectedLoanAmortization({
     openedTimestamp,
     closesTimestamp,
@@ -596,51 +641,40 @@ export default {
     amount: number;
   }): Promise<IAmortizationInterval[]> {
     // TODO: validate inputs
-    const listOfPayments: IAmortizationInterval[] = [];
-    const loanDurationInDays = differenceInCalendarDays(new Date(closesTimestamp), new Date(openedTimestamp));
-    const principalPaymentPerDay = amount / loanDurationInDays;
+
+    const paydaysTimestamps: number[] = getTimestampsOfPaydays({
+      openedTimestamp: openedTimestamp,
+      closesTimestamp: closesTimestamp,
+      expectedPayments: interestRate.expectedPayments,
+    });
+    const loanDurationInDays = differenceInCalendarDays(new Date(closesTimestamp), new Date(openedTimestamp)) + 1;
+
     const interestPerDay = normalizeInterestRateToDay(interestRate);
+    const interestPercentagePerDay = interestPerDay / 100;
+    const paymentPerDay = calculateLoanPaymentAmount(amount, interestPercentagePerDay, loanDurationInDays);
+    console.log(paymentPerDay);
 
-    let paymentDaysTimestamps: number[] = [];
-
-    if (interestRate.expectedPayments === 'DAILY') {
-      paymentDaysTimestamps = eachDayOfInterval({
-        start: openedTimestamp,
-        end: closesTimestamp,
-      }).map((date) => date.getTime());
-      paymentDaysTimestamps.shift();
-    } else if (interestRate.expectedPayments === 'WEEKLY') {
-      paymentDaysTimestamps = eachWeekOfInterval({
-        start: openedTimestamp,
-        end: closesTimestamp,
-      }).map((date) => date.getTime());
-      paymentDaysTimestamps.shift();
-      if (paymentDaysTimestamps[paymentDaysTimestamps.length - 1] !== closesTimestamp) {
-        paymentDaysTimestamps.push(closesTimestamp);
-      }
-    } else if (interestRate.expectedPayments === 'MONTHLY') {
-      paymentDaysTimestamps = eachMonthOfInterval({
-        start: openedTimestamp,
-        end: closesTimestamp,
-      }).map((date) => date.getTime());
-      paymentDaysTimestamps.shift();
-      if (paymentDaysTimestamps[paymentDaysTimestamps.length - 1] !== closesTimestamp) {
-        paymentDaysTimestamps.push(closesTimestamp);
-      }
-    } else if (interestRate.expectedPayments === 'YEARLY') {
-      paymentDaysTimestamps = eachYearOfInterval({
-        start: openedTimestamp,
-        end: closesTimestamp,
-      }).map((date) => date.getTime());
-      paymentDaysTimestamps.shift();
-      if (paymentDaysTimestamps[paymentDaysTimestamps.length - 1] !== closesTimestamp) {
-        paymentDaysTimestamps.push(closesTimestamp);
-      }
-    } else if (interestRate.expectedPayments === 'ONE_TIME') {
-      paymentDaysTimestamps.push(closesTimestamp);
+    let paymentPerDuration: number;
+    switch (interestRate.expectedPayments) {
+      case 'DAILY':
+        paymentPerDuration = paymentPerDay;
+        break;
+      case 'WEEKLY':
+        paymentPerDuration = paymentPerDay * 7;
+        break;
+      case 'MONTHLY':
+        paymentPerDuration = paymentPerDay * 30;
+        break;
+      case 'YEARLY':
+        paymentPerDuration = paymentPerDay * 365;
+        break;
+      case 'ONE_TIME':
+        paymentPerDuration = paymentPerDay * loanDurationInDays;
+        break;
     }
 
-    for (let i = 0; i < paymentDaysTimestamps.length; i++) {
+    const listOfPayments: IAmortizationInterval[] = [];
+    for (let i = 0; i < paydaysTimestamps.length; i++) {
       let outstandingPrincipal;
       let fromDateTimestamp;
       if (i === 0) {
@@ -648,21 +682,20 @@ export default {
         fromDateTimestamp = openedTimestamp;
       } else {
         outstandingPrincipal = listOfPayments[i - 1].outstandingPrincipal - listOfPayments[i - 1].principalPayment;
-        fromDateTimestamp = paymentDaysTimestamps[i - 1];
+        fromDateTimestamp = paydaysTimestamps[i - 1];
       }
 
-      const toDateTimestamp = paymentDaysTimestamps[i];
+      const toDateTimestamp = paydaysTimestamps[i];
 
       const differenceInDays = differenceInCalendarDays(new Date(toDateTimestamp), new Date(fromDateTimestamp));
 
+      // const paymentAmount = differenceInDays * paymentPerDay;
       let interest = 0;
       if (interestRate.type === 'PERCENTAGE_PER_DURATION' && interestRate.isCompounding) {
-        const interestPercentagePerDay = interestPerDay / 100;
         for (let i = 0; i < differenceInDays; i++) {
           interest += (outstandingPrincipal + interest) * interestPercentagePerDay;
         }
       } else if (interestRate.type === 'PERCENTAGE_PER_DURATION' && !interestRate.isCompounding) {
-        const interestPercentagePerDay = interestPerDay / 100;
         interest = outstandingPrincipal * interestPercentagePerDay * differenceInDays;
       } else if (interestRate.type === 'FIXED_PER_DURATION' && interestRate.duration !== 'FULL_DURATION') {
         interest = interestPerDay * differenceInDays;
@@ -675,7 +708,8 @@ export default {
         toDateTimestamp: toDateTimestamp,
         outstandingPrincipal: outstandingPrincipal,
         interest: interest,
-        principalPayment: differenceInDays * principalPaymentPerDay,
+        principalPayment: paymentPerDuration - interest,
+        //principalPayment: differenceInDays * principalPaymentPerDay,
       });
     }
 
@@ -689,6 +723,63 @@ export default {
   },
 };
 
+function getTimestampsOfPaydays({
+  openedTimestamp,
+  closesTimestamp,
+  expectedPayments,
+}: {
+  openedTimestamp: number;
+  closesTimestamp: number;
+  expectedPayments: IInterestRate['expectedPayments'];
+}): number[] {
+  let paymentDaysTimestamps: number[] = [];
+
+  if (expectedPayments === 'DAILY') {
+    paymentDaysTimestamps = eachDayOfInterval({
+      start: openedTimestamp,
+      end: closesTimestamp,
+    }).map((date) => {
+      return date.getTime();
+    });
+    paymentDaysTimestamps.shift();
+  } else if (expectedPayments === 'WEEKLY') {
+    paymentDaysTimestamps = eachWeekOfInterval({
+      start: openedTimestamp,
+      end: closesTimestamp,
+    }).map((date) => {
+      return date.getTime();
+    });
+    paymentDaysTimestamps.shift();
+    if (paymentDaysTimestamps[paymentDaysTimestamps.length - 1] !== closesTimestamp) {
+      paymentDaysTimestamps.push(closesTimestamp);
+    }
+  } else if (expectedPayments === 'MONTHLY') {
+    paymentDaysTimestamps = eachMonthOfInterval({
+      start: openedTimestamp,
+      end: closesTimestamp,
+    }).map((date) => {
+      return date.getTime();
+    });
+    paymentDaysTimestamps.shift();
+    if (paymentDaysTimestamps[paymentDaysTimestamps.length - 1] !== closesTimestamp) {
+      paymentDaysTimestamps.push(closesTimestamp);
+    }
+  } else if (expectedPayments === 'YEARLY') {
+    paymentDaysTimestamps = eachYearOfInterval({
+      start: openedTimestamp,
+      end: closesTimestamp,
+    }).map((date) => {
+      return date.getTime();
+    });
+    paymentDaysTimestamps.shift();
+    if (paymentDaysTimestamps[paymentDaysTimestamps.length - 1] !== closesTimestamp) {
+      paymentDaysTimestamps.push(closesTimestamp);
+    }
+  } else if (expectedPayments === 'ONE_TIME') {
+    paymentDaysTimestamps.push(closesTimestamp);
+  }
+  return paymentDaysTimestamps;
+}
 function normalizeInterestRateToDay(interestRate: Omit<IInterestRate, 'entryTimestamp' | 'revisions'>): number {
   if (interestRate.duration === 'DAY') {
     return interestRate.amount;
@@ -697,7 +788,7 @@ function normalizeInterestRateToDay(interestRate: Omit<IInterestRate, 'entryTime
   } else if (interestRate.duration === 'MONTH') {
     return interestRate.amount / 30;
   } else if (interestRate.duration === 'YEAR') {
-    return interestRate.amount / 360;
+    return interestRate.amount / 365;
   } else {
     throw new Error('Error when calculating daily interest rate!');
   }
