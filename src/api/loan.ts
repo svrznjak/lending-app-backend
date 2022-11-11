@@ -610,8 +610,8 @@ export default {
           principalCharge = 0;
         } else {
           interestCharge = -outstandingInterest;
-          outstandingInterest = outstandingInterest - interestCharge;
-          principalCharge = loanTransaction.amount - interestCharge;
+          outstandingInterest = outstandingInterest + interestCharge;
+          principalCharge = loanTransaction.amount + interestCharge;
           outstandingPrincipal = outstandingPrincipal - principalCharge;
         }
       }
