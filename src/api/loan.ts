@@ -441,13 +441,14 @@ export default {
       pageNumber: 0,
       pageSize: Infinity,
     });
-    const TRANSACTIONS_LIST = await this.generateTransactionsList({
+    const TRANSACTIONS_LIST = this.generateTransactionsList({
       loanTransactions: loanTransactions,
       interestRate: Mongo_loan.interestRate,
     });
     if (TRANSACTIONS_LIST.length > 0) {
       for (let i = 0; i < TRANSACTIONS_LIST.length; i++) {
         const TRANSACTION = TRANSACTIONS_LIST[i];
+        // TODO PARANAID CALCULATOR
         if (TRANSACTION.principalCharge > 0) calculatedTotalPaidPrincipal += TRANSACTION.principalCharge;
         if (TRANSACTION.interestCharge > 0) calculatedChargedInterest += TRANSACTION.interestCharge;
         if (TRANSACTION.interestCharge < 0) calculatedPaidInterest -= TRANSACTION.interestCharge;
@@ -482,13 +483,13 @@ export default {
     await Mongo_loan.save();
     return CHANGED_LOAN;
   },
-  generateTransactionsList: async function generateLoanTransactionsList({
+  generateTransactionsList: function generateLoanTransactionsList({
     loanTransactions,
     interestRate,
   }: {
     loanTransactions: ITransaction[];
     interestRate: IInterestRate;
-  }): Promise<ITransactionInterval[]> {
+  }): ITransactionInterval[] {
     // return empty if no transactions are present in loan
     if (loanTransactions.length === 0) return [];
 
@@ -496,7 +497,7 @@ export default {
     let loanId = '';
     if (loanTransactions[0].to.datatype === 'LOAN') loanId = loanTransactions[0].to.addressId;
     else if (loanTransactions[0].from.datatype === 'LOAN') loanId = loanTransactions[0].from.addressId;
-    else throw new Error('Transaction does not include LOAN');
+    else throw new Error('Transaction does not include LOAN datatype');
 
     // check if loanTransactions are in correct order (transactionTimestamp from newest to oldest)
     for (let i = 1; i < loanTransactions.length - 1; i++) {
