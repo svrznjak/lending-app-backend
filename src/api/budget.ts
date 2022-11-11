@@ -73,7 +73,18 @@ export default {
           amount: newBudget.defaultInterestRate.amount,
           isCompounding: newBudget.defaultInterestRate.isCompounding,
           entryTimestamp: newBudget.defaultInterestRate.entryTimestamp,
-          revisions: newBudget.defaultInterestRate.revisions,
+          revisions:
+            newBudget.defaultInterestRate.revisions !== undefined
+              ? {
+                  type: newBudget.defaultInterestRate.revisions.type,
+                  duration: newBudget.defaultInterestRate.revisions.duration,
+                  expectedPayments: newBudget.defaultInterestRate.revisions.expectedPayments,
+                  amount: newBudget.defaultInterestRate.revisions.amount,
+                  isCompounding: newBudget.defaultInterestRate.revisions.isCompounding,
+                  entryTimestamp: newBudget.defaultInterestRate.revisions.entryTimestamp,
+                  revisions: newBudget.defaultInterestRate.revisions.revisions,
+                }
+              : undefined,
         },
         calculatedTotalWithdrawnAmount: newBudget.calculatedTotalWithdrawnAmount,
         calculatedTotalInvestedAmount: newBudget.calculatedTotalInvestedAmount,
@@ -109,7 +120,18 @@ export default {
         amount: Mongo_budget.defaultInterestRate.amount,
         isCompounding: Mongo_budget.defaultInterestRate.isCompounding,
         entryTimestamp: Mongo_budget.defaultInterestRate.entryTimestamp,
-        revisions: Mongo_budget.defaultInterestRate.revisions,
+        revisions:
+          Mongo_budget.defaultInterestRate.revisions !== undefined
+            ? {
+                type: Mongo_budget.defaultInterestRate.revisions.type,
+                duration: Mongo_budget.defaultInterestRate.revisions.duration,
+                expectedPayments: Mongo_budget.defaultInterestRate.revisions.expectedPayments,
+                amount: Mongo_budget.defaultInterestRate.revisions.amount,
+                isCompounding: Mongo_budget.defaultInterestRate.revisions.isCompounding,
+                entryTimestamp: Mongo_budget.defaultInterestRate.revisions.entryTimestamp,
+                revisions: Mongo_budget.defaultInterestRate.revisions.revisions,
+              }
+            : undefined,
       },
       calculatedTotalWithdrawnAmount: Mongo_budget.calculatedTotalWithdrawnAmount,
       calculatedTotalInvestedAmount: Mongo_budget.calculatedTotalInvestedAmount,
@@ -134,7 +156,18 @@ export default {
           amount: Mongo_budget.defaultInterestRate.amount,
           isCompounding: Mongo_budget.defaultInterestRate.isCompounding,
           entryTimestamp: Mongo_budget.defaultInterestRate.entryTimestamp,
-          revisions: Mongo_budget.defaultInterestRate.revisions,
+          revisions:
+            Mongo_budget.defaultInterestRate.revisions !== undefined
+              ? {
+                  type: Mongo_budget.defaultInterestRate.revisions.type,
+                  duration: Mongo_budget.defaultInterestRate.revisions.duration,
+                  expectedPayments: Mongo_budget.defaultInterestRate.revisions.expectedPayments,
+                  amount: Mongo_budget.defaultInterestRate.revisions.amount,
+                  isCompounding: Mongo_budget.defaultInterestRate.revisions.isCompounding,
+                  entryTimestamp: Mongo_budget.defaultInterestRate.revisions.entryTimestamp,
+                  revisions: Mongo_budget.defaultInterestRate.revisions.revisions,
+                }
+              : undefined,
         },
         calculatedTotalWithdrawnAmount: Mongo_budget.calculatedTotalWithdrawnAmount,
         calculatedTotalInvestedAmount: Mongo_budget.calculatedTotalInvestedAmount,
@@ -179,7 +212,9 @@ export default {
       entryTimestamp: new Date().getTime(),
     };
     const createdTransaction = await transaction.add(newTransaction, options);
-
+    await this.recalculateCalculatedValues({
+      Mongo_budget: await BudgetModel.findOne({ _id: budgetId, userId: userId }),
+    });
     return createdTransaction;
   },
 
@@ -226,7 +261,9 @@ export default {
       entryTimestamp: new Date().getTime(),
     };
     const createdTransaction = await transaction.add(newTransaction, options);
-
+    await this.recalculateCalculatedValues({
+      Mongo_budget: await BudgetModel.findOne({ _id: budgetId, userId: userId }),
+    });
     return createdTransaction;
   },
   // As a lender, I want to view transactions related to budget, so that I can make decisions.
@@ -271,7 +308,18 @@ export default {
         amount: budget.defaultInterestRate.amount,
         isCompounding: budget.defaultInterestRate.isCompounding,
         entryTimestamp: budget.defaultInterestRate.entryTimestamp,
-        revisions: budget.defaultInterestRate.revisions,
+        revisions:
+          budget.defaultInterestRate.revisions !== undefined
+            ? {
+                type: budget.defaultInterestRate.revisions.type,
+                duration: budget.defaultInterestRate.revisions.duration,
+                expectedPayments: budget.defaultInterestRate.revisions.expectedPayments,
+                amount: budget.defaultInterestRate.revisions.amount,
+                isCompounding: budget.defaultInterestRate.revisions.isCompounding,
+                entryTimestamp: budget.defaultInterestRate.revisions.entryTimestamp,
+                revisions: budget.defaultInterestRate.revisions.revisions,
+              }
+            : undefined,
       },
       calculatedTotalInvestedAmount: budget.calculatedTotalInvestedAmount,
       calculatedTotalWithdrawnAmount: budget.calculatedTotalWithdrawnAmount,
@@ -329,14 +377,14 @@ export default {
     ) {
       // push current defaultInterestRate into revisions
       newInfo.defaultInterestRate = budget.defaultInterestRate;
-      newInfo.defaultInterestRate.revisions.push({
+      newInfo.defaultInterestRate.revisions = {
         type: newInfo.defaultInterestRate.type,
         duration: newInfo.defaultInterestRate.duration,
         expectedPayments: newInfo.defaultInterestRate.expectedPayments,
         amount: newInfo.defaultInterestRate.amount,
         isCompounding: newInfo.defaultInterestRate.isCompounding,
         entryTimestamp: newInfo.defaultInterestRate.entryTimestamp,
-      });
+      };
       if (defaultInterestRateType !== undefined)
         newInfo.defaultInterestRate.type = interestRateHelpers.validate.type(defaultInterestRateType);
       if (defaultInterestRateDuration !== undefined)
@@ -364,7 +412,18 @@ export default {
         amount: budget.defaultInterestRate.amount,
         isCompounding: budget.defaultInterestRate.isCompounding,
         entryTimestamp: budget.defaultInterestRate.entryTimestamp,
-        revisions: budget.defaultInterestRate.revisions,
+        revisions:
+          budget.defaultInterestRate.revisions !== undefined
+            ? {
+                type: budget.defaultInterestRate.revisions.type,
+                duration: budget.defaultInterestRate.revisions.duration,
+                expectedPayments: budget.defaultInterestRate.revisions.expectedPayments,
+                amount: budget.defaultInterestRate.revisions.amount,
+                isCompounding: budget.defaultInterestRate.revisions.isCompounding,
+                entryTimestamp: budget.defaultInterestRate.revisions.entryTimestamp,
+                revisions: budget.defaultInterestRate.revisions.revisions,
+              }
+            : undefined,
       },
       calculatedTotalInvestedAmount: budget.calculatedTotalInvestedAmount,
       calculatedTotalWithdrawnAmount: budget.calculatedTotalWithdrawnAmount,
@@ -433,7 +492,18 @@ export default {
         amount: Mongo_budget.defaultInterestRate.amount,
         isCompounding: Mongo_budget.defaultInterestRate.isCompounding,
         entryTimestamp: Mongo_budget.defaultInterestRate.entryTimestamp,
-        revisions: Mongo_budget.defaultInterestRate.revisions,
+        revisions:
+          Mongo_budget.defaultInterestRate.revisions !== undefined
+            ? {
+                type: Mongo_budget.defaultInterestRate.revisions.type,
+                duration: Mongo_budget.defaultInterestRate.revisions.duration,
+                expectedPayments: Mongo_budget.defaultInterestRate.revisions.expectedPayments,
+                amount: Mongo_budget.defaultInterestRate.revisions.amount,
+                isCompounding: Mongo_budget.defaultInterestRate.revisions.isCompounding,
+                entryTimestamp: Mongo_budget.defaultInterestRate.revisions.entryTimestamp,
+                revisions: Mongo_budget.defaultInterestRate.revisions.revisions,
+              }
+            : undefined,
       },
       calculatedTotalWithdrawnAmount: Mongo_budget.calculatedTotalWithdrawnAmount,
       calculatedTotalInvestedAmount: Mongo_budget.calculatedTotalInvestedAmount,
