@@ -4,8 +4,8 @@ export default {
     preCheck(n1, n2);
 
     // Calculate twice and check results
-    const result1 = n1 + n2;
-    const result2 = n2 + n1;
+    const result1 = parseFloat((n1 + n2).toPrecision(15));
+    const result2 = parseFloat((n1 + n2).toPrecision(15));
 
     if (result1 !== result2)
       throw new Error(`Add Paranoid computation failed! This should not happen. n1: ${n1} , n2: ${n2}`);
@@ -20,8 +20,8 @@ export default {
     preCheck(n1, n2);
 
     // Calculate twice and check results
-    const result1 = n1 - n2;
-    const result2 = n1 - n2;
+    const result1 = parseFloat((n1 - n2).toPrecision(15));
+    const result2 = parseFloat((n1 - n2).toPrecision(15));
 
     if (result1 !== result2)
       throw new Error(`Subtract Paranoid computation failed! This should not happen. n1: ${n1} , n2: ${n2}`);
