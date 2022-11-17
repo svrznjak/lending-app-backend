@@ -427,23 +427,29 @@ export default {
     await loan.save();
     return changedloan;
   },
-  recalculateCalculatedValues: async function recalculateLoanCalculatedValues({
-    Mongo_loan,
+
+  getCalculatedValuesAtTimestamp: async function getLoanCalculatedValuesAtTimestamp({
+    loanId,
+    interestRate,
+    timestampLimit,
   }: {
-    Mongo_loan: any;
-  }): Promise<ILoan> {
+    loanId: string;
+    interestRate: IInterestRate;
+    timestampLimit: number;
+  }): Promise<Pick<ILoan, 'calculatedTotalPaidPrincipal' | 'calculatedChargedInterest' | 'calculatedPaidInterest'>> {
     let calculatedTotalPaidPrincipal = 0;
     let calculatedChargedInterest = 0;
     let calculatedPaidInterest = 0;
 
     // get all transactions
-    const loanTransactions: ITransaction[] = await this.getTransactions(Mongo_loan._id.toString(), {
+    const loanTransactions: ITransaction[] = await this.getTransactions(loanId, {
       pageNumber: 0,
       pageSize: Infinity,
     });
-    const TRANSACTIONS_LIST = this.generateTransactionsList({
+    const TRANSACTIONS_LIST: ITransactionInterval[] = this.generateTransactionsList({
       loanTransactions: loanTransactions,
-      interestRate: Mongo_loan.interestRate,
+      interestRate: interestRate,
+      timestampLimit: timestampLimit,
     });
     if (TRANSACTIONS_LIST.length > 0) {
       for (let i = 0; i < TRANSACTIONS_LIST.length; i++) {
@@ -454,9 +460,26 @@ export default {
         if (TRANSACTION.interestCharge < 0) calculatedPaidInterest -= TRANSACTION.interestCharge;
       }
     }
-    Mongo_loan.calculatedTotalPaidPrincipal = calculatedTotalPaidPrincipal;
-    Mongo_loan.calculatedChargedInterest = calculatedChargedInterest;
-    Mongo_loan.calculatedPaidInterest = calculatedPaidInterest;
+    return {
+      calculatedChargedInterest,
+      calculatedPaidInterest,
+      calculatedTotalPaidPrincipal,
+    };
+  },
+  recalculateCalculatedValues: async function recalculateLoanCalculatedValues({
+    Mongo_loan,
+  }: {
+    Mongo_loan: any;
+  }): Promise<ILoan> {
+    const NOW_TIMESTAMP = new Date().getTime();
+    const CALCULATED_VALUES_UNTIL_NOW = await this.getCalculatedValuesAtTimestamp({
+      loanId: Mongo_loan._id.toString(),
+      interestRate: Mongo_loan.interestRate,
+      timestampLimit: NOW_TIMESTAMP,
+    });
+    Mongo_loan.calculatedTotalPaidPrincipal = CALCULATED_VALUES_UNTIL_NOW.calculatedTotalPaidPrincipal;
+    Mongo_loan.calculatedChargedInterest = CALCULATED_VALUES_UNTIL_NOW.calculatedChargedInterest;
+    Mongo_loan.calculatedPaidInterest = CALCULATED_VALUES_UNTIL_NOW.calculatedPaidInterest;
     const CHANGED_LOAN = loanHelpers.runtimeCast({
       _id: Mongo_loan._id.toString(),
       userId: Mongo_loan.userId.toString(),
@@ -486,9 +509,11 @@ export default {
   generateTransactionsList: function generateLoanTransactionsList({
     loanTransactions,
     interestRate,
+    timestampLimit = new Date().getTime(),
   }: {
     loanTransactions: ITransaction[];
     interestRate: IInterestRate;
+    timestampLimit: number;
   }): ITransactionInterval[] {
     // return empty if no transactions are present in loan
     if (loanTransactions.length === 0) return [];
@@ -551,17 +576,16 @@ export default {
 
     // add another empty loan transaction for now in order to calculate interest until now
     // POSSIBLE SOURCE OF BUGS IS DATA STRUCTURE IS CHANGED
-    const NOW = new Date().getTime();
-    if (loanTransactions[0].transactionTimestamp < NOW)
+    if (loanTransactions[0].transactionTimestamp < timestampLimit)
       loanTransactions.unshift({
         _id: '',
         userId: '',
-        transactionTimestamp: NOW,
+        transactionTimestamp: timestampLimit,
         description: '',
         from: { datatype: 'INTEREST', addressId: '' },
         to: { datatype: 'INTEREST', addressId: '' },
         amount: 0,
-        entryTimestamp: NOW,
+        entryTimestamp: timestampLimit,
       });
 
     const listOfTransactions: ITransactionInterval[] = [];

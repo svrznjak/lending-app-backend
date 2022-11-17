@@ -433,15 +433,17 @@ export default {
     await budget.save();
     return changedBudget;
   },
-  recalculateCalculatedValues: async function recalculateCalculatedBudgetValues({
-    Mongo_budget,
+  getCalculatedValuesAtTimestamp: async function getBudgetCalculatedValuesAtTimestamp({
+    budgetId,
+    timestampLimit,
   }: {
-    Mongo_budget: any;
-  }): Promise<IBudget> {
-    // Optimizations possible for calculations at scale
-
+    budgetId: string;
+    timestampLimit: number;
+  }): Promise<
+    Pick<IBudget, 'calculatedTotalInvestedAmount' | 'calculatedTotalWithdrawnAmount' | 'calculatedTotalAvailableAmount'>
+  > {
     // get all transactions
-    const budgetTransactions = await this.getTransactions(Mongo_budget._id.toString(), {
+    const budgetTransactions: ITransaction[] = await this.getTransactions(budgetId, {
       pageNumber: 0,
       pageSize: Infinity,
     });
@@ -449,10 +451,11 @@ export default {
     // initialize variables
     let newCalculatedTotalInvestedAmount = 0;
     let newCalculatedTotalWithdrawnAmount = 0;
-    let newCalculatedTotalAvailableAmount = 0;
+    let newCalculatedTotalLendedAmount = 0;
 
     // Loop and add to variables
-    budgetTransactions.forEach((transaction) => {
+    for (const transaction of budgetTransactions) {
+      if (transaction.transactionTimestamp > timestampLimit) break;
       if (transaction.to.datatype === 'BUDGET' && transaction.from.datatype === 'OUTSIDE') {
         newCalculatedTotalInvestedAmount = paranoidCalculator.add(newCalculatedTotalInvestedAmount, transaction.amount);
       } else if (transaction.to.datatype === 'OUTSIDE' && transaction.from.datatype === 'BUDGET') {
@@ -461,23 +464,37 @@ export default {
           transaction.amount,
         );
       } else if (transaction.to.datatype === 'LOAN' && transaction.from.datatype === 'BUDGET') {
-        newCalculatedTotalAvailableAmount = paranoidCalculator.add(
-          newCalculatedTotalAvailableAmount,
-          transaction.amount,
-        );
+        newCalculatedTotalLendedAmount = paranoidCalculator.add(newCalculatedTotalLendedAmount, transaction.amount);
       } else if (transaction.to.datatype === 'BUDGET' && transaction.from.datatype === 'LOAN') {
-        newCalculatedTotalAvailableAmount = paranoidCalculator.subtract(
-          newCalculatedTotalAvailableAmount,
+        newCalculatedTotalLendedAmount = paranoidCalculator.subtract(
+          newCalculatedTotalLendedAmount,
           transaction.amount,
         );
       }
+    }
+
+    return {
+      calculatedTotalInvestedAmount: newCalculatedTotalInvestedAmount,
+      calculatedTotalWithdrawnAmount: newCalculatedTotalWithdrawnAmount,
+      calculatedTotalAvailableAmount:
+        newCalculatedTotalInvestedAmount - newCalculatedTotalWithdrawnAmount - newCalculatedTotalLendedAmount,
+    };
+  },
+  recalculateCalculatedValues: async function recalculateCalculatedBudgetValues({
+    Mongo_budget,
+  }: {
+    Mongo_budget: any;
+  }): Promise<IBudget> {
+    const NOW_TIMESTAMP = new Date().getTime();
+    const CALCULATED_VALUES_UNTIL_NOW = await this.getCalculatedValuesAtTimestamp({
+      budgetId: Mongo_budget._id.toString(),
+      timestampLimit: NOW_TIMESTAMP,
     });
 
     // save calculations to DB
-    Mongo_budget.calculatedTotalInvestedAmount = newCalculatedTotalInvestedAmount;
-    Mongo_budget.calculatedTotalWithdrawnAmount = newCalculatedTotalWithdrawnAmount;
-    Mongo_budget.calculatedTotalAvailableAmount =
-      newCalculatedTotalInvestedAmount - newCalculatedTotalWithdrawnAmount - newCalculatedTotalAvailableAmount;
+    Mongo_budget.calculatedTotalInvestedAmount = CALCULATED_VALUES_UNTIL_NOW.calculatedTotalInvestedAmount;
+    Mongo_budget.calculatedTotalWithdrawnAmount = CALCULATED_VALUES_UNTIL_NOW.calculatedTotalWithdrawnAmount;
+    Mongo_budget.calculatedTotalAvailableAmount = CALCULATED_VALUES_UNTIL_NOW.calculatedTotalAvailableAmount;
 
     await Mongo_budget.save();
     return budgetHelpers.runtimeCast({
