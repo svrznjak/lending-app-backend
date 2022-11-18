@@ -509,12 +509,13 @@ export default {
   generateTransactionsList: function generateLoanTransactionsList({
     loanTransactions,
     interestRate,
-    timestampLimit = new Date().getTime(),
+    timestampLimit,
   }: {
     loanTransactions: ITransaction[];
     interestRate: IInterestRate;
-    timestampLimit: number;
+    timestampLimit: number | undefined;
   }): ITransactionInterval[] {
+    if (timestampLimit === undefined) timestampLimit = new Date().getTime();
     // return empty if no transactions are present in loan
     if (loanTransactions.length === 0) return [];
 

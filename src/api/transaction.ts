@@ -475,6 +475,7 @@ export default {
       const TRANSACTIONS_LIST = Loan.generateTransactionsList({
         loanTransactions: AFFECTED_LOAN_TRANSACTIONS,
         interestRate: AFFECTED_LOAN.interestRate,
+        timestampLimit: new Date().getTime(),
       });
 
       for (let i = 0; i < TRANSACTIONS_LIST.length; i++) {
