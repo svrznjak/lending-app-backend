@@ -50,3 +50,12 @@ export const fundInputType = new GraphQLInputObjectType({
     amount: { type: new GraphQLNonNull(GraphQLFloat) },
   }),
 });
+
+export const loanCalculatedValues = new GraphQLObjectType({
+  name: 'LoanCalculatedValuesType',
+  fields: (): any => ({
+    calculatedTotalPaidPrincipal: { type: new GraphQLNonNull(GraphQLFloat) },
+    calculatedChargedInterest: { type: new GraphQLNonNull(GraphQLFloat) },
+    calculatedPaidInterest: { type: new GraphQLNonNull(GraphQLFloat) },
+  }),
+});

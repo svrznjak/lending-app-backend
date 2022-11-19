@@ -1,12 +1,13 @@
 import { ITransaction } from './../../../api/types/transaction/transactionInterface.js';
 import { transactionType } from './../transaction/type.js';
-import { GraphQLID, GraphQLList, GraphQLNonNull, GraphQLObjectType } from 'graphql';
+import { GraphQLFloat, GraphQLID, GraphQLList, GraphQLNonNull, GraphQLObjectType } from 'graphql';
 import { getUserByAuthId } from '../../../api/user.js';
 import loan from '../../../api/loan.js';
 import { paginationInputType } from '../commonTypes.js';
 import LoanModel from '../../../api/db/model/LoanModel.js';
-import { loansType } from './type.js';
+import { loanCalculatedValues, loansType } from './type.js';
 import { ILoan } from '../../../api/types/loan/loanInterface.js';
+import { interestRateType } from '../interestRate/type.js';
 
 export default new GraphQLObjectType({
   name: 'LoanQueries',
@@ -35,6 +36,31 @@ export default new GraphQLObjectType({
         return await loan.getTransactions(args.loanId, {
           pageSize: args.pagination?.pageSize,
           pageNumber: args.pagination?.pageNumber,
+        });
+      },
+    },
+    /*
+     * Queries calculated fields at specific time.
+     * Query is not totaly protected to speed up response.
+     * - Response does not return data about the budget or user it belongs to. Hence data is useless to malicious actor.
+     */
+    loanCalculatedValuesAtTimestamp: {
+      type: loanCalculatedValues,
+      args: {
+        loanId: { type: new GraphQLNonNull(GraphQLID) },
+        interestRate: { type: new GraphQLNonNull(interestRateType) },
+        timestamp: { type: new GraphQLNonNull(GraphQLFloat) },
+      },
+      async resolve(
+        _parent: any,
+        args: any,
+        context: any,
+      ): Promise<Pick<ILoan, 'calculatedTotalPaidPrincipal' | 'calculatedChargedInterest' | 'calculatedPaidInterest'>> {
+        await context.getCurrentUserAuthIdOrThrowValidationError();
+        return await loan.getCalculatedValuesAtTimestamp({
+          loanId: args.loanId,
+          interestRate: args.interestRate,
+          timestampLimit: args.timestamp,
         });
       },
     },
