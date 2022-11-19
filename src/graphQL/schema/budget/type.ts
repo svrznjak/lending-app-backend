@@ -15,3 +15,12 @@ export const budgetsType = new GraphQLObjectType({
     isArchived: { type: new GraphQLNonNull(GraphQLBoolean) },
   }),
 });
+
+export const budgetCalculatedValues = new GraphQLObjectType({
+  name: 'BudgetCalculatedValuesType',
+  fields: (): any => ({
+    calculatedTotalInvestedAmount: { type: new GraphQLNonNull(GraphQLFloat) },
+    calculatedTotalWithdrawnAmount: { type: new GraphQLNonNull(GraphQLFloat) },
+    calculatedTotalAvailableAmount: { type: new GraphQLNonNull(GraphQLFloat) },
+  }),
+});

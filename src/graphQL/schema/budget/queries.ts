@@ -1,11 +1,11 @@
 import { paginationInputType } from './../commonTypes.js';
 import { ITransaction } from './../../../api/types/transaction/transactionInterface.js';
 import { transactionType } from './../transaction/type.js';
-import { GraphQLID, GraphQLList, GraphQLNonNull, GraphQLObjectType } from 'graphql';
+import { GraphQLFloat, GraphQLID, GraphQLList, GraphQLNonNull, GraphQLObjectType } from 'graphql';
 import { getUserByAuthId } from '../../../api/user.js';
 import budget from '../../../api/budget.js';
 import BudgetModel from '../../../api/db/model/BudgetModel.js';
-import { budgetsType } from './type.js';
+import { budgetCalculatedValues, budgetsType } from './type.js';
 import { IBudget } from '../../../api/types/budget/budgetInterface.js';
 
 export default new GraphQLObjectType({
@@ -49,6 +49,31 @@ export default new GraphQLObjectType({
           pageSize: args.pagination?.pageSize,
           pageNumber: args.pagination?.pageNumber,
         });
+      },
+    },
+    /*
+     * Queries calculated fields at specific time.
+     * Query is not totaly protected to speed up response.
+     * - Response does not return data about the budget or user it belongs to. Hence data is useless to malicious actor.
+     */
+    budgetCalculatedValuesAtTimestamp: {
+      type: budgetCalculatedValues,
+      args: {
+        budgetId: { type: new GraphQLNonNull(GraphQLID) },
+        timestamp: { type: new GraphQLNonNull(GraphQLFloat) },
+      },
+      async resolve(
+        _parent: any,
+        args: any,
+        context: any,
+      ): Promise<
+        Pick<
+          IBudget,
+          'calculatedTotalInvestedAmount' | 'calculatedTotalWithdrawnAmount' | 'calculatedTotalAvailableAmount'
+        >
+      > {
+        await context.getCurrentUserAuthIdOrThrowValidationError();
+        return await budget.getCalculatedValuesAtTimestamp({ budgetId: args.budgetId, timestampLimit: args.timestamp });
       },
     },
   }),
