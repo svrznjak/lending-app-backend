@@ -480,11 +480,11 @@ export default {
     function applyTransactionToTotalInvestedAmount(transaction: ITransaction): void {
       // totalInvestedAmount is only affected until timestampLimit
       if (transaction.transactionTimestamp <= timestampLimit)
-      if (transaction.to.datatype === 'BUDGET' && transaction.from.datatype === 'OUTSIDE') {
+        if (transaction.to.datatype === 'BUDGET' && transaction.from.datatype === 'OUTSIDE') {
           calculatedValues.calculatedTotalInvestedAmount = paranoidCalculator.add(
             calculatedValues.calculatedTotalInvestedAmount,
-          transaction.amount,
-        );
+            transaction.amount,
+          );
         }
     }
     function applyTransactionToTotalWithdrawnAmount(transaction: ITransaction): void {
@@ -493,9 +493,9 @@ export default {
         if (transaction.to.datatype === 'OUTSIDE' && transaction.from.datatype === 'BUDGET') {
           calculatedValues.calculatedTotalWithdrawnAmount = paranoidCalculator.add(
             calculatedValues.calculatedTotalWithdrawnAmount,
-          transaction.amount,
-        );
-      }
+            transaction.amount,
+          );
+        }
     }
     function applyTransactionToTotalAvaiableAmount(transaction: ITransaction): void {
       if (transaction.to.datatype === 'BUDGET') {
