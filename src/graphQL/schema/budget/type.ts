@@ -19,6 +19,7 @@ export const budgetsType = new GraphQLObjectType({
 export const budgetCalculatedValues = new GraphQLObjectType({
   name: 'BudgetCalculatedValuesType',
   fields: (): any => ({
+    _id: { type: new GraphQLNonNull(GraphQLID) },
     calculatedTotalInvestedAmount: { type: new GraphQLNonNull(GraphQLFloat) },
     calculatedTotalWithdrawnAmount: { type: new GraphQLNonNull(GraphQLFloat) },
     calculatedTotalAvailableAmount: { type: new GraphQLNonNull(GraphQLFloat) },
