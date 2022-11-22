@@ -56,10 +56,10 @@ export default new GraphQLObjectType({
      * Query is not totaly protected to speed up response.
      * - Response does not return data about the budget or user it belongs to. Hence data is useless to malicious actor.
      */
-    budgetCalculatedValuesAtTimestamp: {
-      type: budgetCalculatedValues,
+    calculatedValuesAtTimestamp: {
+      type: new GraphQLList(budgetCalculatedValues),
       args: {
-        budgetId: { type: new GraphQLNonNull(GraphQLID) },
+        budgetIds: { type: new GraphQLList(GraphQLID) },
         timestamp: { type: new GraphQLNonNull(GraphQLFloat) },
       },
       async resolve(
@@ -69,11 +69,21 @@ export default new GraphQLObjectType({
       ): Promise<
         Pick<
           IBudget,
-          'calculatedTotalInvestedAmount' | 'calculatedTotalWithdrawnAmount' | 'calculatedTotalAvailableAmount'
-        >
+          '_id' | 'calculatedTotalInvestedAmount' | 'calculatedTotalWithdrawnAmount' | 'calculatedTotalAvailableAmount'
+        >[]
       > {
         await context.getCurrentUserAuthIdOrThrowValidationError();
-        return await budget.getCalculatedValuesAtTimestamp({ budgetId: args.budgetId, timestampLimit: args.timestamp });
+        if (args.budgetIds.length === 0) return [];
+        const CALCULATED_VALUES: Pick<
+          IBudget,
+          '_id' | 'calculatedTotalInvestedAmount' | 'calculatedTotalWithdrawnAmount' | 'calculatedTotalAvailableAmount'
+        >[] = await args.budgetIds.map(async (budgetId: string) => {
+          return {
+            _id: budgetId,
+            ...(await budget.getCalculatedValuesAtTimestamp({ budgetId: budgetId, timestampLimit: args.timestamp })),
+          };
+        });
+        return CALCULATED_VALUES;
       },
     },
   }),
