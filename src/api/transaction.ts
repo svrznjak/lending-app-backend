@@ -97,7 +97,23 @@ export default {
     const transaction: any = await TransactionModel.findById(transactionId);
     if (transaction === null) throw new Error('Transaction you wanted to edit, does not exist.');
 
-    transaction.revisions = transaction;
+    transaction.revisions = transactionHelpers.runtimeCast({
+      _id: transaction._id.toString(),
+      userId: transaction.userId.toString(),
+      transactionTimestamp: transaction.transactionTimestamp,
+      description: transaction.description,
+      from: {
+        datatype: transaction.from.datatype,
+        addressId: transaction.from.addressId.toString(),
+      },
+      to: {
+        datatype: transaction.to.datatype,
+        addressId: transaction.to.addressId.toString(),
+      },
+      amount: transaction.amount,
+      entryTimestamp: transaction.entryTimestamp,
+      revisions: transaction.revisions !== undefined ? transaction.revisions.toObject() : undefined,
+    });
     // set values from newTransaction
     transaction.transactionTimestamp = newTransaction.transactionTimestamp;
     transaction.description = newTransaction.description;
@@ -105,7 +121,26 @@ export default {
     transaction.entryTimestamp = newTransaction.entryTimestamp;
 
     try {
-      await this.checkIfTransactionCanExist({ transaction: transaction, originalTransactionId: transactionId });
+      await this.checkIfTransactionCanExist({
+        transaction: transactionHelpers.runtimeCast({
+          _id: transaction._id.toString(),
+          userId: transaction.userId.toString(),
+          transactionTimestamp: transaction.transactionTimestamp,
+          description: transaction.description,
+          from: {
+            datatype: transaction.from.datatype,
+            addressId: transaction.from.addressId.toString(),
+          },
+          to: {
+            datatype: transaction.to.datatype,
+            addressId: transaction.to.addressId.toString(),
+          },
+          amount: transaction.amount,
+          entryTimestamp: transaction.entryTimestamp,
+          revisions: transaction.revisions !== undefined ? transaction.revisions.toObject() : undefined,
+        }),
+        originalTransactionId: transactionId,
+      });
     } catch (err) {
       console.log(err);
       throw new Error(err);
