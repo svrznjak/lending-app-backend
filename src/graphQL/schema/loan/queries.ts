@@ -7,7 +7,7 @@ import { paginationInputType } from '../commonTypes.js';
 import LoanModel from '../../../api/db/model/LoanModel.js';
 import { loanCalculatedValues, loansType } from './type.js';
 import { ILoan } from '../../../api/types/loan/loanInterface.js';
-import { interestRateType } from '../interestRate/type.js';
+import { interestRateInputType } from '../interestRate/type.js';
 
 export default new GraphQLObjectType({
   name: 'LoanQueries',
@@ -48,7 +48,7 @@ export default new GraphQLObjectType({
       type: loanCalculatedValues,
       args: {
         loanId: { type: new GraphQLNonNull(GraphQLID) },
-        interestRate: { type: new GraphQLNonNull(interestRateType) },
+        interestRate: { type: new GraphQLNonNull(interestRateInputType) },
         timestamp: { type: new GraphQLNonNull(GraphQLFloat) },
       },
       async resolve(
