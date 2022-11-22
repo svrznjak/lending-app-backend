@@ -433,6 +433,12 @@ export default {
     await budget.save();
     return changedBudget;
   },
+  /**
+   * @param  {string} budgetId - _id of budget
+   * @param  {number} timestampLimit - DateTime (timestamp) of resulting calculated values. This value is used to retrieve
+   * calculated values at any point in past.
+   * @returns {Promise} Pick<IBudget, 'calculatedTotalInvestedAmount' | 'calculatedTotalWithdrawnAmount' | 'calculatedTotalAvailableAmount'>
+   */
   getCalculatedValuesAtTimestamp: async function getBudgetCalculatedValuesAtTimestamp({
     budgetId,
     timestampLimit,
@@ -443,42 +449,71 @@ export default {
     Pick<IBudget, 'calculatedTotalInvestedAmount' | 'calculatedTotalWithdrawnAmount' | 'calculatedTotalAvailableAmount'>
   > {
     // get all transactions
+    // NOTE TO SELF: Transactions should maybe be passed as argument.
     const budgetTransactions: ITransaction[] = await this.getTransactions(budgetId, {
       pageNumber: 0,
       pageSize: Infinity,
     });
 
     // initialize variables
-    let newCalculatedTotalInvestedAmount = 0;
-    let newCalculatedTotalWithdrawnAmount = 0;
-    let newCalculatedTotalLendedAmount = 0;
+    const calculatedValues: Pick<
+      IBudget,
+      'calculatedTotalInvestedAmount' | 'calculatedTotalWithdrawnAmount' | 'calculatedTotalAvailableAmount'
+    > = {
+      calculatedTotalInvestedAmount: 0,
+      calculatedTotalWithdrawnAmount: 0,
+      calculatedTotalAvailableAmount: 0,
+    };
+    let tmpCalculatedAvaiableAmount = 0;
 
-    // Loop and add to variables
-    for (const transaction of budgetTransactions) {
-      if (transaction.transactionTimestamp > timestampLimit) break;
+    // Loop and affect calculatedValues
+    for (let i = budgetTransactions.length - 1; i >= 0; i--) {
+      const TRANSACTION = budgetTransactions[i];
+      applyTransactionToTotalInvestedAmount(TRANSACTION);
+      applyTransactionToTotalWithdrawnAmount(TRANSACTION);
+      applyTransactionToTotalAvaiableAmount(TRANSACTION);
+    }
+
+    return calculatedValues;
+
+    // Abstractions
+    function applyTransactionToTotalInvestedAmount(transaction: ITransaction): void {
+      // totalInvestedAmount is only affected until timestampLimit
+      if (transaction.transactionTimestamp <= timestampLimit)
       if (transaction.to.datatype === 'BUDGET' && transaction.from.datatype === 'OUTSIDE') {
-        newCalculatedTotalInvestedAmount = paranoidCalculator.add(newCalculatedTotalInvestedAmount, transaction.amount);
-      } else if (transaction.to.datatype === 'OUTSIDE' && transaction.from.datatype === 'BUDGET') {
-        newCalculatedTotalWithdrawnAmount = paranoidCalculator.add(
-          newCalculatedTotalWithdrawnAmount,
+          calculatedValues.calculatedTotalInvestedAmount = paranoidCalculator.add(
+            calculatedValues.calculatedTotalInvestedAmount,
           transaction.amount,
         );
-      } else if (transaction.to.datatype === 'LOAN' && transaction.from.datatype === 'BUDGET') {
-        newCalculatedTotalLendedAmount = paranoidCalculator.add(newCalculatedTotalLendedAmount, transaction.amount);
-      } else if (transaction.to.datatype === 'BUDGET' && transaction.from.datatype === 'LOAN') {
-        newCalculatedTotalLendedAmount = paranoidCalculator.subtract(
-          newCalculatedTotalLendedAmount,
+        }
+    }
+    function applyTransactionToTotalWithdrawnAmount(transaction: ITransaction): void {
+      // totalWithdrawnAmount is only affected until timestampLimit
+      if (transaction.transactionTimestamp <= timestampLimit)
+        if (transaction.to.datatype === 'OUTSIDE' && transaction.from.datatype === 'BUDGET') {
+          calculatedValues.calculatedTotalWithdrawnAmount = paranoidCalculator.add(
+            calculatedValues.calculatedTotalWithdrawnAmount,
           transaction.amount,
         );
       }
     }
-
-    return {
-      calculatedTotalInvestedAmount: newCalculatedTotalInvestedAmount,
-      calculatedTotalWithdrawnAmount: newCalculatedTotalWithdrawnAmount,
-      calculatedTotalAvailableAmount:
-        newCalculatedTotalInvestedAmount - newCalculatedTotalWithdrawnAmount - newCalculatedTotalLendedAmount,
-    };
+    function applyTransactionToTotalAvaiableAmount(transaction: ITransaction): void {
+      if (transaction.to.datatype === 'BUDGET') {
+        tmpCalculatedAvaiableAmount = paranoidCalculator.add(tmpCalculatedAvaiableAmount, transaction.amount);
+      } else if (transaction.from.datatype === 'BUDGET') {
+        tmpCalculatedAvaiableAmount = paranoidCalculator.subtract(tmpCalculatedAvaiableAmount, transaction.amount);
+      }
+      /**
+       * Apply every new tmpCalculatedAvaiableAmount until timestampLimit,
+       * after that only apply tmpCalculatedAvaiableAmount if it reaches new low value.
+       */
+      if (transaction.transactionTimestamp <= timestampLimit) {
+        calculatedValues.calculatedTotalAvailableAmount = tmpCalculatedAvaiableAmount;
+      } else {
+        if (tmpCalculatedAvaiableAmount < calculatedValues.calculatedTotalAvailableAmount)
+          calculatedValues.calculatedTotalAvailableAmount = tmpCalculatedAvaiableAmount;
+      }
+    }
   },
   recalculateCalculatedValues: async function recalculateCalculatedBudgetValues({
     Mongo_budget,
