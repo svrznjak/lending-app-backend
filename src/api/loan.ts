@@ -1,4 +1,4 @@
-import mongoose from 'mongoose';
+import mongoose, { ClientSession } from 'mongoose';
 import {
   //add,
   differenceInHours,
@@ -254,42 +254,56 @@ export default {
       paginate,
     );
   },
-  addPayment: async function addLoanPayment({
-    userId,
-    loanId,
-    budgetId,
-    transactionTimestamp,
-    description,
-    amount,
-  }: {
-    userId: string;
-    loanId: string;
-    budgetId: string;
-    transactionTimestamp: number;
-    description: string;
-    amount: number;
-  }): Promise<ITransaction> {
-    // Get user
+  addPayment: async function addLoanPayment(
+    {
+      userId,
+      loanId,
+      budgetId,
+      transactionTimestamp,
+      description,
+      amount,
+    }: {
+      userId: string;
+      loanId: string;
+      budgetId: string;
+      transactionTimestamp: number;
+      description: string;
+      amount: number;
+    },
+    {
+      session = undefined,
+      runRecalculate = true,
+    }: {
+      session?: ClientSession;
+      runRecalculate?: boolean;
+    } = {},
+  ): Promise<ITransaction> {
+    // Check if user with revieved id exists
     const user = await UserModel.findOne({ _id: userId });
+    console.log(await UserModel.existsOneWithId(new mongoose.Types.ObjectId().toString()));
     if (user === null) throw new Error('User does not exist!');
-    // Get loan
+
+    // Check if loan with revieved id exists
     const Mongo_loan: any = await LoanModel.findOne({ _id: loanId });
     if (Mongo_loan === null) throw new Error('loan does not exist!');
 
+    // Check if budget with revieved id exists
     const Mongo_budget: any = await BudgetModel.findOne({ _id: budgetId });
     if (Mongo_budget === null) throw new Error('budget does not exist!');
 
+    // Validate and sanitize inputs
     transactionHelpers.validate.description(description);
     description = transactionHelpers.sanitize.description(description);
     transactionHelpers.validate.amount(amount);
     transactionHelpers.validate.transactionTimestamp(transactionTimestamp);
+
+    // TO FIX / HANDLE SOMEWHERE ELSE
     if (transactionTimestamp < Mongo_loan.openedTimestamp)
       throw new Error('Transaction should not happen before loan start');
     if (transactionTimestamp > new Date().getTime()) throw new Error('Transaction should not happen in the future');
 
-    const newTransaction = await transaction.add(
-      transactionHelpers.runtimeCast({
-        _id: new mongoose.Types.ObjectId().toString(),
+    const NEW_TRANSACTION = await transaction.add(
+      {
         userId,
         transactionTimestamp,
         description,
@@ -302,28 +316,47 @@ export default {
           addressId: budgetId,
         },
         amount,
-      entryTimestamp: transactionHelpers.validate.entryTimestamp(new Date().getTime()),
-        revisions: undefined,
-      }),
+        entryTimestamp: transactionHelpers.validate.entryTimestamp(new Date().getTime()),
+      } as Pick<
+        ITransaction,
+        'userId' | 'transactionTimestamp' | 'description' | 'from' | 'to' | 'amount' | 'entryTimestamp'
+      >,
       { session: session },
     );
 
-    await Budget.recalculateCalculatedValues({ Mongo_budget: Mongo_budget });
-    LoanCache.setCachedItem({
-      itemId: loanId,
-      value: await this.recalculateCalculatedValues({ Mongo_loan: Mongo_loan }),
-    });
-
-    return newTransaction;
+    if (runRecalculate) {
+      await Budget.recalculateCalculatedValues({ Mongo_budget: Mongo_budget });
+      LoanCache.setCachedItem({
+        itemId: loanId,
+        value: await this.recalculateCalculatedValues({ Mongo_loan: Mongo_loan }),
+      });
+    }
+    return NEW_TRANSACTION;
   },
 
   addFunds: async function addFundsToLoan(
-    userId: string,
-    budgetId: string,
-    loanId: string,
-    transactionTimestamp: number,
-    description: string,
-    amount: number,
+    {
+      userId,
+      budgetId,
+      loanId,
+      transactionTimestamp,
+      description,
+      amount,
+    }: {
+      userId: string;
+      budgetId: string;
+      loanId: string;
+      transactionTimestamp: number;
+      description: string;
+      amount: number;
+    },
+    {
+      session = undefined,
+      runRecalculate = true,
+    }: {
+      session?: ClientSession;
+      runRecalculate?: boolean;
+    } = {},
   ): Promise<ITransaction> {
     // Get user
     const user = await UserModel.findOne({ _id: userId });
@@ -353,34 +386,46 @@ export default {
           addressId: loanId,
         },
         amount,
-      entryTimestamp: transactionHelpers.validate.entryTimestamp(new Date().getTime()),
+        entryTimestamp: transactionHelpers.validate.entryTimestamp(new Date().getTime()),
       } as Pick<
         ITransaction,
         'userId' | 'transactionTimestamp' | 'description' | 'from' | 'to' | 'amount' | 'entryTimestamp'
       >,
       { session: session },
     );
-    await Budget.recalculateCalculatedValues({ Mongo_budget: Mongo_budget });
-    LoanCache.setCachedItem({
-      itemId: loanId,
-      value: await this.recalculateCalculatedValues({ Mongo_loan: Mongo_loan }),
-    });
+
+    if (runRecalculate) {
+      await Budget.recalculateCalculatedValues({ Mongo_budget: Mongo_budget });
+      LoanCache.setCachedItem({
+        itemId: loanId,
+        value: await this.recalculateCalculatedValues({ Mongo_loan: Mongo_loan }),
+      });
+    }
     return NEW_TRANSACTION;
   },
 
-  addManualInterest: async function addManualInterestToLoan({
-    userId,
-    loanId,
-    transactionTimestamp,
-    description,
-    amount,
-  }: {
-    userId: string;
-    loanId: string;
-    transactionTimestamp: number;
-    description: string;
-    amount: number;
-  }): Promise<ITransaction> {
+  addManualInterest: async function addManualInterestToLoan(
+    {
+      userId,
+      loanId,
+      transactionTimestamp,
+      description,
+      amount,
+    }: {
+      userId: string;
+      loanId: string;
+      transactionTimestamp: number;
+      description: string;
+      amount: number;
+    },
+    {
+      session = undefined,
+      runRecalculate = true,
+    }: {
+      session?: ClientSession;
+      runRecalculate?: boolean;
+    } = {},
+  ): Promise<ITransaction> {
     // Get user
     const user = await UserModel.findOne({ _id: userId });
     if (user === null) throw new Error('User does not exist!');
@@ -393,30 +438,34 @@ export default {
     description = transactionHelpers.sanitize.description(description);
     transactionHelpers.validate.amount(amount);
 
-    const newTransactionInfo: Pick<
-      ITransaction,
-      'userId' | 'transactionTimestamp' | 'description' | 'from' | 'to' | 'amount' | 'entryTimestamp'
-    > = {
-      userId: userId,
-      transactionTimestamp: transactionTimestamp,
-      description: description,
-      from: {
-        datatype: 'INTEREST',
-        addressId: '000000000000000000000000',
-      },
-      to: {
-        datatype: 'LOAN',
-        addressId: loanId,
-      },
-      amount: amount,
-      entryTimestamp: transactionHelpers.validate.entryTimestamp(new Date().getTime()),
-    };
-    const NEW_TRANSACTION = await transaction.add(newTransactionInfo);
+    const NEW_TRANSACTION = await transaction.add(
+      {
+        userId: userId,
+        transactionTimestamp: transactionTimestamp,
+        description: description,
+        from: {
+          datatype: 'INTEREST',
+          addressId: '000000000000000000000000',
+        },
+        to: {
+          datatype: 'LOAN',
+          addressId: loanId,
+        },
+        amount: amount,
+        entryTimestamp: transactionHelpers.validate.entryTimestamp(new Date().getTime()),
+      } as Pick<
+        ITransaction,
+        'userId' | 'transactionTimestamp' | 'description' | 'from' | 'to' | 'amount' | 'entryTimestamp'
+      >,
+      { session: session },
+    );
 
-    LoanCache.setCachedItem({
-      itemId: loanId,
-      value: await this.recalculateCalculatedValues({ Mongo_loan: Mongo_loan }),
-    });
+    if (runRecalculate) {
+      LoanCache.setCachedItem({
+        itemId: loanId,
+        value: await this.recalculateCalculatedValues({ Mongo_loan: Mongo_loan }),
+      });
+    }
     return NEW_TRANSACTION;
   },
 

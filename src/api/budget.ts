@@ -1,5 +1,5 @@
 import { transactionHelpers } from './types/transaction/transactionHelpers.js';
-import mongoose from 'mongoose';
+import mongoose, { ClientSession } from 'mongoose';
 import { budgetHelpers } from './types/budget/budgetHelpers.js';
 import { ITransaction } from './types/transaction/transactionInterface.js';
 import UserModel from './db/model/UserModel.js';
@@ -54,7 +54,7 @@ export default {
             description: initialTransactionDescription,
             amount: inititalTransactionAmount,
           },
-          { session },
+          { session: session, runRecalculate: false },
         );
       }
 
@@ -191,8 +191,15 @@ export default {
       description: string;
       amount: number;
     },
-    options?,
+    {
+      session = undefined,
+      runRecalculate = true,
+    }: {
+      session?: ClientSession;
+      runRecalculate?: boolean;
+    } = {},
   ): Promise<ITransaction> {
+    console.log(runRecalculate);
     const newTransaction: Pick<
       ITransaction,
       'userId' | 'transactionTimestamp' | 'description' | 'from' | 'to' | 'amount' | 'entryTimestamp'
@@ -211,10 +218,12 @@ export default {
       amount: amount,
       entryTimestamp: new Date().getTime(),
     };
-    const createdTransaction = await transaction.add(newTransaction, options);
-    await this.recalculateCalculatedValues({
-      Mongo_budget: await BudgetModel.findOne({ _id: budgetId, userId: userId }),
-    });
+    const createdTransaction = await transaction.add(newTransaction, { session: session });
+    if (runRecalculate) {
+      await this.recalculateCalculatedValues({
+        Mongo_budget: await BudgetModel.findOne({ _id: budgetId, userId: userId }),
+      });
+    }
     return createdTransaction;
   },
 
@@ -233,7 +242,13 @@ export default {
       description: string;
       amount: number;
     },
-    options?,
+    {
+      session = undefined,
+      runRecalculate = true,
+    }: {
+      session?: ClientSession;
+      runRecalculate?: boolean;
+    } = {},
   ): Promise<ITransaction> {
     // Get user
     const user = await UserModel.findOne({ _id: userId });
@@ -260,10 +275,12 @@ export default {
       amount: amount,
       entryTimestamp: new Date().getTime(),
     };
-    const createdTransaction = await transaction.add(newTransaction, options);
-    await this.recalculateCalculatedValues({
-      Mongo_budget: await BudgetModel.findOne({ _id: budgetId, userId: userId }),
-    });
+    const createdTransaction = await transaction.add(newTransaction, { session: session });
+    if (runRecalculate) {
+      await this.recalculateCalculatedValues({
+        Mongo_budget: await BudgetModel.findOne({ _id: budgetId, userId: userId }),
+      });
+    }
     return createdTransaction;
   },
   // As a lender, I want to view transactions related to budget, so that I can make decisions.

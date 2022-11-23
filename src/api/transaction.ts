@@ -3,7 +3,7 @@ import { transactionHelpers } from './types/transaction/transactionHelpers.js';
 import { ITransaction } from './types/transaction/transactionInterface.js';
 import { ITransactionAddress } from './types/transactionAddress/transactionAddressInterface.js';
 import { transactionAddressHelpers } from './types/transactionAddress/transactionAddressHelpers.js';
-import mongoose, { SessionOption } from 'mongoose';
+import mongoose, { ClientSession, SessionOption } from 'mongoose';
 import Budget from './budget.js';
 import BudgetModel from './db/model/BudgetModel.js';
 import Loan from './loan.js';
@@ -43,7 +43,13 @@ export default {
       ITransaction,
       'userId' | 'transactionTimestamp' | 'description' | 'from' | 'to' | 'amount' | 'entryTimestamp'
     >,
-    options?,
+    {
+      session = undefined,
+      runChecks = true,
+    }: {
+      session?: ClientSession;
+      runChecks?: boolean;
+    } = {},
   ): Promise<ITransaction> {
     transactionHelpers.validate.all(transaction);
     transactionHelpers.sanitize.all(transaction);
@@ -53,14 +59,16 @@ export default {
       revisions: undefined,
     } as ITransaction;
     transactionHelpers.runtimeCast(validatedTransaction);
-    try {
-      await this.checkIfTransactionCanExist({ transaction: validatedTransaction });
-    } catch (err) {
-      console.log(err);
-      throw new Error(err);
+    if (runChecks) {
+      try {
+        await this.checkIfTransactionCanExist({ transaction: validatedTransaction });
+      } catch (err) {
+        console.log(err);
+        throw new Error(err);
+      }
     }
     try {
-      const newTransactionInDB: any = await new TransactionModel(validatedTransaction).save(options);
+      const newTransactionInDB: any = await new TransactionModel(validatedTransaction).save({ session });
       const newTransaction: ITransaction = {
         _id: newTransactionInDB._id.toString(),
         userId: newTransactionInDB.userId.toString(),
