@@ -80,17 +80,26 @@ export default {
 
       // Prepare initial transactions from budgets to loan in creation
       for (let i = 0; i < funds.length; i++) {
-        await transaction.transferAmountFromBudgetToLoan(
+        await transaction.add(
           {
-            userId: userId,
-            budgetId: funds[i].budgetId,
-            loanId: loan._id,
+            userId,
             transactionTimestamp: transactionHelpers.validate.transactionTimestamp(new Date().getTime()),
             description: initialTransactionDescription,
+            from: {
+              datatype: 'BUDGET',
+              addressId: funds[i].budgetId,
+            },
+            to: {
+              datatype: 'LOAN',
+              addressId: loan._id,
+            },
             amount: funds[i].amount,
             entryTimestamp: transactionHelpers.validate.entryTimestamp(new Date().getTime()),
-          },
-          { session },
+          } as Pick<
+            ITransaction,
+            'userId' | 'transactionTimestamp' | 'description' | 'from' | 'to' | 'amount' | 'entryTimestamp'
+          >,
+          { session: session },
         );
       }
       await session.commitTransaction();
@@ -329,15 +338,28 @@ export default {
     transactionHelpers.validate.description(description);
     description = transactionHelpers.sanitize.description(description);
     transactionHelpers.validate.amount(amount);
-    const NEW_TRANSACTION = await transaction.transferAmountFromBudgetToLoan({
-      userId: userId,
-      loanId: loanId,
-      budgetId: budgetId,
-      transactionTimestamp: transactionHelpers.validate.transactionTimestamp(transactionTimestamp),
-      description: description,
-      amount: amount,
+
+    const NEW_TRANSACTION = await transaction.add(
+      {
+        userId,
+        transactionTimestamp,
+        description,
+        from: {
+          datatype: 'BUDGET',
+          addressId: budgetId,
+        },
+        to: {
+          datatype: 'LOAN',
+          addressId: loanId,
+        },
+        amount,
       entryTimestamp: transactionHelpers.validate.entryTimestamp(new Date().getTime()),
-    });
+      } as Pick<
+        ITransaction,
+        'userId' | 'transactionTimestamp' | 'description' | 'from' | 'to' | 'amount' | 'entryTimestamp'
+      >,
+      { session: session },
+    );
     await Budget.recalculateCalculatedValues({ Mongo_budget: Mongo_budget });
     LoanCache.setCachedItem({
       itemId: loanId,
