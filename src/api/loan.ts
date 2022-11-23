@@ -278,15 +278,26 @@ export default {
       throw new Error('Transaction should not happen before loan start');
     if (transactionTimestamp > new Date().getTime()) throw new Error('Transaction should not happen in the future');
 
-    const newTransaction = await transaction.transferAmountFromLoanToBudget({
-      userId: userId,
-      loanId: loanId,
-      budgetId: budgetId,
-      transactionTimestamp: transactionTimestamp,
-      description: description,
-      amount: amount,
+    const newTransaction = await transaction.add(
+      transactionHelpers.runtimeCast({
+        _id: new mongoose.Types.ObjectId().toString(),
+        userId,
+        transactionTimestamp,
+        description,
+        from: {
+          datatype: 'LOAN',
+          addressId: loanId,
+        },
+        to: {
+          datatype: 'BUDGET',
+          addressId: budgetId,
+        },
+        amount,
       entryTimestamp: transactionHelpers.validate.entryTimestamp(new Date().getTime()),
-    });
+        revisions: undefined,
+      }),
+      { session: session },
+    );
 
     await Budget.recalculateCalculatedValues({ Mongo_budget: Mongo_budget });
     LoanCache.setCachedItem({

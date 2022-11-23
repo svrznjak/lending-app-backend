@@ -321,33 +321,6 @@ export default {
     );
     return newTransaction;
   },
-  transferAmountFromLoanToBudget: async function transferAmountFromLoanToBudget(
-    { userId, loanId, budgetId, transactionTimestamp, description, amount, entryTimestamp },
-    options?,
-  ): Promise<ITransaction> {
-    const newTransaction = await this.add(
-      {
-        userId,
-        transactionTimestamp,
-        description,
-        from: {
-          datatype: 'LOAN',
-          addressId: loanId,
-        },
-        to: {
-          datatype: 'BUDGET',
-          addressId: budgetId,
-        },
-        amount,
-        entryTimestamp,
-      } as Pick<
-        ITransaction,
-        'userId' | 'transactionTimestamp' | 'description' | 'from' | 'to' | 'amount' | 'entryTimestamp'
-      >,
-      options,
-    );
-    return newTransaction;
-  },
   /**
    * Checks if transaction will break any of following rules:
    * - Rule 1: Transaction involving the budget can not occur if the budget would reach negative value at any point in
