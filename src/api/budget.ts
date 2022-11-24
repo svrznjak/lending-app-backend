@@ -99,14 +99,17 @@ export default {
       session.endSession();
     }
   },
-  getOneFromUser: async function getBudget({
+  getOneFromUser: async function getBudget(
+    {
     userId,
     budgetId,
   }: {
     userId: string;
     budgetId: string;
-  }): Promise<IBudget> {
-    const Mongo_budget: any = await BudgetModel.findOne({ _id: budgetId, userId: userId }).lean().exec();
+    },
+    { session = undefined }: { session?: ClientSession } = {},
+  ): Promise<IBudget> {
+    const Mongo_budget: any = await BudgetModel.findOne({ _id: budgetId, userId: userId }).session(session).lean();
     if (Mongo_budget === null) throw new Error('Budget could not be found');
     return budgetHelpers.runtimeCast({
       _id: Mongo_budget._id.toString(),
@@ -140,8 +143,11 @@ export default {
     });
   },
   // As a lender, I want to view a list of budgets with basic information, so that I can have a general overview of my investments.
-  getAllFromUser: async function getBudgets({ userId }: { userId: string }): Promise<IBudget[]> {
-    const Mongo_budgets: any = await BudgetModel.find({ userId: userId }).lean().exec();
+  getAllFromUser: async function getBudgets(
+    { userId }: { userId: string },
+    { session = undefined }: { session?: ClientSession } = {},
+  ): Promise<IBudget[]> {
+    const Mongo_budgets: any = await BudgetModel.find({ userId: userId }).session(session).lean();
 
     return Mongo_budgets.map((Mongo_budget) => {
       return budgetHelpers.runtimeCast({
@@ -199,7 +205,6 @@ export default {
       runRecalculate?: boolean;
     } = {},
   ): Promise<ITransaction> {
-    console.log(runRecalculate);
     const newTransaction: Pick<
       ITransaction,
       'userId' | 'transactionTimestamp' | 'description' | 'from' | 'to' | 'amount' | 'entryTimestamp'

@@ -56,8 +56,8 @@ export default {
       const Mongo_budget: any = await BudgetModel.findOne({ _id: funds[i].budgetId });
       if (Mongo_budget === null) throw new Error('budget does not exist!');
 
+      // TODO: This is incorrect + real test happens on transaction level
       const recalculatedBudget = await Budget.recalculateCalculatedValues({ Mongo_budget: Mongo_budget });
-
       if (recalculatedBudget.calculatedTotalAvailableAmount < funds[i].amount)
         throw new Error(`Budget (id: ${funds[i].budgetId}) has insufficient funds.`);
     }
@@ -183,8 +183,11 @@ export default {
     await loan.save();
     return changedloan;
   },
-  getOneFromUser: async function getLoan({ userId, loanId }: { userId: string; loanId: string }): Promise<ILoan> {
-    const Mongo_loan: any = await LoanModel.findOne({ _id: loanId, userId: userId }).exec();
+  getOneFromUser: async function getLoan(
+    { userId, loanId }: { userId: string; loanId: string },
+    { session = undefined }: { session?: ClientSession } = {},
+  ): Promise<ILoan> {
+    const Mongo_loan: any = await LoanModel.findOne({ _id: loanId, userId: userId }).session(session).exec();
     if (LoanCache.getCachedItem({ itemId: loanId })) {
       return LoanCache.getCachedItem({ itemId: loanId }) as ILoan;
     } else {
@@ -194,8 +197,11 @@ export default {
     }
   },
 
-  getAllFromUser: async function getLoans({ userId }: { userId: string }): Promise<ILoan[]> {
-    const Mongo_loans: any = await LoanModel.find({ userId: userId }).exec();
+  getAllFromUser: async function getLoans(
+    { userId }: { userId: string },
+    { session = undefined }: { session?: ClientSession } = {},
+  ): Promise<ILoan[]> {
+    const Mongo_loans: any = await LoanModel.find({ userId: userId }).session(session).exec();
     const returnValue: ILoan[] = [];
     for (let i = 0; i < Mongo_loans.length; i++) {
       const LOAN_ID = Mongo_loans[i]._id.toString();

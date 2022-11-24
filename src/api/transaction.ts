@@ -3,7 +3,7 @@ import { transactionHelpers } from './types/transaction/transactionHelpers.js';
 import { ITransaction } from './types/transaction/transactionInterface.js';
 import { ITransactionAddress } from './types/transactionAddress/transactionAddressInterface.js';
 import { transactionAddressHelpers } from './types/transactionAddress/transactionAddressHelpers.js';
-import mongoose, { ClientSession, SessionOption } from 'mongoose';
+import mongoose, { ClientSession } from 'mongoose';
 import Budget from './budget.js';
 import BudgetModel from './db/model/BudgetModel.js';
 import Loan from './loan.js';
@@ -314,13 +314,16 @@ export default {
    * @param  {string|undefined} originalTransactionId - (Used when editing existing transaction) Id of transaction that is being replaced/edited
    * @returns Promise<true> or throws error
    */
-  checkIfTransactionCanExist: async function checkIfTransactionCanExist({
-    transaction,
-    originalTransactionId,
-  }: {
-    transaction: ITransaction;
-    originalTransactionId: string | undefined;
-  }): Promise<true> {
+  checkIfTransactionCanExist: async function checkIfTransactionCanExist(
+    {
+      transaction,
+      originalTransactionId,
+    }: {
+      transaction: ITransaction;
+      originalTransactionId: string | undefined;
+    },
+    { session = undefined }: { session?: ClientSession } = {},
+  ): Promise<true> {
     // Do check for Rule 1
     if (transaction.from.datatype === 'BUDGET') {
       const AFFECTED_BUDGET_ID = transaction.from.addressId;
@@ -390,19 +393,25 @@ export default {
 
     // Do check for Rule 2 and Rule 3
     if (transaction.from.datatype === 'LOAN') {
-      const AFFECTED_LOAN: ILoan = await Loan.getOneFromUser({
-        userId: transaction.userId,
-        loanId: transaction.from.addressId,
-      });
+      const AFFECTED_LOAN: ILoan = await Loan.getOneFromUser(
+        {
+          userId: transaction.userId,
+          loanId: transaction.from.addressId,
+        },
+        { session: session },
+      );
       if (AFFECTED_LOAN.openedTimestamp > transaction.transactionTimestamp)
         throw new Error('Transaction can not occur before loan openedTimestamp');
 
       if (AFFECTED_LOAN.status === 'CLOSED') throw new Error('Transaction can not occur on loan with status "CLOSED"');
     } else if (transaction.to.datatype === 'LOAN') {
-      const AFFECTED_LOAN: ILoan = await Loan.getOneFromUser({
-        userId: transaction.userId,
-        loanId: transaction.to.addressId,
-      });
+      const AFFECTED_LOAN: ILoan = await Loan.getOneFromUser(
+        {
+          userId: transaction.userId,
+          loanId: transaction.to.addressId,
+        },
+        { session: session },
+      );
       if (AFFECTED_LOAN.openedTimestamp > transaction.transactionTimestamp)
         throw new Error('Transaction can not occur before loan openedTimestamp');
       if (AFFECTED_LOAN.status === 'CLOSED') throw new Error('Transaction can not occur on loan with status "CLOSED"');
