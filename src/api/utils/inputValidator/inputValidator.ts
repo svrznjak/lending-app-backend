@@ -78,8 +78,8 @@ export const isValidTimestamp = function isValidTimestamp(
   extend: undefined | Function = undefined,
 ): boolean {
   if (!Number.isFinite(timestamp)) return false;
-  if (timestamp < 0) return false;
-  if (timestamp > 5000000000000) return false;
+  if (timestamp < -1) return false;
+  if (timestamp > 95649119999000) return false;
   if (new Date(timestamp).toString() === 'Invalid Date') return false;
 
   if (extend === undefined) return true;

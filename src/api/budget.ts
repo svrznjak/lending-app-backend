@@ -1,4 +1,3 @@
-import { transactionHelpers } from './types/transaction/transactionHelpers.js';
 import mongoose, { ClientSession } from 'mongoose';
 import { budgetHelpers } from './types/budget/budgetHelpers.js';
 import { ITransaction } from './types/transaction/transactionInterface.js';
@@ -33,7 +32,7 @@ export default {
       defaultInterestRate: input.defaultInterestRate,
       calculatedTotalWithdrawnAmount: 0,
       calculatedTotalInvestedAmount: inititalTransactionAmount,
-      calculatedTotalAvailableAmount: 0,
+      calculatedTotalAvailableAmount: inititalTransactionAmount,
       isArchived: false,
     });
 
@@ -50,7 +49,7 @@ export default {
           {
             userId: userId,
             budgetId: newBudget._id.toString(),
-            transactionTimestamp: transactionHelpers.validate.transactionTimestamp(new Date().getTime()),
+            transactionTimestamp: -1,
             description: initialTransactionDescription,
             amount: inititalTransactionAmount,
           },
@@ -101,11 +100,11 @@ export default {
   },
   getOneFromUser: async function getBudget(
     {
-    userId,
-    budgetId,
-  }: {
-    userId: string;
-    budgetId: string;
+      userId,
+      budgetId,
+    }: {
+      userId: string;
+      budgetId: string;
     },
     { session = undefined }: { session?: ClientSession } = {},
   ): Promise<IBudget> {
