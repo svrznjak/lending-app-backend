@@ -5,12 +5,7 @@ import { BudgetSchema } from '../schema/BudgetSchema.js';
 
 export interface IBudgetDocument extends mongoose.Document, Omit<IBudget, '_id'> {}
 
-interface BudgetMethods {
-  toSimple(): IBudget;
-}
-
-// eslint-disable-next-line @typescript-eslint/ban-types
-interface BudgetModel extends mongoose.Model<IBudget, {}, BudgetMethods> {
+interface BudgetModel extends mongoose.Model<IBudget> {
   existsOneWithId: (id: string) => Promise<boolean>;
 }
 
