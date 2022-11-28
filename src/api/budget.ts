@@ -1,12 +1,12 @@
 import mongoose, { ClientSession } from 'mongoose';
 import { budgetHelpers } from './types/budget/budgetHelpers.js';
 import { ITransaction } from './types/transaction/transactionInterface.js';
-import UserModel from './db/model/UserModel.js';
 import transaction from './transaction.js';
+import * as User from './user.js';
 import { IBudget } from './types/budget/budgetInterface.js';
 import { interestRateHelpers } from './types/interestRate/interestRateHelpers.js';
 import paranoidCalculator from './utils/paranoidCalculator/paranoidCalculator.js';
-import BudgetModel from './db/model/BudgetModel.js';
+import BudgetModel, { IBudgetDocument } from './db/model/BudgetModel.js';
 
 export default {
   // As a lender, I want to create a budget, so that I can categorize my investments.
@@ -20,9 +20,8 @@ export default {
     budgetHelpers.validate.all(input);
     budgetHelpers.sanitize.all(input);
 
-    // Get user and check if user even exists
-    const user: any = await UserModel.findOne({ _id: userId });
-    if (user === null) throw new Error('User with provided userId was not found!');
+    // Check if user exists
+    User.checkIfExists(userId);
 
     const budget: IBudget = budgetHelpers.runtimeCast({
       _id: new mongoose.Types.ObjectId().toString(),
@@ -61,34 +60,9 @@ export default {
 
       // return casted budget
       return budgetHelpers.runtimeCast({
+        ...newBudget.toObject(),
         _id: newBudget._id.toString(),
         userId: newBudget.userId.toString(),
-        name: newBudget.name,
-        description: newBudget.description,
-        defaultInterestRate: {
-          type: newBudget.defaultInterestRate.type,
-          duration: newBudget.defaultInterestRate.duration,
-          expectedPayments: newBudget.defaultInterestRate.expectedPayments,
-          amount: newBudget.defaultInterestRate.amount,
-          isCompounding: newBudget.defaultInterestRate.isCompounding,
-          entryTimestamp: newBudget.defaultInterestRate.entryTimestamp,
-          revisions:
-            newBudget.defaultInterestRate.revisions !== undefined
-              ? {
-                  type: newBudget.defaultInterestRate.revisions.type,
-                  duration: newBudget.defaultInterestRate.revisions.duration,
-                  expectedPayments: newBudget.defaultInterestRate.revisions.expectedPayments,
-                  amount: newBudget.defaultInterestRate.revisions.amount,
-                  isCompounding: newBudget.defaultInterestRate.revisions.isCompounding,
-                  entryTimestamp: newBudget.defaultInterestRate.revisions.entryTimestamp,
-                  revisions: newBudget.defaultInterestRate.revisions.revisions,
-                }
-              : undefined,
-        },
-        calculatedTotalWithdrawnAmount: newBudget.calculatedTotalWithdrawnAmount,
-        calculatedTotalInvestedAmount: newBudget.calculatedTotalInvestedAmount,
-        calculatedTotalAvailableAmount: newBudget.calculatedTotalAvailableAmount,
-        isArchived: newBudget.isArchived,
       });
     } catch (err) {
       console.log(err);
@@ -97,6 +71,9 @@ export default {
     } finally {
       session.endSession();
     }
+  },
+  checkIfExists: async function checkIfBudgetExists(budgetId: string): Promise<void> {
+    if (!(await BudgetModel.existsOneWithId(budgetId))) throw new Error('Budget with prodived _id does not exist!');
   },
   getOneFromUser: async function getBudget(
     {
@@ -111,34 +88,9 @@ export default {
     const Mongo_budget: any = await BudgetModel.findOne({ _id: budgetId, userId: userId }).session(session).lean();
     if (Mongo_budget === null) throw new Error('Budget could not be found');
     return budgetHelpers.runtimeCast({
+      ...Mongo_budget,
       _id: Mongo_budget._id.toString(),
       userId: Mongo_budget.userId.toString(),
-      name: Mongo_budget.name,
-      description: Mongo_budget.description,
-      defaultInterestRate: {
-        type: Mongo_budget.defaultInterestRate.type,
-        duration: Mongo_budget.defaultInterestRate.duration,
-        expectedPayments: Mongo_budget.defaultInterestRate.expectedPayments,
-        amount: Mongo_budget.defaultInterestRate.amount,
-        isCompounding: Mongo_budget.defaultInterestRate.isCompounding,
-        entryTimestamp: Mongo_budget.defaultInterestRate.entryTimestamp,
-        revisions:
-          Mongo_budget.defaultInterestRate.revisions !== undefined
-            ? {
-                type: Mongo_budget.defaultInterestRate.revisions.type,
-                duration: Mongo_budget.defaultInterestRate.revisions.duration,
-                expectedPayments: Mongo_budget.defaultInterestRate.revisions.expectedPayments,
-                amount: Mongo_budget.defaultInterestRate.revisions.amount,
-                isCompounding: Mongo_budget.defaultInterestRate.revisions.isCompounding,
-                entryTimestamp: Mongo_budget.defaultInterestRate.revisions.entryTimestamp,
-                revisions: Mongo_budget.defaultInterestRate.revisions.revisions,
-              }
-            : undefined,
-      },
-      calculatedTotalWithdrawnAmount: Mongo_budget.calculatedTotalWithdrawnAmount,
-      calculatedTotalInvestedAmount: Mongo_budget.calculatedTotalInvestedAmount,
-      calculatedTotalAvailableAmount: Mongo_budget.calculatedTotalAvailableAmount,
-      isArchived: Mongo_budget.isArchived,
     });
   },
   // As a lender, I want to view a list of budgets with basic information, so that I can have a general overview of my investments.
@@ -150,34 +102,9 @@ export default {
 
     return Mongo_budgets.map((Mongo_budget) => {
       return budgetHelpers.runtimeCast({
+        ...Mongo_budget,
         _id: Mongo_budget._id.toString(),
         userId: Mongo_budget.userId.toString(),
-        name: Mongo_budget.name,
-        description: Mongo_budget.description,
-        defaultInterestRate: {
-          type: Mongo_budget.defaultInterestRate.type,
-          duration: Mongo_budget.defaultInterestRate.duration,
-          expectedPayments: Mongo_budget.defaultInterestRate.expectedPayments,
-          amount: Mongo_budget.defaultInterestRate.amount,
-          isCompounding: Mongo_budget.defaultInterestRate.isCompounding,
-          entryTimestamp: Mongo_budget.defaultInterestRate.entryTimestamp,
-          revisions:
-            Mongo_budget.defaultInterestRate.revisions !== undefined
-              ? {
-                  type: Mongo_budget.defaultInterestRate.revisions.type,
-                  duration: Mongo_budget.defaultInterestRate.revisions.duration,
-                  expectedPayments: Mongo_budget.defaultInterestRate.revisions.expectedPayments,
-                  amount: Mongo_budget.defaultInterestRate.revisions.amount,
-                  isCompounding: Mongo_budget.defaultInterestRate.revisions.isCompounding,
-                  entryTimestamp: Mongo_budget.defaultInterestRate.revisions.entryTimestamp,
-                  revisions: Mongo_budget.defaultInterestRate.revisions.revisions,
-                }
-              : undefined,
-        },
-        calculatedTotalWithdrawnAmount: Mongo_budget.calculatedTotalWithdrawnAmount,
-        calculatedTotalInvestedAmount: Mongo_budget.calculatedTotalInvestedAmount,
-        calculatedTotalAvailableAmount: Mongo_budget.calculatedTotalAvailableAmount,
-        isArchived: Mongo_budget.isArchived,
       });
     });
   },
@@ -254,13 +181,6 @@ export default {
       runRecalculate?: boolean;
     } = {},
   ): Promise<ITransaction> {
-    // Get user
-    const user = await UserModel.findOne({ _id: userId });
-    if (user === null) throw new Error('User does not exist!');
-    // Get budget
-    const budget: any = await BudgetModel.findOne({ _id: budgetId });
-    if (budget === null) throw new Error('Budget does not exist!');
-
     const newTransaction: Pick<
       ITransaction,
       'userId' | 'transactionTimestamp' | 'description' | 'from' | 'to' | 'amount' | 'entryTimestamp'
@@ -312,40 +232,17 @@ export default {
     budgetId: string;
     isArchived: boolean;
   }): Promise<IBudget> {
-    // get budget and check if it exists
-    const budget: any = await BudgetModel.findOne({ _id: budgetId });
-    if (budget === null) throw new Error('Budget does not exist!');
+    // Check if budget exists
+    this.checkIfExists(budgetId);
+
+    // Get budget
+    const budget = await BudgetModel.findOne({ _id: budgetId });
 
     budget.isArchived = isArchived;
     const changedBudget = budgetHelpers.runtimeCast({
+      ...budget.toObject(),
       _id: budget._id.toString(),
       userId: budget.userId.toString(),
-      name: budget.name,
-      description: budget.description,
-      defaultInterestRate: {
-        type: budget.defaultInterestRate.type,
-        duration: budget.defaultInterestRate.duration,
-        expectedPayments: budget.defaultInterestRate.expectedPayments,
-        amount: budget.defaultInterestRate.amount,
-        isCompounding: budget.defaultInterestRate.isCompounding,
-        entryTimestamp: budget.defaultInterestRate.entryTimestamp,
-        revisions:
-          budget.defaultInterestRate.revisions !== undefined
-            ? {
-                type: budget.defaultInterestRate.revisions.type,
-                duration: budget.defaultInterestRate.revisions.duration,
-                expectedPayments: budget.defaultInterestRate.revisions.expectedPayments,
-                amount: budget.defaultInterestRate.revisions.amount,
-                isCompounding: budget.defaultInterestRate.revisions.isCompounding,
-                entryTimestamp: budget.defaultInterestRate.revisions.entryTimestamp,
-                revisions: budget.defaultInterestRate.revisions.revisions,
-              }
-            : undefined,
-      },
-      calculatedTotalInvestedAmount: budget.calculatedTotalInvestedAmount,
-      calculatedTotalWithdrawnAmount: budget.calculatedTotalWithdrawnAmount,
-      calculatedTotalAvailableAmount: budget.calculatedTotalAvailableAmount,
-      isArchived: budget.isArchived,
     });
     await budget.save();
     return changedBudget;
@@ -422,34 +319,9 @@ export default {
     }
     budget.set(newInfo);
     const changedBudget = budgetHelpers.runtimeCast({
+      ...budget.toObject(),
       _id: budget._id.toString(),
       userId: budget.userId.toString(),
-      name: budget.name,
-      description: budget.description,
-      defaultInterestRate: {
-        type: budget.defaultInterestRate.type,
-        duration: budget.defaultInterestRate.duration,
-        expectedPayments: budget.defaultInterestRate.expectedPayments,
-        amount: budget.defaultInterestRate.amount,
-        isCompounding: budget.defaultInterestRate.isCompounding,
-        entryTimestamp: budget.defaultInterestRate.entryTimestamp,
-        revisions:
-          budget.defaultInterestRate.revisions !== undefined
-            ? {
-                type: budget.defaultInterestRate.revisions.type,
-                duration: budget.defaultInterestRate.revisions.duration,
-                expectedPayments: budget.defaultInterestRate.revisions.expectedPayments,
-                amount: budget.defaultInterestRate.revisions.amount,
-                isCompounding: budget.defaultInterestRate.revisions.isCompounding,
-                entryTimestamp: budget.defaultInterestRate.revisions.entryTimestamp,
-                revisions: budget.defaultInterestRate.revisions.revisions,
-              }
-            : undefined,
-      },
-      calculatedTotalInvestedAmount: budget.calculatedTotalInvestedAmount,
-      calculatedTotalWithdrawnAmount: budget.calculatedTotalWithdrawnAmount,
-      calculatedTotalAvailableAmount: budget.calculatedTotalAvailableAmount,
-      isArchived: budget.isArchived,
     });
     await budget.save();
     return changedBudget;
@@ -536,52 +408,27 @@ export default {
       }
     }
   },
-  recalculateCalculatedValues: async function recalculateCalculatedBudgetValues({
-    Mongo_budget,
-  }: {
-    Mongo_budget: any;
-  }): Promise<IBudget> {
+  recalculateCalculatedValues: async function recalculateCalculatedBudgetValues(
+    input: string | IBudgetDocument,
+  ): Promise<IBudget> {
+    const MONGO_BUDGET = typeof input === 'string' ? await BudgetModel.findOne({ _id: input }) : input;
+
     const NOW_TIMESTAMP = new Date().getTime();
     const CALCULATED_VALUES_UNTIL_NOW = await this.getCalculatedValuesAtTimestamp({
-      budgetId: Mongo_budget._id.toString(),
+      budgetId: MONGO_BUDGET._id.toString(),
       timestampLimit: NOW_TIMESTAMP,
     });
 
     // save calculations to DB
-    Mongo_budget.calculatedTotalInvestedAmount = CALCULATED_VALUES_UNTIL_NOW.calculatedTotalInvestedAmount;
-    Mongo_budget.calculatedTotalWithdrawnAmount = CALCULATED_VALUES_UNTIL_NOW.calculatedTotalWithdrawnAmount;
-    Mongo_budget.calculatedTotalAvailableAmount = CALCULATED_VALUES_UNTIL_NOW.calculatedTotalAvailableAmount;
+    MONGO_BUDGET.calculatedTotalInvestedAmount = CALCULATED_VALUES_UNTIL_NOW.calculatedTotalInvestedAmount;
+    MONGO_BUDGET.calculatedTotalWithdrawnAmount = CALCULATED_VALUES_UNTIL_NOW.calculatedTotalWithdrawnAmount;
+    MONGO_BUDGET.calculatedTotalAvailableAmount = CALCULATED_VALUES_UNTIL_NOW.calculatedTotalAvailableAmount;
 
-    await Mongo_budget.save();
+    await MONGO_BUDGET.save();
     return budgetHelpers.runtimeCast({
-      _id: Mongo_budget._id.toString(),
-      userId: Mongo_budget.userId.toString(),
-      name: Mongo_budget.name,
-      description: Mongo_budget.description,
-      defaultInterestRate: {
-        type: Mongo_budget.defaultInterestRate.type,
-        duration: Mongo_budget.defaultInterestRate.duration,
-        expectedPayments: Mongo_budget.defaultInterestRate.expectedPayments,
-        amount: Mongo_budget.defaultInterestRate.amount,
-        isCompounding: Mongo_budget.defaultInterestRate.isCompounding,
-        entryTimestamp: Mongo_budget.defaultInterestRate.entryTimestamp,
-        revisions:
-          Mongo_budget.defaultInterestRate.revisions !== undefined
-            ? {
-                type: Mongo_budget.defaultInterestRate.revisions.type,
-                duration: Mongo_budget.defaultInterestRate.revisions.duration,
-                expectedPayments: Mongo_budget.defaultInterestRate.revisions.expectedPayments,
-                amount: Mongo_budget.defaultInterestRate.revisions.amount,
-                isCompounding: Mongo_budget.defaultInterestRate.revisions.isCompounding,
-                entryTimestamp: Mongo_budget.defaultInterestRate.revisions.entryTimestamp,
-                revisions: Mongo_budget.defaultInterestRate.revisions.revisions,
-              }
-            : undefined,
-      },
-      calculatedTotalWithdrawnAmount: Mongo_budget.calculatedTotalWithdrawnAmount,
-      calculatedTotalInvestedAmount: Mongo_budget.calculatedTotalInvestedAmount,
-      calculatedTotalAvailableAmount: Mongo_budget.calculatedTotalAvailableAmount,
-      isArchived: Mongo_budget.isArchived,
+      ...MONGO_BUDGET.toObject(),
+      _id: MONGO_BUDGET._id.toString(),
+      userId: MONGO_BUDGET.userId.toString(),
     });
   },
 };
