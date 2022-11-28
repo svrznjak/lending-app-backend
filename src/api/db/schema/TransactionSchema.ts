@@ -23,6 +23,7 @@ const TransactionSchema = new mongoose.Schema(
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       required: true,
+      ref: 'Users',
     },
     transactionTimestamp: { type: Number, required: true },
     description: { type: String, required: true },
