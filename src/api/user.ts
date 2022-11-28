@@ -86,3 +86,7 @@ export async function updateUserById(id: string | object, updatedUserInfo: IUser
     throw new Error('DB query error!');
   }
 }
+
+export async function checkIfExists(userId: string): Promise<void> {
+  if (!(await UserModel.existsOneWithId(userId))) throw new Error('User does not exist!');
+}

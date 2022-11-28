@@ -4,10 +4,9 @@ import { ITransaction } from './types/transaction/transactionInterface.js';
 import { ITransactionAddress } from './types/transactionAddress/transactionAddressInterface.js';
 import { transactionAddressHelpers } from './types/transactionAddress/transactionAddressHelpers.js';
 import mongoose, { ClientSession } from 'mongoose';
+import * as User from './user.js';
 import Budget from './budget.js';
-import BudgetModel from './db/model/BudgetModel.js';
 import Loan from './loan.js';
-import LoanModel from './db/model/LoanModel.js';
 import LoanCache from './cache/loanCache.js';
 import paranoidCalculator from './utils/paranoidCalculator/paranoidCalculator.js';
 import { ILoan } from './types/loan/loanInterface.js';
@@ -184,24 +183,16 @@ export default {
       revisions: Mongo_editedTransaction.revisions,
     });
     if (editedTransaction.from.datatype === 'BUDGET') {
-      const Mongo_budget: any = await BudgetModel.findOne({ _id: editedTransaction.from.addressId });
-      if (Mongo_budget === null) throw new Error('budget does not exist!');
-      await Budget.recalculateCalculatedValues({ Mongo_budget: Mongo_budget });
+      await Budget.recalculateCalculatedValues(editedTransaction.from.addressId);
     }
     if (editedTransaction.to.datatype === 'BUDGET') {
-      const Mongo_budget: any = await BudgetModel.findOne({ _id: editedTransaction.to.addressId });
-      if (Mongo_budget === null) throw new Error('budget does not exist!');
-      await Budget.recalculateCalculatedValues({ Mongo_budget: Mongo_budget });
+      await Budget.recalculateCalculatedValues(editedTransaction.to.addressId);
     }
     if (editedTransaction.from.datatype === 'LOAN') {
-      const Mongo_loan: any = await LoanModel.findOne({ _id: editedTransaction.from.addressId });
-      if (Mongo_loan === null) throw new Error('loan does not exist!');
-      await Loan.recalculateCalculatedValues({ Mongo_loan: Mongo_loan });
+      await Loan.recalculateCalculatedValues(editedTransaction.from.addressId);
     }
     if (editedTransaction.to.datatype === 'LOAN') {
-      const Mongo_loan: any = await LoanModel.findOne({ _id: editedTransaction.to.addressId });
-      if (Mongo_loan === null) throw new Error('loan does not exist!');
-      await Loan.recalculateCalculatedValues({ Mongo_loan: Mongo_loan });
+      await Loan.recalculateCalculatedValues(editedTransaction.to.addressId);
     }
 
     // return edited transaction
@@ -214,41 +205,21 @@ export default {
       const deletedTransaction: ITransaction = await TransactionModel.findByIdAndDelete(transactionId).lean();
       if (deletedTransaction === null) throw new Error('Transaction you wanted to delete was not found!');
       if (deletedTransaction.from.datatype === 'BUDGET') {
-        Budget.recalculateCalculatedValues({
-          Mongo_budget: await BudgetModel.findOne({
-            _id: deletedTransaction.from.addressId,
-            userId: deletedTransaction.userId,
-          }).exec(),
-        });
+        Budget.recalculateCalculatedValues(deletedTransaction.from.addressId);
       }
       if (deletedTransaction.to.datatype === 'BUDGET') {
-        Budget.recalculateCalculatedValues({
-          Mongo_budget: await BudgetModel.findOne({
-            _id: deletedTransaction.to.addressId,
-            userId: deletedTransaction.userId,
-          }).exec(),
-        });
+        Budget.recalculateCalculatedValues(deletedTransaction.to.addressId);
       }
       if (deletedTransaction.from.datatype === 'LOAN') {
         LoanCache.setCachedItem({
           itemId: deletedTransaction.to.addressId,
-          value: await Loan.recalculateCalculatedValues({
-            Mongo_loan: await LoanModel.findOne({
-              _id: deletedTransaction.from.addressId,
-              userId: deletedTransaction.userId,
-            }).exec(),
-          }),
+          value: await Loan.recalculateCalculatedValues(deletedTransaction.from.addressId),
         });
       }
       if (deletedTransaction.to.datatype === 'LOAN') {
         LoanCache.setCachedItem({
           itemId: deletedTransaction.to.addressId,
-          value: await Loan.recalculateCalculatedValues({
-            Mongo_loan: await LoanModel.findOne({
-              _id: deletedTransaction.to.addressId,
-              userId: deletedTransaction.userId,
-            }).exec(),
-          }),
+          value: await Loan.recalculateCalculatedValues(deletedTransaction.to.addressId),
         });
       }
       return true;
@@ -304,6 +275,7 @@ export default {
   },
   /**
    * Checks if transaction will break any of following rules:
+   * - Rule 0: Referenced User, Budget and Loan must exist
    * - Rule 1: Transaction involving the budget can not occur if the budget would reach negative value at any point in
    *   time of existance of the budget
    * - Rule 2: Transaction involving the loan can not occur before the loan is created
@@ -324,6 +296,13 @@ export default {
     },
     { session = undefined }: { session?: ClientSession } = {},
   ): Promise<true> {
+    // Do check for Rule 0
+    await User.checkIfExists(transaction.userId);
+    if (transaction.from.datatype === 'BUDGET') await Budget.checkIfExists(transaction.from.addressId);
+    if (transaction.to.datatype === 'BUDGET') await Budget.checkIfExists(transaction.to.addressId);
+    if (transaction.from.datatype === 'LOAN') await Loan.checkIfExists(transaction.from.addressId);
+    if (transaction.to.datatype === 'LOAN') await Loan.checkIfExists(transaction.to.addressId);
+
     // Do check for Rule 1
     if (transaction.from.datatype === 'BUDGET') {
       const AFFECTED_BUDGET_ID = transaction.from.addressId;

@@ -8,7 +8,7 @@ import {
   eachMonthOfInterval,
   eachYearOfInterval,
 } from 'date-fns';
-import UserModel from './db/model/UserModel.js';
+import * as User from './user.js';
 import transaction from './transaction.js';
 import { loanHelpers } from './types/loan/loanHelpers.js';
 import { ILoan } from './types/loan/loanInterface.js';
@@ -20,8 +20,7 @@ import {
   ITransactionInterval,
   IInterestRate,
 } from './types/interestRate/interestRateInterface.js';
-import LoanModel from './db/model/LoanModel.js';
-import BudgetModel from './db/model/BudgetModel.js';
+import LoanModel, { ILoanDocument } from './db/model/LoanModel.js';
 import LoanCache from './cache/loanCache.js';
 
 interface fund {
@@ -46,20 +45,20 @@ export default {
 
     if (funds.length <= 0) throw new Error('Funds should be provided to new loan!');
 
-    // Get user
-    const user: any = await UserModel.findOne({ _id: userId });
-    if (user === null) throw new Error('User with provided userId was not found!');
+    // check if user exists
+    User.checkIfExists(userId);
 
-    // check if budgets have sufficient funds
+    // check if budgets exist
 
     for (let i = 0; i < funds.length; i++) {
-      const Mongo_budget: any = await BudgetModel.findOne({ _id: funds[i].budgetId });
-      if (Mongo_budget === null) throw new Error('budget does not exist!');
+      Budget.checkIfExists(funds[i].budgetId);
 
       // TODO: This is incorrect + real test happens on transaction level
-      const recalculatedBudget = await Budget.recalculateCalculatedValues({ Mongo_budget: Mongo_budget });
+      /*
+      const recalculatedBudget = await Budget.recalculateCalculatedValues(MONGO_LOAN.{
       if (recalculatedBudget.calculatedTotalAvailableAmount < funds[i].amount)
         throw new Error(`Budget (id: ${funds[i].budgetId}) has insufficient funds.`);
+        */
     }
 
     const loan: ILoan = loanHelpers.runtimeCast({
@@ -73,7 +72,7 @@ export default {
       calculatedTotalPaidPrincipal: 0,
     });
 
-    const session = await global.mongooseConnection.startSession();
+    const session = await global.mongoose.startSession();
     try {
       session.startTransaction();
       const newLoan = await new LoanModel(loan).save({ session });
@@ -91,7 +90,7 @@ export default {
             },
             to: {
               datatype: 'LOAN',
-              addressId: loan._id,
+              addressId: loan._id.toString(),
             },
             amount: funds[i].amount,
             entryTimestamp: transactionHelpers.validate.entryTimestamp(new Date().getTime()),
@@ -105,12 +104,9 @@ export default {
       await session.commitTransaction();
 
       // recalculate affected budgets
-      await funds.forEach(async (fund) => {
-        const Mongo_budget: any = await BudgetModel.findOne({ _id: fund.budgetId });
-        if (Mongo_budget === null) throw new Error('budget does not exist!');
-
-        await Budget.recalculateCalculatedValues({ Mongo_budget: Mongo_budget });
-      });
+      for (const fund of funds) {
+        await Budget.recalculateCalculatedValues(fund.budgetId);
+      }
       console.log(newLoan);
     } catch (err) {
       console.log(err);
@@ -137,12 +133,14 @@ export default {
     description?: string;
     closesTimestamp?: number;
   }): Promise<ILoan> {
-    // Get user
-    const user = await UserModel.findOne({ _id: userId });
-    if (user === null) throw new Error('User does not exist!');
+    // Check if user exists
+    User.checkIfExists(userId);
+
+    // Check if loan exists
+    this.checkIfExists(loanId);
+
     // Get loan
     const loan: any = await LoanModel.findOne({ _id: loanId });
-    if (loan === null) throw new Error('loan does not exist!');
 
     const newInfo: any = {};
     if (name !== undefined) {
@@ -183,61 +181,70 @@ export default {
     await loan.save();
     return changedloan;
   },
+  checkIfExists: async function checkIfLoanExists(loanId: string): Promise<void> {
+    if (!(await LoanModel.existsOneWithId(loanId))) throw new Error('Loan with prodived _id does not exist!');
+  },
   getOneFromUser: async function getLoan(
-    { userId, loanId }: { userId: string; loanId: string },
+    {
+      userId,
+      loanId,
+    }: {
+      userId: string;
+      loanId: string;
+    },
     { session = undefined }: { session?: ClientSession } = {},
   ): Promise<ILoan> {
-    const Mongo_loan: any = await LoanModel.findOne({ _id: loanId, userId: userId }).session(session).exec();
+    console.log(userId);
     if (LoanCache.getCachedItem({ itemId: loanId })) {
       return LoanCache.getCachedItem({ itemId: loanId }) as ILoan;
     } else {
-      const recalculatedLoan = await this.recalculateCalculatedValues({ Mongo_loan: Mongo_loan });
+      const MONGO_LOAN = await LoanModel.findOne({ _id: loanId, userId: userId }).session(session);
+      const recalculatedLoan = await this.recalculateCalculatedValues(MONGO_LOAN);
       LoanCache.setCachedItem({ itemId: loanId, value: recalculatedLoan });
       return recalculatedLoan;
     }
   },
-
   getAllFromUser: async function getLoans(
     { userId }: { userId: string },
     { session = undefined }: { session?: ClientSession } = {},
   ): Promise<ILoan[]> {
-    const Mongo_loans: any = await LoanModel.find({ userId: userId }).session(session).exec();
+    const LOANS = await LoanModel.find({ userId: userId }).session(session).exec();
     const returnValue: ILoan[] = [];
-    for (let i = 0; i < Mongo_loans.length; i++) {
-      const LOAN_ID = Mongo_loans[i]._id.toString();
+    for (let i = 0; i < LOANS.length; i++) {
+      const LOAN_ID = LOANS[i]._id.toString();
       if (LoanCache.getCachedItem({ itemId: LOAN_ID })) {
         returnValue.push(LoanCache.getCachedItem({ itemId: LOAN_ID }) as ILoan);
       } else {
-        const recalculatedLoan = await this.recalculateCalculatedValues({ Mongo_loan: Mongo_loans[i] });
+        const recalculatedLoan = await this.recalculateCalculatedValues(LOANS[i]);
         LoanCache.setCachedItem({ itemId: LOAN_ID, value: recalculatedLoan });
         returnValue.push(recalculatedLoan);
       }
     }
     return returnValue;
-    /* return await Mongo_loans.map(async (Mongo_loan) => {
-      return await this.recalculateCalculatedValues({ loanId: Mongo_loan._id.toString() });
+    /* return await MONGO_LOAN.map(async MONGO_LOAN.(
+      return await this.recalculateCalculatedValues({ loanId: MONGO_LOAN._id.toString() });
       return loanHelpers.runtimeCast({
-        _id: Mongo_loan._id.toString(),
-        userId: Mongo_loan.userId.toString(),
-        name: Mongo_loan.name,
-        description: Mongo_loan.description,
-        notes: Mongo_loan.notes,
-        openedTimestamp: Mongo_loan.openedTimestamp,
-        closesTimestamp: Mongo_loan.closesTimestamp,
+        _id: MONGO_LOAN._id.toString(),
+        userId: MONGO_LOAN.userId.toString(),
+        name: MONGO_LOAN.name,
+        description: MONGO_LOAN.description,
+        notes: MONGO_LOAN.notes,
+        openedTimestamp: MONGO_LOAN.openedTimestamp,
+        closesTimestamp: MONGO_LOAN.closesTimestamp,
         interestRate: {
-          type: Mongo_loan.interestRate.type,
-          duration: Mongo_loan.interestRate.duration,
-          expectedPayments: Mongo_loan.interestRate.expectedPayments,
-          amount: Mongo_loan.interestRate.amount,
-          isCompounding: Mongo_loan.interestRate.isCompounding,
-          entryTimestamp: Mongo_loan.interestRate.entryTimestamp,
-          revisions: Mongo_loan.interestRate.revisions,
+          type: MONGO_LOAN.interestRate.type,
+          duration: MONGO_LOAN.interestRate.duration,
+          expectedPayments: MONGO_LOAN.interestRate.expectedPayments,
+          amount: MONGO_LOAN.interestRate.amount,
+          isCompounding: MONGO_LOAN.interestRate.isCompounding,
+          entryTimestamp: MONGO_LOAN.interestRate.entryTimestamp,
+          revisions: MONGO_LOAN.interestRate.revisions,
         },
-        initialPrincipal: Mongo_loan.initialPrincipal,
-        status: Mongo_loan.status,
-        calculatedTotalPaidPrincipal: Mongo_loan.calculatedTotalPaidPrincipal,
-        calculatedChargedInterest: Mongo_loan.calculatedChargedInterest,
-        calculatedPaidInterest: Mongo_loan.calculatedPaidInterest,
+        initialPrincipal: MONGO_LOAN.initialPrincipal,
+        status: MONGO_LOAN.status,
+        calculatedTotalPaidPrincipal: MONGO_LOAN.calculatedTotalPaidPrincipal,
+        calculatedChargedInterest: MONGO_LOAN.calculatedChargedInterest,
+        calculatedPaidInterest: MONGO_LOAN.calculatedPaidInterest,
       });
     });*/
   },
@@ -284,30 +291,17 @@ export default {
       runRecalculate?: boolean;
     } = {},
   ): Promise<ITransaction> {
-    // Check if user with revieved id exists
-    const user = await UserModel.findOne({ _id: userId });
-    console.log(await UserModel.existsOneWithId(new mongoose.Types.ObjectId().toString()));
-    if (user === null) throw new Error('User does not exist!');
-
-    // Check if loan with revieved id exists
-    const Mongo_loan: any = await LoanModel.findOne({ _id: loanId });
-    if (Mongo_loan === null) throw new Error('loan does not exist!');
-
-    // Check if budget with revieved id exists
-    const Mongo_budget: any = await BudgetModel.findOne({ _id: budgetId });
-    if (Mongo_budget === null) throw new Error('budget does not exist!');
-
     // Validate and sanitize inputs
     transactionHelpers.validate.description(description);
     description = transactionHelpers.sanitize.description(description);
     transactionHelpers.validate.amount(amount);
     transactionHelpers.validate.transactionTimestamp(transactionTimestamp);
 
-    // TO FIX / HANDLE SOMEWHERE ELSE
-    if (transactionTimestamp < Mongo_loan.openedTimestamp)
+    // TODO FIX / HANDLE SOMEWHERE ELSE
+    /*if (transactionTimestamp < MONGO_LOAN.openedTimestamp)
       throw new Error('Transaction should not happen before loan start');
     if (transactionTimestamp > new Date().getTime()) throw new Error('Transaction should not happen in the future');
-
+*/
     const NEW_TRANSACTION = await transaction.add(
       {
         userId,
@@ -331,10 +325,10 @@ export default {
     );
 
     if (runRecalculate) {
-      await Budget.recalculateCalculatedValues({ Mongo_budget: Mongo_budget });
+      await Budget.recalculateCalculatedValues(budgetId);
       LoanCache.setCachedItem({
         itemId: loanId,
-        value: await this.recalculateCalculatedValues({ Mongo_loan: Mongo_loan }),
+        value: await this.recalculateCalculatedValues(loanId),
       });
     }
     return NEW_TRANSACTION;
@@ -364,16 +358,6 @@ export default {
       runRecalculate?: boolean;
     } = {},
   ): Promise<ITransaction> {
-    // Get user
-    const user = await UserModel.findOne({ _id: userId });
-    if (user === null) throw new Error('User does not exist!');
-    // Get loan
-    const Mongo_loan: any = await LoanModel.findOne({ _id: loanId });
-    if (Mongo_loan === null) throw new Error('loan does not exist!');
-
-    const Mongo_budget: any = await BudgetModel.findOne({ _id: budgetId });
-    if (Mongo_budget === null) throw new Error('budget does not exist!');
-
     transactionHelpers.validate.description(description);
     description = transactionHelpers.sanitize.description(description);
     transactionHelpers.validate.amount(amount);
@@ -401,10 +385,10 @@ export default {
     );
 
     if (runRecalculate) {
-      await Budget.recalculateCalculatedValues({ Mongo_budget: Mongo_budget });
+      await Budget.recalculateCalculatedValues(budgetId);
       LoanCache.setCachedItem({
         itemId: loanId,
-        value: await this.recalculateCalculatedValues({ Mongo_loan: Mongo_loan }),
+        value: await this.recalculateCalculatedValues(loanId),
       });
     }
     return NEW_TRANSACTION;
@@ -432,13 +416,6 @@ export default {
       runRecalculate?: boolean;
     } = {},
   ): Promise<ITransaction> {
-    // Get user
-    const user = await UserModel.findOne({ _id: userId });
-    if (user === null) throw new Error('User does not exist!');
-    // Get loan
-    const Mongo_loan: any = await LoanModel.findOne({ _id: loanId });
-    if (Mongo_loan === null) throw new Error('loan does not exist!');
-
     transactionHelpers.validate.transactionTimestamp(transactionTimestamp);
     transactionHelpers.validate.description(description);
     description = transactionHelpers.sanitize.description(description);
@@ -469,7 +446,7 @@ export default {
     if (runRecalculate) {
       LoanCache.setCachedItem({
         itemId: loanId,
-        value: await this.recalculateCalculatedValues({ Mongo_loan: Mongo_loan }),
+        value: await this.recalculateCalculatedValues(loanId),
       });
     }
     return NEW_TRANSACTION;
@@ -481,13 +458,18 @@ export default {
     loanId: string,
     newStatus: Pick<ILoan, 'status'>,
   ): Promise<ILoan> {
-    // Get user
-    const user = await UserModel.findOne({ _id: userId });
-    if (user === null) throw new Error('User does not exist!');
+    // Validate function inputs
+    loanHelpers.validate.status(newStatus);
+
+    // Check if user exists
+    User.checkIfExists(userId);
+
+    // Check if loan exists
+    this.checkIfExists(loanId);
+
     // Get loan
     const loan: any = await LoanModel.findOne({ _id: loanId });
-    if (loan === null) throw new Error('loan does not exist!');
-    loanHelpers.validate.status(newStatus);
+
     loan.status = newStatus;
     const changedloan: ILoan = loanHelpers.runtimeCast({
       _id: loan._id.toString(),
@@ -554,44 +536,45 @@ export default {
       calculatedTotalPaidPrincipal,
     };
   },
-  recalculateCalculatedValues: async function recalculateLoanCalculatedValues({
-    Mongo_loan,
-  }: {
-    Mongo_loan: any;
-  }): Promise<ILoan> {
+  recalculateCalculatedValues: async function recalculateLoanCalculatedValues(
+    input: string | ILoanDocument,
+  ): Promise<ILoan> {
+    const MONGO_LOAN = typeof input === 'string' ? await LoanModel.findOne({ _id: input }) : input;
+
     const NOW_TIMESTAMP = new Date().getTime();
+
     const CALCULATED_VALUES_UNTIL_NOW = await this.getCalculatedValuesAtTimestamp({
-      loanId: Mongo_loan._id.toString(),
-      interestRate: Mongo_loan.interestRate,
+      loanId: MONGO_LOAN._id.toString(),
+      interestRate: MONGO_LOAN.interestRate,
       timestampLimit: NOW_TIMESTAMP,
     });
-    Mongo_loan.calculatedTotalPaidPrincipal = CALCULATED_VALUES_UNTIL_NOW.calculatedTotalPaidPrincipal;
-    Mongo_loan.calculatedChargedInterest = CALCULATED_VALUES_UNTIL_NOW.calculatedChargedInterest;
-    Mongo_loan.calculatedPaidInterest = CALCULATED_VALUES_UNTIL_NOW.calculatedPaidInterest;
+    MONGO_LOAN.calculatedTotalPaidPrincipal = CALCULATED_VALUES_UNTIL_NOW.calculatedTotalPaidPrincipal;
+    MONGO_LOAN.calculatedChargedInterest = CALCULATED_VALUES_UNTIL_NOW.calculatedChargedInterest;
+    MONGO_LOAN.calculatedPaidInterest = CALCULATED_VALUES_UNTIL_NOW.calculatedPaidInterest;
     const CHANGED_LOAN = loanHelpers.runtimeCast({
-      _id: Mongo_loan._id.toString(),
-      userId: Mongo_loan.userId.toString(),
-      name: Mongo_loan.name,
-      description: Mongo_loan.description,
-      notes: Mongo_loan.notes,
-      openedTimestamp: Mongo_loan.openedTimestamp,
-      closesTimestamp: Mongo_loan.closesTimestamp,
+      _id: MONGO_LOAN._id.toString(),
+      userId: MONGO_LOAN.userId.toString(),
+      name: MONGO_LOAN.name,
+      description: MONGO_LOAN.description,
+      notes: MONGO_LOAN.notes,
+      openedTimestamp: MONGO_LOAN.openedTimestamp,
+      closesTimestamp: MONGO_LOAN.closesTimestamp,
       interestRate: {
-        type: Mongo_loan.interestRate.type,
-        duration: Mongo_loan.interestRate.duration,
-        expectedPayments: Mongo_loan.interestRate.expectedPayments,
-        amount: Mongo_loan.interestRate.amount,
-        isCompounding: Mongo_loan.interestRate.isCompounding,
-        entryTimestamp: Mongo_loan.interestRate.entryTimestamp,
-        revisions: Mongo_loan.interestRate.revisions,
+        type: MONGO_LOAN.interestRate.type,
+        duration: MONGO_LOAN.interestRate.duration,
+        expectedPayments: MONGO_LOAN.interestRate.expectedPayments,
+        amount: MONGO_LOAN.interestRate.amount,
+        isCompounding: MONGO_LOAN.interestRate.isCompounding,
+        entryTimestamp: MONGO_LOAN.interestRate.entryTimestamp,
+        revisions: MONGO_LOAN.interestRate.revisions,
       },
-      initialPrincipal: Mongo_loan.initialPrincipal,
-      status: Mongo_loan.status,
-      calculatedTotalPaidPrincipal: Mongo_loan.calculatedTotalPaidPrincipal,
-      calculatedChargedInterest: Mongo_loan.calculatedChargedInterest,
-      calculatedPaidInterest: Mongo_loan.calculatedPaidInterest,
-    } as ILoan);
-    await Mongo_loan.save();
+      initialPrincipal: MONGO_LOAN.initialPrincipal,
+      status: MONGO_LOAN.status,
+      calculatedTotalPaidPrincipal: MONGO_LOAN.calculatedTotalPaidPrincipal,
+      calculatedChargedInterest: MONGO_LOAN.calculatedChargedInterest,
+      calculatedPaidInterest: MONGO_LOAN.calculatedPaidInterest,
+    });
+    await MONGO_LOAN.save();
     return CHANGED_LOAN;
   },
   generateTransactionsList: function generateLoanTransactionsList({
