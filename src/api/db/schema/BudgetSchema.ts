@@ -1,5 +1,4 @@
 import mongoose from 'mongoose';
-import { IBudget } from '../../types/budget/budgetInterface.js';
 import existsOneWithId from '../plugins/existsOneWithId.js';
 
 import { LoanInterestRateSchema } from './LoanInterestRateSchema.js';
