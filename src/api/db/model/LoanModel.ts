@@ -1,5 +1,12 @@
 import mongoose from 'mongoose';
+import { ILoan } from '../../types/loan/loanInterface.js';
 
 import { LoanSchema } from '../schema/LoanSchema.js';
 
-export default mongoose.model('Loans', LoanSchema);
+export interface ILoanDocument extends mongoose.Document, Omit<ILoan, '_id'> {}
+
+interface LoanModel extends mongoose.Model<ILoan> {
+  existsOneWithId: (id: string) => Promise<boolean>;
+}
+
+export default mongoose.model<ILoan, LoanModel>('Loans', LoanSchema);
