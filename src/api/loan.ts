@@ -15,7 +15,11 @@ import { ILoan } from './types/loan/loanInterface.js';
 import { ITransaction } from './types/transaction/transactionInterface.js';
 import Budget from './budget.js';
 import { transactionHelpers } from './types/transaction/transactionHelpers.js';
-import { ITransactionInterval, IInterestRate } from './types/interestRate/interestRateInterface.js';
+import {
+  ITransactionInterval,
+  IInterestRate,
+  IAmortizationInterval,
+} from './types/interestRate/interestRateInterface.js';
 import LoanModel, { ILoanDocument } from './db/model/LoanModel.js';
 import LoanCache from './cache/loanCache.js';
 
