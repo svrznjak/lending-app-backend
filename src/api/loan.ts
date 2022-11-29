@@ -49,7 +49,6 @@ export default {
     User.checkIfExists(userId);
 
     // check if budgets exist
-
     for (let i = 0; i < funds.length; i++) {
       Budget.checkIfExists(funds[i].budgetId);
 
@@ -107,7 +106,6 @@ export default {
       for (const fund of funds) {
         await Budget.recalculateCalculatedValues(fund.budgetId);
       }
-      console.log(newLoan);
     } catch (err) {
       console.log(err);
       await session.abortTransaction();
@@ -157,27 +155,10 @@ export default {
     loan.set(newInfo);
 
     const changedloan: ILoan = loanHelpers.runtimeCast({
+      ...loan,
       _id: loan._id.toString(),
       userId: loan.userId.toString(),
-      name: loan.name,
-      description: loan.description,
-      notes: loan.notes,
-      openedTimestamp: loan.openedTimestamp,
-      closesTimestamp: loan.closesTimestamp,
-      interestRate: {
-        type: loan.interestRate.type,
-        duration: loan.interestRate.duration,
-        expectedPayments: loan.interestRate.expectedPayments,
-        amount: loan.interestRate.amount,
-        isCompounding: loan.interestRate.isCompounding,
-        entryTimestamp: loan.interestRate.entryTimestamp,
-        revisions: loan.interestRate.revisions,
-      },
-      initialPrincipal: loan.inititalPrincipal,
-      calculatedTotalPaidPrincipal: loan.calculatedTotalPaidPrincipal,
-      calculatedChargedInterest: loan.calculatedChargedInterest,
-      calculatedPaidInterest: loan.calculatedPaidInterest,
-    } as ILoan);
+    });
     await loan.save();
     return changedloan;
   },
@@ -221,32 +202,6 @@ export default {
       }
     }
     return returnValue;
-    /* return await MONGO_LOAN.map(async MONGO_LOAN.(
-      return await this.recalculateCalculatedValues({ loanId: MONGO_LOAN._id.toString() });
-      return loanHelpers.runtimeCast({
-        _id: MONGO_LOAN._id.toString(),
-        userId: MONGO_LOAN.userId.toString(),
-        name: MONGO_LOAN.name,
-        description: MONGO_LOAN.description,
-        notes: MONGO_LOAN.notes,
-        openedTimestamp: MONGO_LOAN.openedTimestamp,
-        closesTimestamp: MONGO_LOAN.closesTimestamp,
-        interestRate: {
-          type: MONGO_LOAN.interestRate.type,
-          duration: MONGO_LOAN.interestRate.duration,
-          expectedPayments: MONGO_LOAN.interestRate.expectedPayments,
-          amount: MONGO_LOAN.interestRate.amount,
-          isCompounding: MONGO_LOAN.interestRate.isCompounding,
-          entryTimestamp: MONGO_LOAN.interestRate.entryTimestamp,
-          revisions: MONGO_LOAN.interestRate.revisions,
-        },
-        initialPrincipal: MONGO_LOAN.initialPrincipal,
-        status: MONGO_LOAN.status,
-        calculatedTotalPaidPrincipal: MONGO_LOAN.calculatedTotalPaidPrincipal,
-        calculatedChargedInterest: MONGO_LOAN.calculatedChargedInterest,
-        calculatedPaidInterest: MONGO_LOAN.calculatedPaidInterest,
-      });
-    });*/
   },
 
   changeInterestRate: async function changeLoanInterestRate() {
@@ -472,28 +427,10 @@ export default {
 
     loan.status = newStatus;
     const changedloan: ILoan = loanHelpers.runtimeCast({
+      ...loan,
       _id: loan._id.toString(),
       userId: loan.userId.toString(),
-      name: loan.name,
-      description: loan.description,
-      notes: loan.notes,
-      openedTimestamp: loan.openedTimestamp,
-      closesTimestamp: loan.closesTimestamp,
-      interestRate: {
-        type: loan.interestRate.type,
-        duration: loan.interestRate.duration,
-        expectedPayments: loan.interestRate.expectedPayments,
-        amount: loan.interestRate.amount,
-        isCompounding: loan.interestRate.isCompounding,
-        entryTimestamp: loan.interestRate.entryTimestamp,
-        revisions: loan.interestRate.revisions,
-      },
-      initialPrincipal: loan.initialPrincipal,
-      status: loan.status,
-      calculatedTotalPaidPrincipal: loan.calculatedTotalPaidPrincipal,
-      calculatedChargedInterest: loan.calculatedChargedInterest,
-      calculatedPaidInterest: loan.calculatedPaidInterest,
-    } as ILoan);
+    });
     await loan.save();
     return changedloan;
   },
@@ -552,27 +489,9 @@ export default {
     MONGO_LOAN.calculatedChargedInterest = CALCULATED_VALUES_UNTIL_NOW.calculatedChargedInterest;
     MONGO_LOAN.calculatedPaidInterest = CALCULATED_VALUES_UNTIL_NOW.calculatedPaidInterest;
     const CHANGED_LOAN = loanHelpers.runtimeCast({
+      ...MONGO_LOAN,
       _id: MONGO_LOAN._id.toString(),
       userId: MONGO_LOAN.userId.toString(),
-      name: MONGO_LOAN.name,
-      description: MONGO_LOAN.description,
-      notes: MONGO_LOAN.notes,
-      openedTimestamp: MONGO_LOAN.openedTimestamp,
-      closesTimestamp: MONGO_LOAN.closesTimestamp,
-      interestRate: {
-        type: MONGO_LOAN.interestRate.type,
-        duration: MONGO_LOAN.interestRate.duration,
-        expectedPayments: MONGO_LOAN.interestRate.expectedPayments,
-        amount: MONGO_LOAN.interestRate.amount,
-        isCompounding: MONGO_LOAN.interestRate.isCompounding,
-        entryTimestamp: MONGO_LOAN.interestRate.entryTimestamp,
-        revisions: MONGO_LOAN.interestRate.revisions,
-      },
-      initialPrincipal: MONGO_LOAN.initialPrincipal,
-      status: MONGO_LOAN.status,
-      calculatedTotalPaidPrincipal: MONGO_LOAN.calculatedTotalPaidPrincipal,
-      calculatedChargedInterest: MONGO_LOAN.calculatedChargedInterest,
-      calculatedPaidInterest: MONGO_LOAN.calculatedPaidInterest,
     });
     await MONGO_LOAN.save();
     return CHANGED_LOAN;
