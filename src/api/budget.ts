@@ -35,7 +35,7 @@ export default {
       isArchived: false,
     });
 
-    const session = await global.mongooseConnection.startSession();
+    const session: ClientSession = await mongoose.connection.startSession();
     try {
       session.startTransaction();
 

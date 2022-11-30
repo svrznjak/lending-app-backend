@@ -60,21 +60,22 @@ export default {
         */
     }
 
-    const loan: ILoan = loanHelpers.runtimeCast({
-      _id: new mongoose.Types.ObjectId().toString(),
-      userId: userId,
-      ...input,
-      notes: [],
-      status: 'ACTIVE',
-      calculatedChargedInterest: 0,
-      calculatedPaidInterest: 0,
-      calculatedTotalPaidPrincipal: 0,
-    });
-
-    const session = await global.mongoose.startSession();
+    const session: ClientSession = await mongoose.connection.startSession();
     try {
       session.startTransaction();
-      const newLoan = await new LoanModel(loan).save({ session });
+
+      const Mongo_Loan: ILoanDocument = await new LoanModel(
+        loanHelpers.runtimeCast({
+          _id: new mongoose.Types.ObjectId().toString(),
+          userId: userId,
+          ...input,
+          notes: [],
+          status: 'ACTIVE',
+          calculatedChargedInterest: 0,
+          calculatedPaidInterest: 0,
+          calculatedTotalPaidPrincipal: 0,
+        }),
+      ).save({ session });
 
       // Prepare initial transactions from budgets to loan in creation
       for (let i = 0; i < funds.length; i++) {
@@ -89,30 +90,34 @@ export default {
             },
             to: {
               datatype: 'LOAN',
-              addressId: loan._id.toString(),
+              addressId: Mongo_Loan._id.toString(),
             },
             amount: funds[i].amount,
             entryTimestamp: transactionHelpers.validate.entryTimestamp(new Date().getTime()),
-          } as Pick<
-            ITransaction,
-            'userId' | 'transactionTimestamp' | 'description' | 'from' | 'to' | 'amount' | 'entryTimestamp'
-          >,
+          },
           { session: session },
         );
       }
+
       await session.commitTransaction();
 
       // recalculate affected budgets
       for (const fund of funds) {
         await Budget.recalculateCalculatedValues(fund.budgetId);
       }
+
+      return loanHelpers.runtimeCast({
+        ...Mongo_Loan,
+        _id: Mongo_Loan._id.toString(),
+        userId: Mongo_Loan.userId.toString(),
+      });
     } catch (err) {
       console.log(err);
       await session.abortTransaction();
+      throw new Error(err);
     } finally {
       session.endSession();
     }
-    return loan;
   },
   // As a lender, I want to update descriptive data about the loan, so that it stays current.
   // As a lender, I want to update the loan interest rate, so that it reflects current market conditions and future interests will be calculated based on the new interest rate.

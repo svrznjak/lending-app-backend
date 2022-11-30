@@ -12,7 +12,7 @@ console.log('Firebase project id: ' + firebaseApp);
 
 try {
   console.log(process.env.MONGO_CLOUD_URI);
-  global.mongooseConnection = await mongoose.connect(process.env.MONGO_CLOUD_URI);
+  await mongoose.connect(process.env.MONGO_CLOUD_URI);
 } catch (err) {
   throw new Error('Failed to connect to MongoDB');
 }
@@ -37,7 +37,7 @@ process.stdin.resume(); //so the program will not close instantly
 
 function exitHandler(options, exitCode) {
   console.log('connection close');
-  mongoose.disconnect();
+  mongoose.connection.close();
   // mongoose.connection.close();
   if (options.cleanup) console.log('clean');
   if (exitCode || exitCode === 0) console.log(exitCode);
