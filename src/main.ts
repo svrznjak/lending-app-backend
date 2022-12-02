@@ -35,7 +35,7 @@ app.listen(9000);
 
 process.stdin.resume(); //so the program will not close instantly
 
-function exitHandler(options, exitCode) {
+function exitHandler(options, exitCode): void {
   console.log('connection close');
   mongoose.connection.close();
   // mongoose.connection.close();
