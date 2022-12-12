@@ -143,9 +143,9 @@ export default {
     this.checkIfExists(loanId);
 
     // Get loan
-    const loan: any = await LoanModel.findOne({ _id: loanId });
+    const loan: ILoanDocument = await LoanModel.findOne({ _id: loanId });
 
-    const newInfo: any = {};
+    const newInfo: Partial<Pick<ILoan, 'name' | 'description' | 'closesTimestamp'>> = {};
     if (name !== undefined) {
       newInfo.name = loanHelpers.validate.name(name);
       newInfo.name = loanHelpers.sanitize.name(newInfo.name);
@@ -209,7 +209,7 @@ export default {
     return returnValue;
   },
 
-  changeInterestRate: async function changeLoanInterestRate() {
+  changeInterestRate: async function changeLoanInterestRate(): Promise<void> {
     //TODO
     throw new Error('changeInterestRate not implemented!');
   },
@@ -416,7 +416,7 @@ export default {
   changeStatus: async function changeLoanStatus(
     userId: string,
     loanId: string,
-    newStatus: Pick<ILoan, 'status'>,
+    newStatus: ILoan['status'],
   ): Promise<ILoan> {
     // Validate function inputs
     loanHelpers.validate.status(newStatus);
@@ -428,8 +428,9 @@ export default {
     this.checkIfExists(loanId);
 
     // Get loan
-    const loan: any = await LoanModel.findOne({ _id: loanId });
+    const loan: ILoanDocument = await LoanModel.findOne({ _id: loanId });
 
+    // TODO : dirty fix is used to cast into loan.status
     loan.status = newStatus;
     const changedloan: ILoan = loanHelpers.runtimeCast({
       ...loan,

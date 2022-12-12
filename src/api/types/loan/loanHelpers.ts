@@ -80,7 +80,7 @@ export const loanHelpers = {
       if (!isValidAmountOfMoney({ amount: amount })) throw new Error('(validation) amount is invalid!');
       return amount;
     },
-    status: function validateStatus(status: Pick<ILoan, 'status'>): Pick<ILoan, 'status'> {
+    status: function validateStatus(status: ILoan['status']): ILoan['status'] {
       if (
         !isValidOption({
           option: status.toString(),
