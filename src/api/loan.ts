@@ -107,7 +107,7 @@ export default {
       }
 
       return loanHelpers.runtimeCast({
-        ...Mongo_Loan,
+        ...Mongo_Loan.toObject(),
         _id: Mongo_Loan._id.toString(),
         userId: Mongo_Loan.userId.toString(),
       });
@@ -160,7 +160,7 @@ export default {
     loan.set(newInfo);
 
     const changedloan: ILoan = loanHelpers.runtimeCast({
-      ...loan,
+      ...loan.toObject(),
       _id: loan._id.toString(),
       userId: loan.userId.toString(),
     });
@@ -433,7 +433,7 @@ export default {
     // TODO : dirty fix is used to cast into loan.status
     loan.status = newStatus;
     const changedloan: ILoan = loanHelpers.runtimeCast({
-      ...loan,
+      ...loan.toObject(),
       _id: loan._id.toString(),
       userId: loan.userId.toString(),
     });
@@ -494,8 +494,9 @@ export default {
     MONGO_LOAN.calculatedTotalPaidPrincipal = CALCULATED_VALUES_UNTIL_NOW.calculatedTotalPaidPrincipal;
     MONGO_LOAN.calculatedChargedInterest = CALCULATED_VALUES_UNTIL_NOW.calculatedChargedInterest;
     MONGO_LOAN.calculatedPaidInterest = CALCULATED_VALUES_UNTIL_NOW.calculatedPaidInterest;
+
     const CHANGED_LOAN = loanHelpers.runtimeCast({
-      ...MONGO_LOAN,
+      ...MONGO_LOAN.toObject(),
       _id: MONGO_LOAN._id.toString(),
       userId: MONGO_LOAN.userId.toString(),
     });
