@@ -1,17 +1,27 @@
-import Loan from './loan.js';
+import Loan, { calculateLoanPaymentAmount, calculateEquivalentInterestRate } from './loan.js';
 
 describe('calculateExpectedInterest', () => {
   test('manualtest', async () => {
     const result = await Loan.calculateExpetedAmortization({
-      openedTimestamp: 1664455532000,
-      closesTimestamp: 1669726344000,
+      openedTimestamp: 1640995200000,
+      closesTimestamp: 1672444800000,
       interestRate: {
-        type: 'FIXED_PER_DURATION',
-        duration: 'FULL_DURATION',
-        amount: 100,
-        expectedPayments: 'WEEKLY',
-        isCompounding: false,
+        type: 'PERCENTAGE_PER_DURATION',
+        duration: 'YEAR',
+        amount: 5,
+        expectedPayments: 'MONTHLY',
+        isCompounding: true,
       },
+      amount: 100000,
+    });
+    const interest = result.reduce((total, amortizationInterval) => {
+      return total + amortizationInterval.interest;
+    }, 0);
+    console.log(interest);
+    expect(interest).toBe(932.56);
+  });
+});
+
 describe('calculateLoanPaymentAmount', () => {
   test('It throws is any of inputs are negative', async () => {
     expect(() => calculateLoanPaymentAmount(-1000, 0.002, 10)).toThrow();
@@ -37,7 +47,7 @@ describe('calculateEquivalentInterestRate', () => {
     expect(() => calculateEquivalentInterestRate(-0.05, 12, 12)).toThrow();
     expect(() => calculateEquivalentInterestRate(0.05, -12, 12)).toThrow();
     expect(() => calculateEquivalentInterestRate(0.05, 12, -12)).toThrow();
-    });
+  });
   test('It returns correct value on couple of inputs', async () => {
     // Interest rate per period: 4%, # of compoundings per period: 12, # of payments per period: 4
     expect(parseFloat(calculateEquivalentInterestRate(0.04, 12, 4).toFixed(7))).toEqual(0.0401335);
