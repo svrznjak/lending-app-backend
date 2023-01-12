@@ -504,9 +504,20 @@ export default {
     MONGO_LOAN.calculatedChargedInterest = CALCULATED_VALUES_UNTIL_NOW.calculatedChargedInterest;
     MONGO_LOAN.calculatedPaidInterest = CALCULATED_VALUES_UNTIL_NOW.calculatedPaidInterest;
 
-    //if(CALCULATED_VALUES_UNTIL_NOW.calculatedTotalAvailableAmount >= CALCULATED_VALUES_UNTIL_NOW.calculatedInvestedAmount){
-    //
-    //}
+    // Update loan status if loan is paid / is changed and is no longer paid
+    if (
+      MONGO_LOAN.calculatedTotalPaidPrincipal >= MONGO_LOAN.calculatedInvestedAmount &&
+      MONGO_LOAN.status === 'ACTIVE'
+    ) {
+      MONGO_LOAN.status = 'PAID';
+    }
+    if (
+      MONGO_LOAN.calculatedTotalPaidPrincipal <= MONGO_LOAN.calculatedInvestedAmount &&
+      MONGO_LOAN.status === 'PAID'
+    ) {
+      MONGO_LOAN.status = 'ACTIVE';
+    }
+
     const CHANGED_LOAN = loanHelpers.runtimeCast({
       ...MONGO_LOAN.toObject(),
       _id: MONGO_LOAN._id.toString(),
@@ -641,7 +652,7 @@ export default {
         outstandingInterest = outstandingInterest + interestCharge;
         if (loanTransaction.amount <= outstandingInterest) {
           interestCharge = -loanTransaction.amount;
-          outstandingInterest = outstandingInterest + loanTransaction.amount;
+          outstandingInterest = outstandingInterest + interestCharge;
           principalCharge = 0;
         } else {
           interestCharge = -outstandingInterest;
