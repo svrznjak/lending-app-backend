@@ -22,7 +22,6 @@ export const loansType = new GraphQLObjectType({
     openedTimestamp: { type: new GraphQLNonNull(GraphQLFloat) },
     closesTimestamp: { type: new GraphQLNonNull(GraphQLFloat) },
     interestRate: { type: new GraphQLNonNull(interestRateType) },
-    initialPrincipal: { type: new GraphQLNonNull(GraphQLFloat) },
     status: {
       type: new GraphQLNonNull(
         new GraphQLEnumType({
@@ -37,6 +36,7 @@ export const loansType = new GraphQLObjectType({
         }),
       ),
     },
+    calculatedInvestedAmount: { type: new GraphQLNonNull(GraphQLFloat) },
     calculatedTotalPaidPrincipal: { type: new GraphQLNonNull(GraphQLFloat) },
     calculatedChargedInterest: { type: new GraphQLNonNull(GraphQLFloat) },
     calculatedPaidInterest: { type: new GraphQLNonNull(GraphQLFloat) },

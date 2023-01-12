@@ -32,10 +32,7 @@ export default {
   // As a lender, I want to create new loans, so that I can later track specific loan transactions and info.
   create: async function createLoan(
     userId: string,
-    input: Pick<
-      ILoan,
-      'name' | 'description' | 'openedTimestamp' | 'closesTimestamp' | 'initialPrincipal' | 'interestRate'
-    >,
+    input: Pick<ILoan, 'name' | 'description' | 'openedTimestamp' | 'closesTimestamp' | 'interestRate'>,
     funds: fund[],
     initialTransactionDescription: string,
   ): Promise<ILoan> {
@@ -71,6 +68,7 @@ export default {
           ...input,
           notes: [],
           status: 'ACTIVE',
+          calculatedInvestedAmount: 0,
           calculatedChargedInterest: 0,
           calculatedPaidInterest: 0,
           calculatedTotalPaidPrincipal: 0,
@@ -82,7 +80,7 @@ export default {
         await transaction.add(
           {
             userId,
-            transactionTimestamp: transactionHelpers.validate.transactionTimestamp(new Date().getTime()),
+            transactionTimestamp: transactionHelpers.validate.transactionTimestamp(Mongo_Loan.openedTimestamp),
             description: initialTransactionDescription,
             from: {
               datatype: 'BUDGET',
@@ -106,11 +104,10 @@ export default {
         await Budget.recalculateCalculatedValues(fund.budgetId);
       }
 
-      return loanHelpers.runtimeCast({
-        ...Mongo_Loan.toObject(),
-        _id: Mongo_Loan._id.toString(),
-        userId: Mongo_Loan.userId.toString(),
-      });
+      const recalculatedLoan: ILoan = await this.recalculateCalculatedValues(Mongo_Loan);
+      LoanCache.setCachedItem({ itemId: recalculatedLoan._id, value: recalculatedLoan });
+
+      return recalculatedLoan;
     } catch (err) {
       console.log(err);
       await session.abortTransaction();
@@ -167,8 +164,8 @@ export default {
     await loan.save();
     return changedloan;
   },
-  checkIfExists: async function checkIfLoanExists(loanId: string): Promise<void> {
-    if (!(await LoanModel.existsOneWithId(loanId))) throw new Error('Loan with prodived _id does not exist!');
+  checkIfExists: async function checkIfLoanExists(loanId: string, session?: ClientSession): Promise<void> {
+    if (!(await LoanModel.existsOneWithId(loanId, session))) throw new Error('Loan with prodived _id does not exist!');
   },
   getOneFromUser: async function getLoan(
     {
@@ -449,7 +446,16 @@ export default {
     loanId: string;
     interestRate: IInterestRate;
     timestampLimit: number;
-  }): Promise<Pick<ILoan, 'calculatedTotalPaidPrincipal' | 'calculatedChargedInterest' | 'calculatedPaidInterest'>> {
+  }): Promise<
+    Pick<
+      ILoan,
+      | 'calculatedInvestedAmount'
+      | 'calculatedTotalPaidPrincipal'
+      | 'calculatedChargedInterest'
+      | 'calculatedPaidInterest'
+    >
+  > {
+    let calculatedInvestedAmount = 0;
     let calculatedTotalPaidPrincipal = 0;
     let calculatedChargedInterest = 0;
     let calculatedPaidInterest = 0;
@@ -468,12 +474,14 @@ export default {
       for (let i = 0; i < TRANSACTIONS_LIST.length; i++) {
         const TRANSACTION = TRANSACTIONS_LIST[i];
         // TODO PARANAID CALCULATOR
-        if (TRANSACTION.principalCharge > 0) calculatedTotalPaidPrincipal += TRANSACTION.principalCharge;
+        if (TRANSACTION.principalCharge < 0) calculatedInvestedAmount -= TRANSACTION.principalCharge;
+        else if (TRANSACTION.principalCharge > 0) calculatedTotalPaidPrincipal += TRANSACTION.principalCharge;
         if (TRANSACTION.interestCharge > 0) calculatedChargedInterest += TRANSACTION.interestCharge;
-        if (TRANSACTION.interestCharge < 0) calculatedPaidInterest -= TRANSACTION.interestCharge;
+        else if (TRANSACTION.interestCharge < 0) calculatedPaidInterest -= TRANSACTION.interestCharge;
       }
     }
     return {
+      calculatedInvestedAmount,
       calculatedChargedInterest,
       calculatedPaidInterest,
       calculatedTotalPaidPrincipal,
@@ -491,10 +499,14 @@ export default {
       interestRate: MONGO_LOAN.interestRate,
       timestampLimit: NOW_TIMESTAMP,
     });
+    MONGO_LOAN.calculatedInvestedAmount = CALCULATED_VALUES_UNTIL_NOW.calculatedInvestedAmount;
     MONGO_LOAN.calculatedTotalPaidPrincipal = CALCULATED_VALUES_UNTIL_NOW.calculatedTotalPaidPrincipal;
     MONGO_LOAN.calculatedChargedInterest = CALCULATED_VALUES_UNTIL_NOW.calculatedChargedInterest;
     MONGO_LOAN.calculatedPaidInterest = CALCULATED_VALUES_UNTIL_NOW.calculatedPaidInterest;
 
+    //if(CALCULATED_VALUES_UNTIL_NOW.calculatedTotalAvailableAmount >= CALCULATED_VALUES_UNTIL_NOW.calculatedInvestedAmount){
+    //
+    //}
     const CHANGED_LOAN = loanHelpers.runtimeCast({
       ...MONGO_LOAN.toObject(),
       _id: MONGO_LOAN._id.toString(),

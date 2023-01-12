@@ -31,15 +31,12 @@ export default new GraphQLObjectType({
         try {
           const newLoanInfo: Pick<
             ILoan,
-            'name' | 'description' | 'openedTimestamp' | 'closesTimestamp' | 'initialPrincipal' | 'interestRate'
+            'name' | 'description' | 'openedTimestamp' | 'closesTimestamp' | 'interestRate'
           > = {
             name: args.name,
             description: args.description,
             openedTimestamp: args.openedTimestamp,
             closesTimestamp: args.closesTimestamp,
-            initialPrincipal: args.funds.reduce((total, fund) => {
-              return total + fund.amount;
-            }, 0),
             interestRate: args.interestRate,
           };
           newLoanInfo.interestRate.entryTimestamp = new Date().getTime();

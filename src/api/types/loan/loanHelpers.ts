@@ -8,19 +8,12 @@ import _ from 'lodash';
 export const loanHelpers = {
   validate: {
     all: function validateAll(
-      loan: Pick<
-        ILoan,
-        'name' | 'description' | 'openedTimestamp' | 'closesTimestamp' | 'initialPrincipal' | 'interestRate'
-      >,
-    ): Pick<
-      ILoan,
-      'name' | 'description' | 'openedTimestamp' | 'closesTimestamp' | 'initialPrincipal' | 'interestRate'
-    > {
+      loan: Pick<ILoan, 'name' | 'description' | 'openedTimestamp' | 'closesTimestamp' | 'interestRate'>,
+    ): Pick<ILoan, 'name' | 'description' | 'openedTimestamp' | 'closesTimestamp' | 'interestRate'> {
       this.name(loan.name);
       this.description(loan.description);
       this.openedTimestamp(loan.openedTimestamp);
       this.closesTimestamp(loan.closesTimestamp);
-      this.amount(loan.initialPrincipal);
 
       interestRateHelpers.validate.all(loan.interestRate);
 
@@ -67,15 +60,6 @@ export const loanHelpers = {
         throw new Error('(validation) closesTimestamp is invalid!');
       return closesTimestamp;
     },
-    initialPrincipal: function validateInitialPrincipal(initialPrincipal: number): number {
-      if (
-        !isValidAmountOfMoney({
-          amount: initialPrincipal,
-        })
-      )
-        throw new Error('(validation) initialPrincipal is invalid!');
-      return initialPrincipal;
-    },
     amount: function validateAmount(amount: number): number {
       if (!isValidAmountOfMoney({ amount: amount })) throw new Error('(validation) amount is invalid!');
       return amount;
@@ -114,8 +98,9 @@ export const loanHelpers = {
     if (!Array.isArray(loan.notes)) throw new Error('Type of loan.notes must be an Array!');
     if (!Number.isFinite(loan.openedTimestamp)) throw new Error('Type of loan.openedTimestamp must be a number!');
     if (!Number.isFinite(loan.closesTimestamp)) throw new Error('Type of loan.closesTimestamp must be a number!');
-    if (!Number.isFinite(loan.initialPrincipal)) throw new Error('Type of loan.initialPrincipal must be a number!');
     if (!_.isString(loan.status)) throw new Error('Type of loan.status must be a string!');
+    if (!Number.isFinite(loan.calculatedInvestedAmount))
+      throw new Error('Type of loan.calculatedTotalPaidPrincipal must be a number!');
     if (!Number.isFinite(loan.calculatedTotalPaidPrincipal))
       throw new Error('Type of loan.calculatedTotalPaidPrincipal must be a number!');
     if (!Number.isFinite(loan.calculatedChargedInterest))
@@ -134,8 +119,8 @@ export const loanHelpers = {
       openedTimestamp: loan.openedTimestamp,
       closesTimestamp: loan.closesTimestamp,
       interestRate: loan.interestRate,
-      initialPrincipal: loan.initialPrincipal,
       status: loan.status,
+      calculatedInvestedAmount: loan.calculatedInvestedAmount,
       calculatedTotalPaidPrincipal: loan.calculatedTotalPaidPrincipal,
       calculatedChargedInterest: loan.calculatedChargedInterest,
       calculatedPaidInterest: loan.calculatedPaidInterest,

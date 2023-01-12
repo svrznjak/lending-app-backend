@@ -6,14 +6,13 @@ describe('loanHelpers', () => {
   describe('validate', () => {
     const correctValidationInputs: Pick<
       ILoan,
-      'name' | 'description' | 'openedTimestamp' | 'closesTimestamp' | 'initialPrincipal' | 'interestRate'
+      'name' | 'description' | 'openedTimestamp' | 'closesTimestamp' | 'interestRate'
     >[] = [
       {
         name: 'Loan 1',
         description: 'Car loan.',
         openedTimestamp: 1663012800,
         closesTimestamp: 1753012802,
-        initialPrincipal: 20000.0,
         interestRate: {
           type: 'PERCENTAGE_PER_DURATION',
           duration: 'MONTH',
@@ -29,7 +28,6 @@ describe('loanHelpers', () => {
         description: '',
         openedTimestamp: 1663012800,
         closesTimestamp: 1753012802,
-        initialPrincipal: 2001200,
         interestRate: {
           type: 'FIXED_PER_DURATION',
           duration: 'FULL_DURATION',
@@ -48,7 +46,7 @@ describe('loanHelpers', () => {
 
     const invalidValidationInputs: Pick<
       ILoan,
-      'name' | 'description' | 'openedTimestamp' | 'closesTimestamp' | 'initialPrincipal' | 'interestRate'
+      'name' | 'description' | 'openedTimestamp' | 'closesTimestamp' | 'interestRate'
     >[] = [
       {
         // To short name
@@ -56,7 +54,6 @@ describe('loanHelpers', () => {
         description: 'Car loan.',
         openedTimestamp: 1663012800,
         closesTimestamp: 1753012802,
-        initialPrincipal: 20000.0,
         interestRate: {
           type: 'PERCENTAGE_PER_DURATION',
           duration: 'MONTH',
@@ -73,7 +70,6 @@ describe('loanHelpers', () => {
         description: 'Car loan.',
         openedTimestamp: 1663012800,
         closesTimestamp: 1753012802,
-        initialPrincipal: 20000.0,
         interestRate: {
           type: 'PERCENTAGE_PER_DURATION',
           duration: 'MONTH',
@@ -90,7 +86,6 @@ describe('loanHelpers', () => {
         description: 'Car loan.',
         openedTimestamp: 1663012800,
         closesTimestamp: 1753012802,
-        initialPrincipal: 20000.0,
         interestRate: {
           type: 'PERCENTAGE_PER_DURATION',
           duration: 'MONTH',
@@ -108,7 +103,6 @@ describe('loanHelpers', () => {
           'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam luctus facilisis lorem eu aliquet. Suspendisse imperdiet laoreet condimentum.Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam luctus facilisis lorem eu aliquet. Suspendisse imperdiet laoreet condimentum.Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam luctus facilisis lorem eu aliquet. Suspendisse imperdiet laoreet condimentum.Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam luctus facilisis lorem eu aliquet. Suspendisse imperdiet laoreet condimentum.Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam luctus facilisis lorem eu aliquet. Suspendisse imperdiet laoreet condimentum.Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam luctus facilisis lorem eu aliquet. Suspendisse imperdiet laoreet condimentum.Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam luctus facilisis lorem eu aliquet. Suspendisse imperdiet laoreet condimentum.Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam luctus facilisis lorem eu aliquet. Suspendisse imperdiet laoreet condimentum.',
         openedTimestamp: 1663012800,
         closesTimestamp: 1753012802,
-        initialPrincipal: 20000.0,
         interestRate: {
           type: 'PERCENTAGE_PER_DURATION',
           duration: 'MONTH',
@@ -125,7 +119,6 @@ describe('loanHelpers', () => {
         description: undefined,
         openedTimestamp: 1663012800,
         closesTimestamp: 1753012802,
-        initialPrincipal: 20000.0,
         interestRate: {
           type: 'PERCENTAGE_PER_DURATION',
           duration: 'MONTH',
@@ -142,7 +135,6 @@ describe('loanHelpers', () => {
         description: 'Car loan.',
         openedTimestamp: -1,
         closesTimestamp: -1,
-        initialPrincipal: 20000.0,
         interestRate: {
           type: 'PERCENTAGE_PER_DURATION',
           duration: 'MONTH',
@@ -159,7 +151,6 @@ describe('loanHelpers', () => {
         description: 'Car loan.',
         openedTimestamp: NaN,
         closesTimestamp: NaN,
-        initialPrincipal: 20000.0,
         interestRate: {
           type: 'PERCENTAGE_PER_DURATION',
           duration: 'MONTH',
@@ -176,7 +167,6 @@ describe('loanHelpers', () => {
         description: 'Car loan.',
         openedTimestamp: undefined,
         closesTimestamp: undefined,
-        initialPrincipal: 20000.0,
         interestRate: {
           type: 'PERCENTAGE_PER_DURATION',
           duration: 'MONTH',
@@ -188,12 +178,10 @@ describe('loanHelpers', () => {
         },
       },
       {
-        // initialPrincipal is negative
         name: 'Loan 1',
         description: 'Car loan.',
         openedTimestamp: 1663012800,
         closesTimestamp: 1753012802,
-        initialPrincipal: -20000.0,
         interestRate: {
           type: 'PERCENTAGE_PER_DURATION',
           duration: 'MONTH',
@@ -210,7 +198,6 @@ describe('loanHelpers', () => {
         description: 'Car loan.',
         openedTimestamp: 1663012800,
         closesTimestamp: 1753012802,
-        initialPrincipal: NaN,
         interestRate: {
           type: 'PERCENTAGE_PER_DURATION',
           duration: 'MONTH',
@@ -227,7 +214,6 @@ describe('loanHelpers', () => {
         description: 'Car loan.',
         openedTimestamp: 1663012800,
         closesTimestamp: 1753012802,
-        initialPrincipal: undefined,
         interestRate: {
           type: 'PERCENTAGE_PER_DURATION',
           duration: 'MONTH',
@@ -244,7 +230,6 @@ describe('loanHelpers', () => {
         description: 'Car loan.',
         openedTimestamp: 1663012800,
         closesTimestamp: 1753012802,
-        initialPrincipal: 20000.0,
         interestRate: {
           type: 'PERCENTAGE_PER_DURATION',
           duration: 'MONTH',
@@ -261,7 +246,6 @@ describe('loanHelpers', () => {
         description: 'Car loan.',
         openedTimestamp: 1663012800,
         closesTimestamp: 1753012802,
-        initialPrincipal: 20000.0,
         interestRate: {
           type: 'PERCENTAGE_PER_DURATION',
           duration: 'MONTH',
@@ -278,7 +262,6 @@ describe('loanHelpers', () => {
         description: 'Car loan.',
         openedTimestamp: 1663012800,
         closesTimestamp: 1753012802,
-        initialPrincipal: 20000.0,
         interestRate: {
           type: 'PERCENTAGE_PER_DURATION',
           duration: 'MONTH',
@@ -295,7 +278,6 @@ describe('loanHelpers', () => {
         description: 'Car loan.',
         openedTimestamp: 1663012800,
         closesTimestamp: 1753012802,
-        initialPrincipal: 20000.0,
         interestRate: {
           type: 'PERCENTAGE_PER_DURATION',
           duration: 'MONTH',
@@ -312,7 +294,6 @@ describe('loanHelpers', () => {
         description: 'Car loan.',
         openedTimestamp: 1663012800,
         closesTimestamp: 1753012802,
-        initialPrincipal: 20000.0,
         interestRate: {
           type: 'PERCENTAGE_PER_DURATION',
           duration: 'MONTH',
@@ -329,7 +310,6 @@ describe('loanHelpers', () => {
         description: 'Car loan.',
         openedTimestamp: 1663012800,
         closesTimestamp: 1753012802,
-        initialPrincipal: 20000.0,
         interestRate: {
           type: 'PERCENTAGE_PER_DURATION',
           duration: 'MONTH',
@@ -360,7 +340,6 @@ describe('loanHelpers', () => {
           notes: [],
           openedTimestamp: 1663012800,
           closesTimestamp: 1753012802,
-          initialPrincipal: 20000.0,
           interestRate: {
             type: 'PERCENTAGE_PER_DURATION',
             duration: 'MONTH',
@@ -371,6 +350,7 @@ describe('loanHelpers', () => {
             expectedPayments: 'ONE_TIME',
           },
           status: 'ACTIVE',
+          calculatedInvestedAmount: 100,
           calculatedTotalPaidPrincipal: 100,
           calculatedChargedInterest: 50,
           calculatedPaidInterest: 50,
@@ -391,7 +371,6 @@ describe('loanHelpers', () => {
         notes: [],
         openedTimestamp: 1663012800,
         closesTimestamp: 1753012802,
-        initialPrincipal: 20000.0,
         interestRate: {
           type: 'PERCENTAGE_PER_DURATION',
           duration: 'MONTH',
@@ -410,7 +389,6 @@ describe('loanHelpers', () => {
         notes: [],
         openedTimestamp: 1663033800,
         closesTimestamp: 1753099802,
-        initialPrincipal: 100000,
         interestRate: {
           type: 'FIXED_PER_DURATION',
           duration: 'FULL_DURATION',
@@ -437,7 +415,6 @@ describe('loanHelpers', () => {
         notes: [],
         openedTimestamp: 1663012800,
         closesTimestamp: 1753012802,
-        initialPrincipal: 20000.0,
         interestRate: {
           type: 'PERCENTAGE_PER_DURATION',
           duration: 'MONTH',
@@ -457,7 +434,6 @@ describe('loanHelpers', () => {
         notes: [],
         openedTimestamp: 1663012800,
         closesTimestamp: 1753012802,
-        initialPrincipal: 20000.0,
         interestRate: {
           type: 'PERCENTAGE_PER_DURATION',
           duration: 'MONTH',
@@ -477,7 +453,6 @@ describe('loanHelpers', () => {
         notes: [],
         openedTimestamp: 1663012800,
         closesTimestamp: 1753012802,
-        initialPrincipal: 20000.0,
         interestRate: {
           type: 'PERCENTAGE_PER_DURATION',
           duration: 'MONTH',
@@ -497,7 +472,6 @@ describe('loanHelpers', () => {
         notes: [],
         openedTimestamp: 1663012800,
         closesTimestamp: 1753012802,
-        initialPrincipal: 20000.0,
         interestRate: {
           type: 'PERCENTAGE_PER_DURATION',
           duration: 'MONTH',
@@ -516,7 +490,6 @@ describe('loanHelpers', () => {
         notes: [],
         openedTimestamp: 1663012800,
         closesTimestamp: 1753012802,
-        initialPrincipal: 20000.0,
         interestRate: {
           type: 'PERCENTAGE_PER_DURATION',
           duration: 'MONTH',
@@ -536,7 +509,6 @@ describe('loanHelpers', () => {
         notes: [],
         openedTimestamp: 1663012800,
         closesTimestamp: 1753012802,
-        initialPrincipal: 20000.0,
         interestRate: {
           type: 'PERCENTAGE_PER_DURATION',
           duration: 'MONTH',
@@ -556,7 +528,6 @@ describe('loanHelpers', () => {
         notes: [],
         openedTimestamp: 1663012800,
         closesTimestamp: 1753012802,
-        initialPrincipal: 20000.0,
         interestRate: {
           type: 'PERCENTAGE_PER_DURATION',
           duration: 'MONTH',
@@ -576,7 +547,6 @@ describe('loanHelpers', () => {
         notes: [],
         openedTimestamp: 1663012800,
         closesTimestamp: 1753012802,
-        initialPrincipal: 20000.0,
         interestRate: {
           type: 'PERCENTAGE_PER_DURATION',
           duration: 'MONTH',
@@ -595,7 +565,6 @@ describe('loanHelpers', () => {
         description: 'Car loan.',
         openedTimestamp: 1663012800,
         closesTimestamp: 1753012802,
-        initialPrincipal: 20000.0,
         interestRate: {
           type: 'PERCENTAGE_PER_DURATION',
           duration: 'MONTH',
@@ -615,7 +584,6 @@ describe('loanHelpers', () => {
         notes: undefined,
         openedTimestamp: 1663012800,
         closesTimestamp: 1753012802,
-        initialPrincipal: 20000.0,
         interestRate: {
           type: 'PERCENTAGE_PER_DURATION',
           duration: 'MONTH',
@@ -635,7 +603,6 @@ describe('loanHelpers', () => {
         notes: 2.2,
         openedTimestamp: 1663012800,
         closesTimestamp: 1753012802,
-        initialPrincipal: 20000.0,
         interestRate: {
           type: 'PERCENTAGE_PER_DURATION',
           duration: 'MONTH',
@@ -655,7 +622,6 @@ describe('loanHelpers', () => {
         notes: [],
         openedTimestamp: '1663012800',
         closesTimestamp: 1753012802,
-        initialPrincipal: 20000.0,
         interestRate: {
           type: 'PERCENTAGE_PER_DURATION',
           duration: 'MONTH',
@@ -675,7 +641,6 @@ describe('loanHelpers', () => {
         notes: [],
         openedTimestamp: 1663012800,
         closesTimestamp: '1753012802',
-        initialPrincipal: 20000.0,
         interestRate: {
           type: 'PERCENTAGE_PER_DURATION',
           duration: 'MONTH',
@@ -694,7 +659,6 @@ describe('loanHelpers', () => {
         description: 'Car loan.',
         notes: [],
         closesTimestamp: 1753012802,
-        initialPrincipal: 20000.0,
         interestRate: {
           type: 'PERCENTAGE_PER_DURATION',
           duration: 'MONTH',
@@ -713,7 +677,6 @@ describe('loanHelpers', () => {
         description: 'Car loan.',
         notes: [],
         openedTimestamp: 1663012800,
-        initialPrincipal: 20000.0,
         interestRate: {
           type: 'PERCENTAGE_PER_DURATION',
           duration: 'MONTH',
@@ -733,7 +696,6 @@ describe('loanHelpers', () => {
         notes: [],
         openedTimestamp: 1663012800,
         closesTimestamp: 1753012802,
-        initialPrincipal: NaN,
         interestRate: {
           type: 'PERCENTAGE_PER_DURATION',
           duration: 'MONTH',
@@ -753,7 +715,6 @@ describe('loanHelpers', () => {
         notes: [],
         openedTimestamp: 1663012800,
         closesTimestamp: 1753012802,
-        initialPrincipal: 20000.0,
         calculatedTotalPaidPrincipal: 100,
         calculatedChargedInterest: 50,
         calculatedPaidInterest: 50,
@@ -766,7 +727,6 @@ describe('loanHelpers', () => {
         notes: [],
         openedTimestamp: 1663012800,
         closesTimestamp: 1753012802,
-        initialPrincipal: 20000.0,
         interestRate: {
           type: 'PERCENTAGE_PER_DURATION',
           duration: 'MONTH',
@@ -786,7 +746,6 @@ describe('loanHelpers', () => {
         notes: [],
         openedTimestamp: 1663012800,
         closesTimestamp: 1753012802,
-        initialPrincipal: 20000.0,
         interestRate: {
           type: 'PERCENTAGE_PER_DURATION',
           duration: 'MONTH',
@@ -805,7 +764,6 @@ describe('loanHelpers', () => {
         notes: [],
         openedTimestamp: 1663012800,
         closesTimestamp: 1753012802,
-        initialPrincipal: 20000.0,
         interestRate: {
           type: 'PERCENTAGE_PER_DURATION',
           duration: 'MONTH',
@@ -825,7 +783,6 @@ describe('loanHelpers', () => {
         notes: [],
         openedTimestamp: 1663012800,
         closesTimestamp: 1753012802,
-        initialPrincipal: 20000.0,
         interestRate: {
           type: 'PERCENTAGE_PER_DURATION',
           duration: 'MONTH',
@@ -844,7 +801,6 @@ describe('loanHelpers', () => {
         notes: [],
         openedTimestamp: 1663012800,
         closesTimestamp: 1753012802,
-        initialPrincipal: 20000.0,
         interestRate: {
           type: 'PERCENTAGE_PER_DURATION',
           duration: 'MONTH',
@@ -864,7 +820,6 @@ describe('loanHelpers', () => {
         notes: [],
         openedTimestamp: 1663012800,
         closesTimestamp: 1753012802,
-        initialPrincipal: 20000.0,
         interestRate: {
           type: 'PERCENTAGE_PER_DURATION',
           duration: 'MONTH',
@@ -883,7 +838,6 @@ describe('loanHelpers', () => {
         notes: [],
         openedTimestamp: 1663012800,
         closesTimestamp: 1753012802,
-        initialPrincipal: 20000.0,
         interestRate: {
           type: 'PERCENTAGE_PER_DURATION',
           duration: 'MONTH',

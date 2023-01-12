@@ -60,7 +60,7 @@ export default {
     transactionHelpers.runtimeCast(validatedTransaction);
     if (runChecks) {
       try {
-        await this.checkIfTransactionCanExist({ transaction: validatedTransaction });
+        await this.checkIfTransactionCanExist({ transaction: validatedTransaction }, { session: session });
       } catch (err) {
         console.log(err);
         throw new Error(err);
@@ -296,10 +296,10 @@ export default {
   ): Promise<true> {
     // Do check for Rule 0
     await User.checkIfExists(transaction.userId);
-    if (transaction.from.datatype === 'BUDGET') await Budget.checkIfExists(transaction.from.addressId);
-    if (transaction.to.datatype === 'BUDGET') await Budget.checkIfExists(transaction.to.addressId);
-    if (transaction.from.datatype === 'LOAN') await Loan.checkIfExists(transaction.from.addressId);
-    if (transaction.to.datatype === 'LOAN') await Loan.checkIfExists(transaction.to.addressId);
+    if (transaction.from.datatype === 'BUDGET') await Budget.checkIfExists(transaction.from.addressId, session);
+    if (transaction.to.datatype === 'BUDGET') await Budget.checkIfExists(transaction.to.addressId, session);
+    if (transaction.from.datatype === 'LOAN') await Loan.checkIfExists(transaction.from.addressId, session);
+    if (transaction.to.datatype === 'LOAN') await Loan.checkIfExists(transaction.to.addressId, session);
 
     // Do check for Rule 1
     if (transaction.from.datatype === 'BUDGET') {

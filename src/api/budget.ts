@@ -72,8 +72,9 @@ export default {
       session.endSession();
     }
   },
-  checkIfExists: async function checkIfBudgetExists(budgetId: string): Promise<void> {
-    if (!(await BudgetModel.existsOneWithId(budgetId))) throw new Error('Budget with prodived _id does not exist!');
+  checkIfExists: async function checkIfBudgetExists(budgetId: string, session?: ClientSession): Promise<void> {
+    if (!(await BudgetModel.existsOneWithId(budgetId, session)))
+      throw new Error('Budget with prodived _id does not exist!');
   },
   getOneFromUser: async function getBudget(
     {
