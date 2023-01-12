@@ -280,8 +280,6 @@ export default {
    *   time of existance of the budget
    * - Rule 2: Transaction involving the loan can not occur before the loan is created
    * - Rule 3: Transaction involving the loan can not occur if the loan has status of "closed"
-   * - Rule 4: Transaction involving the loan can not occur if the loan would get overpaid at any point in time of
-   *   existance of the loan
    * @param  {ITransaction} transaction - Transaction that is about to be entered into database.
    * @param  {string|undefined} originalTransactionId - (Used when editing existing transaction) Id of transaction that is being replaced/edited
    * @returns Promise<true> or throws error
@@ -394,75 +392,6 @@ export default {
       if (AFFECTED_LOAN.openedTimestamp > transaction.transactionTimestamp)
         throw new Error('Transaction can not occur before loan openedTimestamp');
       if (AFFECTED_LOAN.status === 'CLOSED') throw new Error('Transaction can not occur on loan with status "CLOSED"');
-    }
-
-    // Do check for Rule 4
-    if (transaction.from.datatype === 'LOAN') {
-      const AFFECTED_LOAN = await Loan.getOneFromUser({
-        userId: transaction.userId,
-        loanId: transaction.from.addressId,
-      });
-      const AFFECTED_LOAN_TRANSACTIONS: ITransaction[] = await Loan.getTransactions(AFFECTED_LOAN._id, {
-        pageNumber: 0,
-        pageSize: Infinity,
-      });
-
-      // delete old transaction from Transactions if originalTransactionId is provided
-      if (originalTransactionId !== undefined) {
-        for (let i = 0; i < AFFECTED_LOAN_TRANSACTIONS.length; i++) {
-          if (AFFECTED_LOAN_TRANSACTIONS[i]._id === originalTransactionId) {
-            AFFECTED_LOAN_TRANSACTIONS.splice(i, 1);
-            break;
-          }
-        }
-      }
-
-      // insert new transaction into Transactions at correct index (according to transactionTimestamp and entryTimestamp)
-      /*
-        Algo explained:
-        Loop existing transactions from newest to oldest. (newest transaction = o | oldest transaction = transactions.length-1)
-        If new transaction is newer than transactions[i] then insert new transaction after transactions[i] and break loop.
-        Else if new transaction is equal age as transactions[i] then check for entryTimestamp
-        - if entryTimestamp of new transaction is newer or equal then insert new transaction after transactions[i]
-        - else insert new transaction before transactions[i]
-        If new transaction is not inserted while looping throught transactions 
-        (aka. new transaction is older than oldest transaction)
-        then insert new transaction at end of transactions array (oldest transaction)
-      */
-      let isTransactionInserted = false;
-      for (let i = 0; i < AFFECTED_LOAN_TRANSACTIONS.length; i++) {
-        if (AFFECTED_LOAN_TRANSACTIONS[i].transactionTimestamp < transaction.transactionTimestamp) {
-          AFFECTED_LOAN_TRANSACTIONS.splice(i, 0, transaction);
-          isTransactionInserted = true;
-          break;
-        } else if (AFFECTED_LOAN_TRANSACTIONS[i].transactionTimestamp === transaction.transactionTimestamp) {
-          if (AFFECTED_LOAN_TRANSACTIONS[i].entryTimestamp <= transaction.entryTimestamp) {
-            AFFECTED_LOAN_TRANSACTIONS.splice(i, 0, transaction);
-          } else {
-            AFFECTED_LOAN_TRANSACTIONS.splice(i + 1, 0, transaction);
-          }
-          isTransactionInserted = true;
-          break;
-        }
-      }
-      if (!isTransactionInserted) {
-        AFFECTED_LOAN_TRANSACTIONS.splice(AFFECTED_LOAN_TRANSACTIONS.length - 1, 0, transaction);
-      }
-
-      const TRANSACTIONS_LIST = Loan.generateTransactionsList({
-        loanTransactions: AFFECTED_LOAN_TRANSACTIONS,
-        interestRate: AFFECTED_LOAN.interestRate,
-        timestampLimit: new Date().getTime(),
-      });
-
-      for (let i = 0; i < TRANSACTIONS_LIST.length; i++) {
-        if (TRANSACTIONS_LIST[i].outstandingPrincipal < 0) {
-          throw new Error(
-            'New transaction would make loan outstanding principal negative at (timestamp): ' +
-              TRANSACTIONS_LIST[i].toDateTimestamp,
-          );
-        }
-      }
     }
     return true;
   },
