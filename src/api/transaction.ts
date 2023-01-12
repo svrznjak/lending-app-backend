@@ -205,21 +205,21 @@ export default {
       const deletedTransaction: ITransaction = await TransactionModel.findByIdAndDelete(transactionId).lean();
       if (deletedTransaction === null) throw new Error('Transaction you wanted to delete was not found!');
       if (deletedTransaction.from.datatype === 'BUDGET') {
-        Budget.recalculateCalculatedValues(deletedTransaction.from.addressId);
+        Budget.recalculateCalculatedValues(deletedTransaction.from.addressId.toString());
       }
       if (deletedTransaction.to.datatype === 'BUDGET') {
-        Budget.recalculateCalculatedValues(deletedTransaction.to.addressId);
+        Budget.recalculateCalculatedValues(deletedTransaction.to.addressId.toString());
       }
       if (deletedTransaction.from.datatype === 'LOAN') {
         LoanCache.setCachedItem({
           itemId: deletedTransaction.to.addressId,
-          value: await Loan.recalculateCalculatedValues(deletedTransaction.from.addressId),
+          value: await Loan.recalculateCalculatedValues(deletedTransaction.from.addressId.toString()),
         });
       }
       if (deletedTransaction.to.datatype === 'LOAN') {
         LoanCache.setCachedItem({
           itemId: deletedTransaction.to.addressId,
-          value: await Loan.recalculateCalculatedValues(deletedTransaction.to.addressId),
+          value: await Loan.recalculateCalculatedValues(deletedTransaction.to.addressId.toString()),
         });
       }
       return true;
