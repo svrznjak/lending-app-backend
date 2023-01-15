@@ -152,9 +152,7 @@ export default {
     };
     const createdTransaction = await transaction.add(newTransaction, { session: session });
     if (runRecalculate) {
-      await this.recalculateCalculatedValues({
-        Mongo_budget: await BudgetModel.findOne({ _id: budgetId, userId: userId }),
-      });
+      await this.recalculateCalculatedValues(await BudgetModel.findOne({ _id: budgetId, userId: userId }));
     }
     return createdTransaction;
   },
@@ -202,9 +200,7 @@ export default {
     };
     const createdTransaction = await transaction.add(newTransaction, { session: session });
     if (runRecalculate) {
-      await this.recalculateCalculatedValues({
-        Mongo_budget: await BudgetModel.findOne({ _id: budgetId, userId: userId }),
-      });
+      await this.recalculateCalculatedValues(await BudgetModel.findOne({ _id: budgetId, userId: userId }));
     }
     return createdTransaction;
   },
