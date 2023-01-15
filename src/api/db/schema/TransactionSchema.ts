@@ -26,7 +26,7 @@ const TransactionSchema = new mongoose.Schema(
       ref: 'Users',
     },
     transactionTimestamp: { type: Number, required: true },
-    description: { type: String, required: true },
+    description: { type: String },
     from: { type: TransactionAddressSchema, required: true },
     to: { type: TransactionAddressSchema, required: true },
     amount: { type: Number, required: true },
