@@ -1,5 +1,10 @@
-import { IUser, IUserRegistrationInfo, IUserUpdateInfo } from './types/user/userInterface.js';
-import { userRegistrationInfoHelpers, userHelpers, userUpdateInfoHelpers } from './types/user/userHelpers.js';
+import { IUser, IUserInitializeInfo, IUserRegistrationInfo, IUserUpdateInfo } from './types/user/userInterface.js';
+import {
+  userRegistrationInfoHelpers,
+  userHelpers,
+  userUpdateInfoHelpers,
+  userInitializeInfoHelpers,
+} from './types/user/userHelpers.js';
 import UserModel from './db/model/UserModel.js';
 import auth from './auth.js';
 
@@ -33,6 +38,28 @@ export async function createUser(userRegistrationInfo: IUserRegistrationInfo): P
   }
 }
 
+// As a lender, I want to create a user account, so that I can persist changes.
+export async function initializeUser(userInitializeInfo: IUserInitializeInfo): Promise<IUser> {
+  userInitializeInfoHelpers.runtimeCast(userInitializeInfo);
+  userInitializeInfoHelpers.validate(userInitializeInfo);
+  userInitializeInfoHelpers.sanitize(userInitializeInfo);
+
+  try {
+    const newUser = await new UserModel(userInitializeInfo).save();
+    return userHelpers.runtimeCast({
+      _id: newUser._id.toString(),
+      name: newUser.name,
+      email: newUser.email,
+      authId: newUser.authId,
+      currency: newUser.currency,
+      language: newUser.language,
+      subscription: newUser.subscription,
+    });
+  } catch (err) {
+    throw new Error('User saving failed...');
+  }
+}
+
 // As a lender, I want to view my user account information, so that I can make appropriate changes.
 export async function getUserByAuthId(authId: string): Promise<IUser | undefined> {
   try {
@@ -48,6 +75,7 @@ export async function getUserByAuthId(authId: string): Promise<IUser | undefined
       subscription: user.subscription,
     });
   } catch (err) {
+    if (err.message === 'User not found') throw new Error('User not found');
     throw new Error('User fetching failed...');
   }
 }

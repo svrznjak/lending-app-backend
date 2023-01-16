@@ -1,6 +1,6 @@
 import { GraphQLNonNull, GraphQLObjectType, GraphQLString } from 'graphql';
-import { IUser, IUserRegistrationInfo } from '../../../api/types/user/userInterface.js';
-import { createUser } from '../../../api/user.js';
+import { IUser, IUserInitializeInfo, IUserRegistrationInfo } from '../../../api/types/user/userInterface.js';
+import { createUser, initializeUser } from '../../../api/user.js';
 import { userType } from './type.js';
 
 export default new GraphQLObjectType({
@@ -25,6 +25,31 @@ export default new GraphQLObjectType({
             password: args.password,
           };
           return await createUser(registrationInfo);
+        } catch (err: any) {
+          console.log(err.message);
+          throw new Error(err);
+        }
+      },
+    },
+    initializeUser: {
+      type: userType,
+      args: {
+        name: { type: new GraphQLNonNull(GraphQLString) },
+        email: { type: new GraphQLNonNull(GraphQLString) },
+        authId: { type: new GraphQLNonNull(GraphQLString) },
+        currency: { type: new GraphQLNonNull(GraphQLString) },
+        language: { type: new GraphQLNonNull(GraphQLString) },
+      },
+      async resolve(_parent: any, args: any, _context: any): Promise<IUser> {
+        try {
+          const initializeInfo: IUserInitializeInfo = {
+            name: args.name,
+            email: args.email,
+            authId: args.authId,
+            currency: args.currency,
+            language: args.language,
+          };
+          return await initializeUser(initializeInfo);
         } catch (err: any) {
           console.log(err.message);
           throw new Error(err);

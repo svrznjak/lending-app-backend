@@ -1,5 +1,5 @@
 import { sanitizeEmail, sanitizeText } from './../../utils/inputSanitizer/inputSanitizer.js';
-import { IUser, IUserRegistrationInfo, IUserUpdateInfo } from './userInterface.js';
+import { IUser, IUserInitializeInfo, IUserRegistrationInfo, IUserUpdateInfo } from './userInterface.js';
 import _ from 'lodash';
 import { subscriptionHelpers } from '../subscription/subscriptionHelpers.js';
 import {
@@ -95,6 +95,60 @@ export const userRegistrationInfoHelpers = {
       currency: registrationInfo.currency,
       language: registrationInfo.language,
       password: registrationInfo.password,
+    };
+  },
+};
+
+export const userInitializeInfoHelpers = {
+  validate: function validateUserInitializeInfo(initializeInfo: IUserInitializeInfo): IUserInitializeInfo {
+    if (
+      !isValidText({
+        text: initializeInfo.name,
+        validEmpty: false,
+        maxLength: 100,
+      })
+    )
+      throw new Error('(validation) Name should contain value!');
+    if (!isValidEmail({ email: initializeInfo.email }))
+      throw new Error('(validation) Email value does not contain email!');
+    if (
+      !isValidCurrency({
+        currency: initializeInfo.currency,
+        caseSensitive: true,
+      })
+    )
+      throw new Error('(validation) Name should be a currency value!');
+    if (
+      !isValidLanguage({
+        language: initializeInfo.language,
+        caseSensitive: true,
+      })
+    )
+      throw new Error('(validation) Language should be locale value!');
+
+    return initializeInfo;
+  },
+  sanitize: function sanitizeUserInitializeInfo(initializeInfo: IUserInitializeInfo): void {
+    initializeInfo.name = sanitizeText({ text: initializeInfo.name });
+    initializeInfo.email = sanitizeEmail({ email: initializeInfo.email });
+    initializeInfo.currency = sanitizeText({ text: initializeInfo.currency });
+    initializeInfo.language = sanitizeText({ text: initializeInfo.language });
+  },
+  runtimeCast: function runtimeCast(initializeInfo: any): IUserInitializeInfo {
+    if (typeof initializeInfo !== 'object' || initializeInfo === null)
+      throw new Error('Type of initializeInfo must be an object!');
+    if (!_.isString(initializeInfo.name)) throw new Error('Type of initializeInfo.name must be a string!');
+    if (!_.isString(initializeInfo.email)) throw new Error('Type of initializeInfo.email must be a string!');
+    if (!_.isString(initializeInfo.authId)) throw new Error('Type of initializeInfo.authId must be a string!');
+    if (!_.isString(initializeInfo.currency)) throw new Error('Type of initializeInfo.currency must be a string!');
+    if (!_.isString(initializeInfo.language)) throw new Error('Type of initializeInfo.language must be a string!');
+
+    return {
+      name: initializeInfo.name,
+      email: initializeInfo.email,
+      authId: initializeInfo.authId,
+      currency: initializeInfo.currency,
+      language: initializeInfo.language,
     };
   },
 };

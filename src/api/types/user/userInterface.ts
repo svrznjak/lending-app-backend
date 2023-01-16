@@ -13,6 +13,14 @@ export interface ISubscription {
   type: 'FREE' | 'STANDARD' | 'PREMIUM';
 }
 
+export interface IUserInitializeInfo {
+  authId: string;
+  name: string;
+  email: string;
+  currency: string;
+  language: string;
+}
+
 export interface IUserRegistrationInfo {
   name: string;
   email: string;

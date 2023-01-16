@@ -17,8 +17,8 @@ const SubscriptionSchema = new mongoose.Schema({
 export default new mongoose.Schema(
   {
     name: { type: String, required: true },
-    email: { type: String, required: true },
-    authId: { type: String, required: true, index: true },
+    email: { type: String, required: true, unique: true },
+    authId: { type: String, required: true, index: true, unique: true },
     currency: { type: String, required: true },
     language: { type: String, required: true },
     subscription: {
