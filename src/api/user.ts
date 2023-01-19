@@ -7,6 +7,8 @@ import {
 } from './types/user/userHelpers.js';
 import UserModel from './db/model/UserModel.js';
 import auth from './auth.js';
+import Budget from './budget.js';
+import mongoose, { ClientSession } from 'mongoose';
 
 // As a lender, I want to create a user account, so that I can persist changes.
 export async function createUser(userRegistrationInfo: IUserRegistrationInfo): Promise<IUser> {
@@ -39,13 +41,40 @@ export async function createUser(userRegistrationInfo: IUserRegistrationInfo): P
 }
 
 // As a lender, I want to create a user account, so that I can persist changes.
-export async function initializeUser(userInitializeInfo: IUserInitializeInfo): Promise<IUser> {
+export async function initializeUser(
+  userInitializeInfo: IUserInitializeInfo,
+  initialBudgetName: string,
+  initialBudgetDescription: string,
+  initialBudgetFunds: number,
+  initiaTransactionDescription: string,
+): Promise<IUser> {
   userInitializeInfoHelpers.runtimeCast(userInitializeInfo);
   userInitializeInfoHelpers.validate(userInitializeInfo);
   userInitializeInfoHelpers.sanitize(userInitializeInfo);
 
+  const session: ClientSession = await mongoose.connection.startSession();
   try {
+    session.startTransaction();
+
     const newUser = await new UserModel(userInitializeInfo).save();
+    await Budget.create(
+      newUser._id.toString(),
+      {
+        name: initialBudgetName,
+        description: initialBudgetDescription,
+        defaultInterestRate: {
+          type: 'FIXED_PER_DURATION',
+          duration: 'FULL_DURATION',
+          expectedPayments: 'ONE_TIME',
+          amount: 0,
+          isCompounding: false,
+          entryTimestamp: new Date().getTime(),
+        },
+      },
+      initialBudgetFunds,
+      initiaTransactionDescription,
+    );
+    await session.commitTransaction();
     return userHelpers.runtimeCast({
       _id: newUser._id.toString(),
       name: newUser.name,
@@ -56,7 +85,10 @@ export async function initializeUser(userInitializeInfo: IUserInitializeInfo): P
       subscription: newUser.subscription,
     });
   } catch (err) {
+    await session.abortTransaction();
     throw new Error('User saving failed...');
+  } finally {
+    session.endSession();
   }
 }
 

@@ -1,4 +1,4 @@
-import { GraphQLNonNull, GraphQLObjectType, GraphQLString } from 'graphql';
+import { GraphQLFloat, GraphQLNonNull, GraphQLObjectType, GraphQLString } from 'graphql';
 import { IUser, IUserInitializeInfo, IUserRegistrationInfo } from '../../../api/types/user/userInterface.js';
 import { createUser, initializeUser } from '../../../api/user.js';
 import { userType } from './type.js';
@@ -39,6 +39,10 @@ export default new GraphQLObjectType({
         authId: { type: new GraphQLNonNull(GraphQLString) },
         currency: { type: new GraphQLNonNull(GraphQLString) },
         language: { type: new GraphQLNonNull(GraphQLString) },
+        initialBudgetName: { type: new GraphQLNonNull(GraphQLString) },
+        initialBudgetDescription: { type: new GraphQLNonNull(GraphQLString) },
+        initialBudgetFunds: { type: new GraphQLNonNull(GraphQLFloat) },
+        initiaTransactionDescription: { type: new GraphQLNonNull(GraphQLString) },
       },
       async resolve(_parent: any, args: any, _context: any): Promise<IUser> {
         try {
@@ -49,7 +53,13 @@ export default new GraphQLObjectType({
             currency: args.currency,
             language: args.language,
           };
-          return await initializeUser(initializeInfo);
+          return await initializeUser(
+            initializeInfo,
+            args.initialBudgetName,
+            args.initialBudgetDescription,
+            args.initialBudgetFunds,
+            args.initiaTransactionDescription,
+          );
         } catch (err: any) {
           console.log(err.message);
           throw new Error(err);
