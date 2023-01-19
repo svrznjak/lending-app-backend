@@ -437,7 +437,36 @@ export default {
     await loan.save();
     return changedloan;
   },
+  pause: async function pauseLoan(input: string | ILoanDocument): Promise<ILoan> {
+    const MONGO_LOAN = typeof input === 'string' ? await LoanModel.findOne({ _id: input }) : input;
 
+    if (MONGO_LOAN.status !== 'ACTIVE') throw new Error('Only ACTIVE loans can be paused!');
+
+    MONGO_LOAN.status = 'PAUSED';
+
+    const CHANGED_LOAN = loanHelpers.runtimeCast({
+      ...MONGO_LOAN.toObject(),
+      _id: MONGO_LOAN._id.toString(),
+      userId: MONGO_LOAN.userId.toString(),
+    });
+    await MONGO_LOAN.save();
+    return CHANGED_LOAN;
+  },
+  unpause: async function pauseLoan(input: string | ILoanDocument): Promise<ILoan> {
+    const MONGO_LOAN = typeof input === 'string' ? await LoanModel.findOne({ _id: input }) : input;
+
+    if (MONGO_LOAN.status !== 'PAUSED') throw new Error('Only ACTIVE loans can be paused!');
+
+    MONGO_LOAN.status = 'ACTIVE';
+
+    const CHANGED_LOAN = loanHelpers.runtimeCast({
+      ...MONGO_LOAN.toObject(),
+      _id: MONGO_LOAN._id.toString(),
+      userId: MONGO_LOAN.userId.toString(),
+    });
+    await MONGO_LOAN.save();
+    return CHANGED_LOAN;
+  },
   getCalculatedValuesAtTimestamp: async function getLoanCalculatedValuesAtTimestamp({
     loanId,
     interestRate,
@@ -503,6 +532,13 @@ export default {
     MONGO_LOAN.calculatedTotalPaidPrincipal = CALCULATED_VALUES_UNTIL_NOW.calculatedTotalPaidPrincipal;
     MONGO_LOAN.calculatedChargedInterest = CALCULATED_VALUES_UNTIL_NOW.calculatedChargedInterest;
     MONGO_LOAN.calculatedPaidInterest = CALCULATED_VALUES_UNTIL_NOW.calculatedPaidInterest;
+
+    const CHANGED_LOAN = await this.recalculateStatus(MONGO_LOAN);
+    // Saved in recalculateStatus  await MONGO_LOAN.save();
+    return CHANGED_LOAN;
+  },
+  recalculateStatus: async function recelculateLoanStatus(input: string | ILoanDocument): Promise<ILoan> {
+    const MONGO_LOAN = typeof input === 'string' ? await LoanModel.findOne({ _id: input }) : input;
 
     // Update loan status if loan is paid / is changed and is no longer paid
     if (

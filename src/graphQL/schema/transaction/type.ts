@@ -5,7 +5,7 @@ import { IBudget } from '../../../api/types/budget/budgetInterface.js';
 import { ILoan } from '../../../api/types/loan/loanInterface.js';
 import { ITransaction } from '../../../api/types/transaction/transactionInterface.js';
 import { budgetsType } from '../budget/type.js';
-import { loansType } from '../loan/type.js';
+import { loanType } from '../loan/type.js';
 
 export const transactionType = new GraphQLObjectType({
   name: 'TransactionType',
@@ -28,7 +28,7 @@ export const transactionType = new GraphQLObjectType({
       },
     },
     affectedLoan: {
-      type: loansType,
+      type: loanType,
       resolve: async (parent: ITransaction): Promise<ILoan | undefined> => {
         if (parent.from.datatype === 'LOAN')
           return await Loans.getOneFromUser({ userId: parent._id, loanId: parent.from.addressId });

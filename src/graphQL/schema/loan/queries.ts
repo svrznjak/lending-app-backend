@@ -5,7 +5,7 @@ import { getUserByAuthId } from '../../../api/user.js';
 import loan from '../../../api/loan.js';
 import { paginationInputType } from '../commonTypes.js';
 import LoanModel from '../../../api/db/model/LoanModel.js';
-import { loanCalculatedValues, loansType } from './type.js';
+import { loanCalculatedValues, loanType } from './type.js';
 import { ILoan } from '../../../api/types/loan/loanInterface.js';
 import { interestRateInputType } from '../interestRate/type.js';
 
@@ -13,7 +13,7 @@ export default new GraphQLObjectType({
   name: 'LoanQueries',
   fields: (): any => ({
     loans: {
-      type: new GraphQLList(loansType),
+      type: new GraphQLList(loanType),
       resolve: async (_parent: any, _args: any, context: any): Promise<ILoan[]> => {
         const authId = await context.getCurrentUserAuthIdOrThrowValidationError();
         const user = await getUserByAuthId(authId);

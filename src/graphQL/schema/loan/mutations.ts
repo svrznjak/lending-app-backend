@@ -6,7 +6,7 @@ import { getUserByAuthId } from '../../../api/user.js';
 import { interestRateInputType } from '../interestRate/type.js';
 
 import Loan from '../../../api/loan.js';
-import { loansType, fundInputType } from './type.js';
+import { loanType, fundInputType } from './type.js';
 import { transactionType } from '../transaction/type.js';
 import LoanModel from '../../../api/db/model/LoanModel.js';
 import BudgetModel from '../../../api/db/model/BudgetModel.js';
@@ -14,7 +14,7 @@ export default new GraphQLObjectType({
   name: 'LoanMutations',
   fields: (): any => ({
     createLoan: {
-      type: loansType,
+      type: loanType,
       args: {
         name: { type: new GraphQLNonNull(GraphQLString) },
         description: { type: new GraphQLNonNull(GraphQLString) },
@@ -106,6 +106,46 @@ export default new GraphQLObjectType({
             amount: args.amount,
           });
           return newTransaction;
+        } catch (err: any) {
+          console.log(err.message);
+          throw new Error(err);
+        }
+      },
+    },
+    pause: {
+      type: loanType,
+      args: {
+        loanId: { type: new GraphQLNonNull(GraphQLID) },
+      },
+      async resolve(_parent: any, args: any, context: any): Promise<ILoan> {
+        const userAuthId = await context.getCurrentUserAuthIdOrThrowValidationError();
+        const user = await getUserByAuthId(userAuthId);
+
+        // get loan to check if loan with loanId exists for specified user userId
+        await Loan.getOneFromUser({ userId: user._id, loanId: args.loanId });
+
+        try {
+          return await Loan.pause(args.loanId);
+        } catch (err: any) {
+          console.log(err.message);
+          throw new Error(err);
+        }
+      },
+    },
+    unpause: {
+      type: loanType,
+      args: {
+        loanId: { type: new GraphQLNonNull(GraphQLID) },
+      },
+      async resolve(_parent: any, args: any, context: any): Promise<ILoan> {
+        const userAuthId = await context.getCurrentUserAuthIdOrThrowValidationError();
+        const user = await getUserByAuthId(userAuthId);
+
+        // get loan to check if loan with loanId exists for specified user userId
+        await Loan.getOneFromUser({ userId: user._id, loanId: args.loanId });
+
+        try {
+          return await Loan.unpause(args.loanId);
         } catch (err: any) {
           console.log(err.message);
           throw new Error(err);

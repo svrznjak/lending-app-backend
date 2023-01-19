@@ -1,7 +1,7 @@
 import { IBudget } from './../../../api/types/budget/budgetInterface.js';
 import { GraphQLEnumType, GraphQLID, GraphQLList, GraphQLNonNull, GraphQLObjectType, GraphQLString } from 'graphql';
 import { budgetsType } from '../budget/type.js';
-import { loansType } from '../loan/type.js';
+import { loanType } from '../loan/type.js';
 import { IUser } from '../../../api/types/user/userInterface.js';
 import Budgets from '../../../api/budget.js';
 import Loans from '../../../api/loan.js';
@@ -21,7 +21,7 @@ export const userType = new GraphQLObjectType({
       },
     },
     loans: {
-      type: new GraphQLList(loansType),
+      type: new GraphQLList(loanType),
       resolve: async (parent: IUser): Promise<ILoan[]> => {
         return await Loans.getAllFromUser({ userId: parent._id });
       },

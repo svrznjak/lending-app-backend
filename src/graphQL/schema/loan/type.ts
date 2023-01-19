@@ -11,8 +11,8 @@ import {
 import { interestRateType } from '../interestRate/type.js';
 import { noteType } from '../note/type.js';
 
-export const loansType = new GraphQLObjectType({
-  name: 'LoansType',
+export const loanType = new GraphQLObjectType({
+  name: 'LoanType',
   fields: (): any => ({
     _id: { type: new GraphQLNonNull(GraphQLID) },
     userId: { type: new GraphQLNonNull(GraphQLID) },
