@@ -1,13 +1,2 @@
-## firebase config
-You must create /src/firebase/firebaseConfig.ts file to make firebase work.
-
-example firebaseConfig.ts:
-export default {
-  apiKey: 'xxxx',
-  authDomain: 'xxxx',
-  projectId: 'xxxx',
-  storageBucket: 'xxxx',
-  messagingSenderId: 'xxxx',
-  appId: 'xxxx',
-  measurementId: 'xxxx',
-};
+## This is a code of backend for my application that tracks budgets, loans, and payments and calculates interest rates.
+This project is an example of a frontend developer having a try at building a working backend in node.js. <b>As such this project is not a good example of best practices!<b>
