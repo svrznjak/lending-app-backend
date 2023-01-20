@@ -55,7 +55,16 @@ export default new GraphQLObjectType({
         _parent: any,
         args: any,
         context: any,
-      ): Promise<Pick<ILoan, 'calculatedTotalPaidPrincipal' | 'calculatedChargedInterest' | 'calculatedPaidInterest'>> {
+      ): Promise<
+        Pick<
+          ILoan,
+          | 'calculatedTotalPaidPrincipal'
+          | 'calculatedChargedInterest'
+          | 'calculatedPaidInterest'
+          | 'calculatedLastTransactionTimestamp'
+          | 'calculatedRelatedBudgets'
+        >
+      > {
         await context.getCurrentUserAuthIdOrThrowValidationError();
         return await loan.getCalculatedValuesAtTimestamp({
           loanId: args.loanId,

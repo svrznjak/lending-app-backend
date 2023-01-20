@@ -107,8 +107,20 @@ export const loanHelpers = {
       throw new Error('Type of loan.calculatedChargedInterest must be a number!');
     if (!Number.isFinite(loan.calculatedPaidInterest))
       throw new Error('Type of loan.calculatedPaidInterest must be a number!');
-
+    if (!Number.isFinite(loan.calculatedLastTransactionTimestamp))
+      throw new Error('Type of loan.calculatedLastTransactionTimestamp must be a number!');
     interestRateHelpers.runtimeCast(loan.interestRate);
+
+    // typecheck relatedBudgets
+    loan.calculatedRelatedBudgets.forEach((relatedBudget) => {
+      if (typeof relatedBudget !== 'object' || relatedBudget === null)
+        throw new Error('Type of loan.relatedBudget must be an object!');
+      if (!_.isString(relatedBudget.budgetId)) throw new Error('Type of loan.relatedBudget.budgetId must be a string!');
+      if (!Number.isFinite(relatedBudget.invested))
+        throw new Error('Type of loan.relatedBudget.invested must be a number!');
+      if (!Number.isFinite(relatedBudget.withdrawn))
+        throw new Error('Type of loan.relatedBudget.withdrawn must be a number!');
+    });
 
     return {
       _id: loan._id,
@@ -124,6 +136,8 @@ export const loanHelpers = {
       calculatedTotalPaidPrincipal: loan.calculatedTotalPaidPrincipal,
       calculatedChargedInterest: loan.calculatedChargedInterest,
       calculatedPaidInterest: loan.calculatedPaidInterest,
+      calculatedLastTransactionTimestamp: loan.calculatedLastTransactionTimestamp,
+      calculatedRelatedBudgets: loan.calculatedRelatedBudgets,
     };
   },
 };

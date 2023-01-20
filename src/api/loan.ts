@@ -11,7 +11,7 @@ import {
 import * as User from './user.js';
 import transaction from './transaction.js';
 import { loanHelpers } from './types/loan/loanHelpers.js';
-import { ILoan } from './types/loan/loanInterface.js';
+import { ILoan, IRelatedBudget } from './types/loan/loanInterface.js';
 import { ITransaction } from './types/transaction/transactionInterface.js';
 import Budget from './budget.js';
 import { transactionHelpers } from './types/transaction/transactionHelpers.js';
@@ -72,6 +72,8 @@ export default {
           calculatedChargedInterest: 0,
           calculatedPaidInterest: 0,
           calculatedTotalPaidPrincipal: 0,
+          calculatedLastTransactionTimestamp: input.openedTimestamp,
+          calculatedRelatedBudgets: [],
         }),
       ).save({ session });
 
@@ -482,18 +484,39 @@ export default {
       | 'calculatedTotalPaidPrincipal'
       | 'calculatedChargedInterest'
       | 'calculatedPaidInterest'
+      | 'calculatedLastTransactionTimestamp'
+      | 'calculatedRelatedBudgets'
     >
   > {
     let calculatedInvestedAmount = 0;
     let calculatedTotalPaidPrincipal = 0;
     let calculatedChargedInterest = 0;
     let calculatedPaidInterest = 0;
-
+    let calculatedLastTransactionTimestamp = 0;
+    const calculatedRelatedBudgets = {};
     // get all transactions
     const loanTransactions: ITransaction[] = await this.getTransactions(loanId, {
       pageNumber: 0,
       pageSize: Infinity,
     });
+
+    if (loanTransactions.length > 0) calculatedLastTransactionTimestamp = loanTransactions[0].transactionTimestamp;
+
+    loanTransactions.forEach((transaction) => {
+      if (transaction.from.datatype === 'BUDGET') {
+        if (calculatedRelatedBudgets[transaction.from.addressId] === undefined)
+          calculatedRelatedBudgets[transaction.from.addressId] = { invested: 0, withdrawn: 0 };
+        calculatedRelatedBudgets[transaction.from.addressId].invested =
+          calculatedRelatedBudgets[transaction.from.addressId].invested + transaction.amount;
+      }
+      if (transaction.to.datatype === 'BUDGET') {
+        if (calculatedRelatedBudgets[transaction.to.addressId] === undefined)
+          calculatedRelatedBudgets[transaction.to.addressId] = { invested: 0, withdrawn: 0 };
+        calculatedRelatedBudgets[transaction.to.addressId].withdrawn =
+          calculatedRelatedBudgets[transaction.to.addressId].withdrawn + transaction.amount;
+      }
+    });
+
     const TRANSACTIONS_LIST: ITransactionInterval[] = this.generateTransactionsList({
       loanTransactions: loanTransactions,
       interestRate: interestRate,
@@ -507,6 +530,8 @@ export default {
         else if (TRANSACTION.principalCharge > 0) calculatedTotalPaidPrincipal += TRANSACTION.principalCharge;
         if (TRANSACTION.interestCharge > 0) calculatedChargedInterest += TRANSACTION.interestCharge;
         else if (TRANSACTION.interestCharge < 0) calculatedPaidInterest -= TRANSACTION.interestCharge;
+
+        //
       }
     }
     return {
@@ -514,6 +539,14 @@ export default {
       calculatedChargedInterest,
       calculatedPaidInterest,
       calculatedTotalPaidPrincipal,
+      calculatedLastTransactionTimestamp,
+      calculatedRelatedBudgets: Object.keys(calculatedRelatedBudgets).map((key) => {
+        return {
+          budgetId: key,
+          invested: parseInt(calculatedRelatedBudgets[key].invested),
+          withdrawn: parseInt(calculatedRelatedBudgets[key].withdrawn),
+        } as IRelatedBudget;
+      }),
     };
   },
   recalculateCalculatedValues: async function recalculateLoanCalculatedValues(
@@ -532,6 +565,11 @@ export default {
     MONGO_LOAN.calculatedTotalPaidPrincipal = CALCULATED_VALUES_UNTIL_NOW.calculatedTotalPaidPrincipal;
     MONGO_LOAN.calculatedChargedInterest = CALCULATED_VALUES_UNTIL_NOW.calculatedChargedInterest;
     MONGO_LOAN.calculatedPaidInterest = CALCULATED_VALUES_UNTIL_NOW.calculatedPaidInterest;
+    MONGO_LOAN.calculatedLastTransactionTimestamp = CALCULATED_VALUES_UNTIL_NOW.calculatedLastTransactionTimestamp;
+    MONGO_LOAN.calculatedRelatedBudgets = [];
+    CALCULATED_VALUES_UNTIL_NOW.calculatedRelatedBudgets.forEach((relatedBudget) => {
+      MONGO_LOAN.calculatedRelatedBudgets.push(relatedBudget);
+    });
 
     const CHANGED_LOAN = await this.recalculateStatus(MONGO_LOAN);
     // Saved in recalculateStatus  await MONGO_LOAN.save();

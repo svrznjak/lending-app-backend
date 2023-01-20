@@ -6,7 +6,7 @@ export interface ILoan {
   userId: string;
   name: string;
   description: string;
-  notes: [INote?];
+  notes: INote[];
   openedTimestamp: number;
   closesTimestamp: number;
   interestRate: IInterestRate;
@@ -15,4 +15,12 @@ export interface ILoan {
   calculatedTotalPaidPrincipal: number;
   calculatedChargedInterest: number;
   calculatedPaidInterest: number;
+  calculatedLastTransactionTimestamp: number;
+  calculatedRelatedBudgets: IRelatedBudget[];
+}
+
+export interface IRelatedBudget {
+  budgetId: string;
+  invested: number;
+  withdrawn: number;
 }

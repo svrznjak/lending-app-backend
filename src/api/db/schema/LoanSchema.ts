@@ -36,6 +36,18 @@ export const LoanSchema = new mongoose.Schema(
     calculatedTotalPaidPrincipal: { type: Number },
     calculatedChargedInterest: { type: Number },
     calculatedPaidInterest: { type: Number },
+    calculatedLastTransactionTimestamp: { type: Number },
+    calculatedRelatedBudgets: {
+      type: [
+        {
+          _id: false,
+          budgetId: { type: String, required: true },
+          invested: { type: Number, default: 0 },
+          withdrawn: { type: Number, default: 0 },
+        },
+      ],
+      default: [],
+    },
   },
   {
     statics: {
