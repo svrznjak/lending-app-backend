@@ -65,7 +65,7 @@ export default {
           notes: [],
           status: 'ACTIVE',
           calculatedInvestedAmount: 0,
-          calculatedChargedInterest: 0,
+          calculatedTotalChargedInterest: 0,
           calculatedPaidInterest: 0,
           calculatedTotalPaidPrincipal: 0,
           calculatedLastTransactionTimestamp: input.openedTimestamp,
@@ -190,7 +190,7 @@ export default {
     if (userId === undefined) throw new Error('userId is required!');
     const query: any = {
       userId: userId,
-      status: { $in: status || ['ACTIVE', 'PAID', 'PAUSED', 'CLOSED', 'DEFAULTED'] },
+      status: { $in: status || ['ACTIVE', 'PAID', 'PAUSED', 'COMPLETED', 'DEFAULTED'] },
     };
     if (loanId !== undefined) query._id = loanId;
 
@@ -198,7 +198,7 @@ export default {
     const returnValue: ILoan[] = [];
     for (let i = 0; i < LOANS.length; i++) {
       const LOAN_ID = LOANS[i]._id.toString();
-      if (LOANS[i].status === 'CLOSED' || LOANS[i].status === 'DEFAULTED') {
+      if (LOANS[i].status === 'COMPLETED' || LOANS[i].status === 'DEFAULTED') {
         returnValue.push(LOANS[i]);
       } else if (LoanCache.getCachedItem({ itemId: LOAN_ID })) {
         returnValue.push(LoanCache.getCachedItem({ itemId: LOAN_ID }) as ILoan);
@@ -465,9 +465,11 @@ export default {
   complete: async function completeLoan(input: string | ILoanDocument): Promise<ILoan> {
     const MONGO_LOAN = typeof input === 'string' ? await LoanModel.findOne({ _id: input }) : input;
 
-    if (MONGO_LOAN.status !== 'ACTIVE') throw new Error('Only ACTIVE loans can be paused!');
+    if (MONGO_LOAN.status === 'PAID') throw new Error('Only PAID loans can be COMPLETED!');
 
-    MONGO_LOAN.status = 'PAUSED';
+    const recalculatedLoan: ILoan = this.recalculateCalculatedValues(MONGO_LOAN);
+
+    MONGO_LOAN.status = 'COMPLETED';
 
     const CHANGED_LOAN = loanHelpers.runtimeCast({
       ...MONGO_LOAN.toObject(),
@@ -490,7 +492,7 @@ export default {
       ILoan,
       | 'calculatedInvestedAmount'
       | 'calculatedTotalPaidPrincipal'
-      | 'calculatedChargedInterest'
+      | 'calculatedTotalChargedInterest'
       | 'calculatedPaidInterest'
       | 'calculatedLastTransactionTimestamp'
       | 'calculatedRelatedBudgets'
@@ -499,7 +501,7 @@ export default {
   > {
     let calculatedInvestedAmount = 0;
     let calculatedTotalPaidPrincipal = 0;
-    let calculatedChargedInterest = 0;
+    let calculatedTotalChargedInterest = 0;
     let calculatedPaidInterest = 0;
     let calculatedLastTransactionTimestamp = 0;
     const calculatedRelatedBudgets = {};
@@ -533,13 +535,13 @@ export default {
     });
     if (TRANSACTIONS_LIST.length > 0) {
       calculatedInvestedAmount = TRANSACTIONS_LIST[TRANSACTIONS_LIST.length - 1].totalInvested;
-      calculatedChargedInterest = TRANSACTIONS_LIST[TRANSACTIONS_LIST.length - 1].outstandingInterest;
+      calculatedTotalChargedInterest = TRANSACTIONS_LIST[TRANSACTIONS_LIST.length - 1].outstandingInterest;
       calculatedPaidInterest = TRANSACTIONS_LIST[TRANSACTIONS_LIST.length - 1].totalPaidInterest;
       calculatedTotalPaidPrincipal = TRANSACTIONS_LIST[TRANSACTIONS_LIST.length - 1].totalPaidPrincipal;
     }
     return {
       calculatedInvestedAmount,
-      calculatedChargedInterest,
+      calculatedTotalChargedInterest,
       calculatedPaidInterest,
       calculatedTotalPaidPrincipal,
       calculatedLastTransactionTimestamp,
@@ -566,21 +568,20 @@ export default {
       timestampLimit: NOW_TIMESTAMP,
     });
 
-    //const CHANGED_LOAN = await this.recalculateStatus(MONGO_LOAN);
+    // Check if PAID
     if (
       CALCULATED_VALUES_UNTIL_NOW.calculatedTotalPaidPrincipal >=
         CALCULATED_VALUES_UNTIL_NOW.calculatedInvestedAmount &&
       MONGO_LOAN.status === 'ACTIVE'
     ) {
       MONGO_LOAN.status = 'PAID';
-      MONGO_LOAN.save();
     } else if (
       CALCULATED_VALUES_UNTIL_NOW.calculatedTotalPaidPrincipal < CALCULATED_VALUES_UNTIL_NOW.calculatedInvestedAmount &&
       MONGO_LOAN.status === 'PAID'
     ) {
       MONGO_LOAN.status = 'ACTIVE';
-      MONGO_LOAN.save();
     }
+    MONGO_LOAN.save();
 
     const CHANGED_LOAN = loanHelpers.runtimeCast({
       ...MONGO_LOAN.toObject(),
@@ -597,31 +598,6 @@ export default {
     });
 
     // Saved in recalculateStatus  await MONGO_LOAN.save();
-    return CHANGED_LOAN;
-  },
-  recalculateStatus: async function recelculateLoanStatus(input: string | ILoanDocument): Promise<ILoan> {
-    const MONGO_LOAN = typeof input === 'string' ? await LoanModel.findOne({ _id: input }) : input;
-
-    // Update loan status if loan is paid / is changed and is no longer paid
-    if (
-      MONGO_LOAN.calculatedTotalPaidPrincipal >= MONGO_LOAN.calculatedInvestedAmount &&
-      MONGO_LOAN.status === 'ACTIVE'
-    ) {
-      MONGO_LOAN.status = 'PAID';
-    }
-    if (
-      MONGO_LOAN.calculatedTotalPaidPrincipal <= MONGO_LOAN.calculatedInvestedAmount &&
-      MONGO_LOAN.status === 'PAID'
-    ) {
-      MONGO_LOAN.status = 'ACTIVE';
-    }
-
-    const CHANGED_LOAN = loanHelpers.runtimeCast({
-      ...MONGO_LOAN.toObject(),
-      _id: MONGO_LOAN._id.toString(),
-      userId: MONGO_LOAN.userId.toString(),
-    });
-    await MONGO_LOAN.save();
     return CHANGED_LOAN;
   },
   generateTransactionsList: function generateLoanTransactionsList({

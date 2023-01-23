@@ -29,12 +29,12 @@ export const LoanSchema = new mongoose.Schema(
     interestRate: { type: LoanInterestRateSchema, required: true },
     status: {
       type: String,
-      enum: ['ACTIVE', 'PAUSED', 'PAID', 'CLOSED', 'DEFAULTED'],
+      enum: ['ACTIVE', 'PAUSED', 'PAID', 'COMPLETED', 'DEFAULTED'],
       required: true,
     },
     calculatedInvestedAmount: { type: Number },
     calculatedTotalPaidPrincipal: { type: Number },
-    calculatedChargedInterest: { type: Number },
+    calculatedTotalChargedInterest: { type: Number },
     calculatedPaidInterest: { type: Number },
     calculatedLastTransactionTimestamp: { type: Number },
     calculatedRelatedBudgets: {

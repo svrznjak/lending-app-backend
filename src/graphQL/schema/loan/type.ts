@@ -28,7 +28,7 @@ export const loanType = new GraphQLObjectType({
     },
     calculatedInvestedAmount: { type: new GraphQLNonNull(GraphQLFloat) },
     calculatedTotalPaidPrincipal: { type: new GraphQLNonNull(GraphQLFloat) },
-    calculatedChargedInterest: { type: new GraphQLNonNull(GraphQLFloat) },
+    calculatedTotalChargedInterest: { type: new GraphQLNonNull(GraphQLFloat) },
     calculatedPaidInterest: { type: new GraphQLNonNull(GraphQLFloat) },
     calculatedLastTransactionTimestamp: { type: new GraphQLNonNull(GraphQLFloat) },
     calculatedRelatedBudgets: { type: new GraphQLList(loanRelatedBudget) },
@@ -50,7 +50,7 @@ export const loanStatus = new GraphQLEnumType({
     ACTIVE: { value: 'ACTIVE' },
     PAUSED: { value: 'PAUSED' },
     PAID: { value: 'PAID' },
-    CLOSED: { value: 'CLOSED' },
+    COMPLETED: { value: 'COMPLETED' },
     DEFAULTED: { value: 'DEFAULTED' },
   },
 });
@@ -89,7 +89,7 @@ export const loanCalculatedValues = new GraphQLObjectType({
   name: 'LoanCalculatedValuesType',
   fields: (): any => ({
     calculatedTotalPaidPrincipal: { type: new GraphQLNonNull(GraphQLFloat) },
-    calculatedChargedInterest: { type: new GraphQLNonNull(GraphQLFloat) },
+    calculatedTotalChargedInterest: { type: new GraphQLNonNull(GraphQLFloat) },
     calculatedPaidInterest: { type: new GraphQLNonNull(GraphQLFloat) },
     calculatedLastTransactionTimestamp: { type: new GraphQLNonNull(GraphQLFloat) },
     calculatedRelatedBudgets: { type: new GraphQLList(loanRelatedBudget) },

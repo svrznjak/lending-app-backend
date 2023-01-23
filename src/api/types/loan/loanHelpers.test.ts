@@ -352,7 +352,7 @@ describe('loanHelpers', () => {
           status: 'ACTIVE',
           calculatedInvestedAmount: 100,
           calculatedTotalPaidPrincipal: 100,
-          calculatedChargedInterest: 50,
+          calculatedTotalChargedInterest: 50,
           calculatedPaidInterest: 50,
         } as ILoan;
         loanHelpers.sanitize.all(input);
@@ -379,7 +379,7 @@ describe('loanHelpers', () => {
           revisions: undefined,
         },
         calculatedTotalPaidPrincipal: 100,
-        calculatedChargedInterest: 50,
+        calculatedTotalChargedInterest: 50,
         calculatedPaidInterest: 50,
       },
       {
@@ -397,7 +397,7 @@ describe('loanHelpers', () => {
           revisions: undefined,
         },
         calculatedTotalPaidPrincipal: 0,
-        calculatedChargedInterest: 10,
+        calculatedTotalChargedInterest: 10,
         calculatedPaidInterest: 5,
       },
     ];
@@ -423,7 +423,7 @@ describe('loanHelpers', () => {
           revisions: undefined,
         },
         calculatedTotalPaidPrincipal: 100,
-        calculatedChargedInterest: 50,
+        calculatedTotalChargedInterest: 50,
         calculatedPaidInterest: 50,
       },
       {
@@ -442,7 +442,7 @@ describe('loanHelpers', () => {
           revisions: undefined,
         },
         calculatedTotalPaidPrincipal: 100,
-        calculatedChargedInterest: 50,
+        calculatedTotalChargedInterest: 50,
         calculatedPaidInterest: 50,
       },
       {
@@ -461,7 +461,7 @@ describe('loanHelpers', () => {
           revisions: undefined,
         },
         calculatedTotalPaidPrincipal: 100,
-        calculatedChargedInterest: 50,
+        calculatedTotalChargedInterest: 50,
         calculatedPaidInterest: 50,
       },
       {
@@ -480,7 +480,7 @@ describe('loanHelpers', () => {
           revisions: undefined,
         },
         calculatedTotalPaidPrincipal: 100,
-        calculatedChargedInterest: 50,
+        calculatedTotalChargedInterest: 50,
         calculatedPaidInterest: 50,
       },
       {
@@ -498,7 +498,7 @@ describe('loanHelpers', () => {
           revisions: undefined,
         },
         calculatedTotalPaidPrincipal: 100,
-        calculatedChargedInterest: 50,
+        calculatedTotalChargedInterest: 50,
         calculatedPaidInterest: 50,
       },
       {
@@ -517,7 +517,7 @@ describe('loanHelpers', () => {
           revisions: undefined,
         },
         calculatedTotalPaidPrincipal: 100,
-        calculatedChargedInterest: 50,
+        calculatedTotalChargedInterest: 50,
         calculatedPaidInterest: 50,
       },
       {
@@ -536,7 +536,7 @@ describe('loanHelpers', () => {
           revisions: undefined,
         },
         calculatedTotalPaidPrincipal: 100,
-        calculatedChargedInterest: 50,
+        calculatedTotalChargedInterest: 50,
         calculatedPaidInterest: 50,
       },
       {
@@ -555,7 +555,7 @@ describe('loanHelpers', () => {
           revisions: undefined,
         },
         calculatedTotalPaidPrincipal: 100,
-        calculatedChargedInterest: 50,
+        calculatedTotalChargedInterest: 50,
         calculatedPaidInterest: 50,
       },
       {
@@ -573,7 +573,7 @@ describe('loanHelpers', () => {
           revisions: undefined,
         },
         calculatedTotalPaidPrincipal: 100,
-        calculatedChargedInterest: 50,
+        calculatedTotalChargedInterest: 50,
         calculatedPaidInterest: 50,
       },
       {
@@ -592,7 +592,7 @@ describe('loanHelpers', () => {
           revisions: undefined,
         },
         calculatedTotalPaidPrincipal: 100,
-        calculatedChargedInterest: 50,
+        calculatedTotalChargedInterest: 50,
         calculatedPaidInterest: 50,
       },
       {
@@ -611,7 +611,7 @@ describe('loanHelpers', () => {
           revisions: undefined,
         },
         calculatedTotalPaidPrincipal: 100,
-        calculatedChargedInterest: 50,
+        calculatedTotalChargedInterest: 50,
         calculatedPaidInterest: 50,
       },
       {
@@ -630,7 +630,7 @@ describe('loanHelpers', () => {
           revisions: undefined,
         },
         calculatedTotalPaidPrincipal: 100,
-        calculatedChargedInterest: 50,
+        calculatedTotalChargedInterest: 50,
         calculatedPaidInterest: 50,
       },
       {
@@ -649,7 +649,7 @@ describe('loanHelpers', () => {
           revisions: undefined,
         },
         calculatedTotalPaidPrincipal: 100,
-        calculatedChargedInterest: 50,
+        calculatedTotalChargedInterest: 50,
         calculatedPaidInterest: 50,
       },
       {
@@ -667,7 +667,7 @@ describe('loanHelpers', () => {
           revisions: undefined,
         },
         calculatedTotalPaidPrincipal: 100,
-        calculatedChargedInterest: 50,
+        calculatedTotalChargedInterest: 50,
         calculatedPaidInterest: 50,
       },
       {
@@ -685,7 +685,7 @@ describe('loanHelpers', () => {
           revisions: undefined,
         },
         calculatedTotalPaidPrincipal: 100,
-        calculatedChargedInterest: 50,
+        calculatedTotalChargedInterest: 50,
         calculatedPaidInterest: 50,
       },
       {
@@ -704,7 +704,7 @@ describe('loanHelpers', () => {
           revisions: undefined,
         },
         calculatedTotalPaidPrincipal: 100,
-        calculatedChargedInterest: 50,
+        calculatedTotalChargedInterest: 50,
         calculatedPaidInterest: 50,
       },
       {
@@ -716,7 +716,7 @@ describe('loanHelpers', () => {
         openedTimestamp: 1663012800,
         closesTimestamp: 1753012802,
         calculatedTotalPaidPrincipal: 100,
-        calculatedChargedInterest: 50,
+        calculatedTotalChargedInterest: 50,
         calculatedPaidInterest: 50,
       },
       {
@@ -735,7 +735,7 @@ describe('loanHelpers', () => {
           revisions: undefined,
         },
         calculatedTotalPaidPrincipal: 100,
-        calculatedChargedInterest: 50,
+        calculatedTotalChargedInterest: 50,
         calculatedPaidInterest: 50,
       },
       {
@@ -753,7 +753,7 @@ describe('loanHelpers', () => {
           entryTimestamp: 1663012853,
           revisions: undefined,
         },
-        calculatedChargedInterest: 50,
+        calculatedTotalChargedInterest: 50,
         calculatedPaidInterest: 50,
       },
       {
@@ -772,11 +772,11 @@ describe('loanHelpers', () => {
           revisions: undefined,
         },
         calculatedTotalPaidPrincipal: NaN,
-        calculatedChargedInterest: 50,
+        calculatedTotalChargedInterest: 50,
         calculatedPaidInterest: 50,
       },
       {
-        // calculatedChargedInterest is missing
+        // calculatedTotalChargedInterest is missing
         _id: 'xxx',
         name: 'Loan 1',
         description: 'Car loan.',
@@ -794,7 +794,7 @@ describe('loanHelpers', () => {
         calculatedPaidInterest: 50,
       },
       {
-        //calculatedChargedInterest is NaN
+        //calculatedTotalChargedInterest is NaN
         _id: 'xxx',
         name: 'Loan 1',
         description: 'Car loan.',
@@ -809,7 +809,7 @@ describe('loanHelpers', () => {
           revisions: undefined,
         },
         calculatedTotalPaidPrincipal: 100,
-        calculatedChargedInterest: NaN,
+        calculatedTotalChargedInterest: NaN,
         calculatedPaidInterest: 50,
       },
       {
@@ -828,7 +828,7 @@ describe('loanHelpers', () => {
           revisions: undefined,
         },
         calculatedTotalPaidPrincipal: 100,
-        calculatedChargedInterest: 50,
+        calculatedTotalChargedInterest: 50,
       },
       {
         // calculatedPaidInterest is NaN
@@ -846,7 +846,7 @@ describe('loanHelpers', () => {
           revisions: undefined,
         },
         calculatedTotalPaidPrincipal: 100,
-        calculatedChargedInterest: 50,
+        calculatedTotalChargedInterest: 50,
         calculatedPaidInterest: NaN,
       },
     ];

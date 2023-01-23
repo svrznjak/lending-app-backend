@@ -373,7 +373,8 @@ export default {
       if (AFFECTED_LOAN.openedTimestamp > transaction.transactionTimestamp)
         throw new Error('Transaction can not occur before loan openedTimestamp');
 
-      if (AFFECTED_LOAN.status === 'CLOSED') throw new Error('Transaction can not occur on loan with status "CLOSED"');
+      if (AFFECTED_LOAN.status === 'COMPLETED')
+        throw new Error('Transaction can not occur on loan with status "COMPLETED"');
     } else if (transaction.to.datatype === 'LOAN') {
       const AFFECTED_LOAN: ILoan = await Loan.getOneFromUser(
         {
@@ -384,7 +385,8 @@ export default {
       );
       if (AFFECTED_LOAN.openedTimestamp > transaction.transactionTimestamp)
         throw new Error('Transaction can not occur before loan openedTimestamp');
-      if (AFFECTED_LOAN.status === 'CLOSED') throw new Error('Transaction can not occur on loan with status "CLOSED"');
+      if (AFFECTED_LOAN.status === 'COMPLETED')
+        throw new Error('Transaction can not occur on loan with status "COMPLETED"');
     }
     return true;
   },

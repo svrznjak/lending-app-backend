@@ -11,10 +11,10 @@ export interface ILoan {
   openedTimestamp: number;
   closesTimestamp: number;
   interestRate: IInterestRate;
-  status: 'ACTIVE' | 'PAUSED' | 'PAID' | 'CLOSED' | 'DEFAULTED';
+  status: 'ACTIVE' | 'PAUSED' | 'PAID' | 'COMPLETED' | 'DEFAULTED';
   calculatedInvestedAmount: number;
   calculatedTotalPaidPrincipal: number;
-  calculatedChargedInterest: number;
+  calculatedTotalChargedInterest: number;
   calculatedPaidInterest: number;
   calculatedLastTransactionTimestamp: number;
   calculatedRelatedBudgets: IRelatedBudget[];

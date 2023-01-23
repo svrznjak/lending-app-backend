@@ -68,7 +68,7 @@ export const loanHelpers = {
       if (
         !isValidOption({
           option: status.toString(),
-          validOptions: ['ACTIVE', 'PAUSED', 'PAID', 'CLOSED', 'DEFAULTED'],
+          validOptions: ['ACTIVE', 'PAUSED', 'PAID', 'COMPLETED', 'DEFAULTED'],
           caseSensitive: true,
         })
       )
@@ -103,8 +103,8 @@ export const loanHelpers = {
       throw new Error('Type of loan.calculatedTotalPaidPrincipal must be a number!');
     if (!Number.isFinite(loan.calculatedTotalPaidPrincipal))
       throw new Error('Type of loan.calculatedTotalPaidPrincipal must be a number!');
-    if (!Number.isFinite(loan.calculatedChargedInterest))
-      throw new Error('Type of loan.calculatedChargedInterest must be a number!');
+    if (!Number.isFinite(loan.calculatedTotalChargedInterest))
+      throw new Error('Type of loan.calculatedTotalChargedInterest must be a number!');
     if (!Number.isFinite(loan.calculatedPaidInterest))
       throw new Error('Type of loan.calculatedPaidInterest must be a number!');
     if (!Number.isFinite(loan.calculatedLastTransactionTimestamp))
@@ -134,7 +134,7 @@ export const loanHelpers = {
       status: loan.status,
       calculatedInvestedAmount: loan.calculatedInvestedAmount,
       calculatedTotalPaidPrincipal: loan.calculatedTotalPaidPrincipal,
-      calculatedChargedInterest: loan.calculatedChargedInterest,
+      calculatedTotalChargedInterest: loan.calculatedTotalChargedInterest,
       calculatedPaidInterest: loan.calculatedPaidInterest,
       calculatedLastTransactionTimestamp: loan.calculatedLastTransactionTimestamp,
       calculatedRelatedBudgets: loan.calculatedRelatedBudgets,
