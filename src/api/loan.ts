@@ -11,15 +11,11 @@ import {
 import * as User from './user.js';
 import transaction from './transaction.js';
 import { loanHelpers } from './types/loan/loanHelpers.js';
-import { ILoan, IRelatedBudget } from './types/loan/loanInterface.js';
+import { ILoan, IRelatedBudget, ITransactionInterval } from './types/loan/loanInterface.js';
 import { ITransaction } from './types/transaction/transactionInterface.js';
 import Budget from './budget.js';
 import { transactionHelpers } from './types/transaction/transactionHelpers.js';
-import {
-  ITransactionInterval,
-  IInterestRate,
-  IAmortizationInterval,
-} from './types/interestRate/interestRateInterface.js';
+import { IInterestRate, IAmortizationInterval } from './types/interestRate/interestRateInterface.js';
 import LoanModel, { ILoanDocument } from './db/model/LoanModel.js';
 import LoanCache from './cache/loanCache.js';
 
@@ -107,7 +103,6 @@ export default {
       }
 
       const recalculatedLoan: ILoan = await this.recalculateCalculatedValues(Mongo_Loan);
-      LoanCache.setCachedItem({ itemId: recalculatedLoan._id, value: recalculatedLoan });
 
       return recalculatedLoan;
     } catch (err) {
@@ -179,29 +174,36 @@ export default {
     },
     { session = undefined }: { session?: ClientSession } = {},
   ): Promise<ILoan> {
-    console.log(userId);
     if (LoanCache.getCachedItem({ itemId: loanId })) {
       return LoanCache.getCachedItem({ itemId: loanId }) as ILoan;
     } else {
       const MONGO_LOAN = await LoanModel.findOne({ _id: loanId, userId: userId }).session(session);
+      if (MONGO_LOAN === null) throw new Error('Loan could not be found');
       const recalculatedLoan = await this.recalculateCalculatedValues(MONGO_LOAN);
-      LoanCache.setCachedItem({ itemId: loanId, value: recalculatedLoan });
       return recalculatedLoan;
     }
   },
-  getAllFromUser: async function getLoans(
-    { userId }: { userId: string },
+  getFromUser: async function getLoans(
+    { userId, loanId, status }: { userId: string; loanId?: string; status?: ILoan['status'][] },
     { session = undefined }: { session?: ClientSession } = {},
   ): Promise<ILoan[]> {
-    const LOANS = await LoanModel.find({ userId: userId }).session(session).exec();
+    if (userId === undefined) throw new Error('userId is required!');
+    const query: any = {
+      userId: userId,
+      status: { $in: status || ['ACTIVE', 'PAID', 'PAUSED', 'CLOSED', 'DEFAULTED'] },
+    };
+    if (loanId !== undefined) query._id = loanId;
+
+    const LOANS = await LoanModel.find(query).session(session).exec();
     const returnValue: ILoan[] = [];
     for (let i = 0; i < LOANS.length; i++) {
       const LOAN_ID = LOANS[i]._id.toString();
-      if (LoanCache.getCachedItem({ itemId: LOAN_ID })) {
+      if (LOANS[i].status === 'CLOSED' || LOANS[i].status === 'DEFAULTED') {
+        returnValue.push(LOANS[i]);
+      } else if (LoanCache.getCachedItem({ itemId: LOAN_ID })) {
         returnValue.push(LoanCache.getCachedItem({ itemId: LOAN_ID }) as ILoan);
       } else {
         const recalculatedLoan = await this.recalculateCalculatedValues(LOANS[i]);
-        LoanCache.setCachedItem({ itemId: LOAN_ID, value: recalculatedLoan });
         returnValue.push(recalculatedLoan);
       }
     }
@@ -285,10 +287,7 @@ export default {
 
     if (runRecalculate) {
       await Budget.recalculateCalculatedValues(budgetId);
-      LoanCache.setCachedItem({
-        itemId: loanId,
-        value: await this.recalculateCalculatedValues(loanId),
-      });
+      await this.recalculateCalculatedValues(loanId);
     }
     return NEW_TRANSACTION;
   },
@@ -345,10 +344,7 @@ export default {
 
     if (runRecalculate) {
       await Budget.recalculateCalculatedValues(budgetId);
-      LoanCache.setCachedItem({
-        itemId: loanId,
-        value: await this.recalculateCalculatedValues(loanId),
-      });
+      await this.recalculateCalculatedValues(loanId);
     }
     return NEW_TRANSACTION;
   },
@@ -403,10 +399,7 @@ export default {
     );
 
     if (runRecalculate) {
-      LoanCache.setCachedItem({
-        itemId: loanId,
-        value: await this.recalculateCalculatedValues(loanId),
-      });
+      await this.recalculateCalculatedValues(loanId);
     }
     return NEW_TRANSACTION;
   },
@@ -469,6 +462,21 @@ export default {
     await MONGO_LOAN.save();
     return CHANGED_LOAN;
   },
+  complete: async function completeLoan(input: string | ILoanDocument): Promise<ILoan> {
+    const MONGO_LOAN = typeof input === 'string' ? await LoanModel.findOne({ _id: input }) : input;
+
+    if (MONGO_LOAN.status !== 'ACTIVE') throw new Error('Only ACTIVE loans can be paused!');
+
+    MONGO_LOAN.status = 'PAUSED';
+
+    const CHANGED_LOAN = loanHelpers.runtimeCast({
+      ...MONGO_LOAN.toObject(),
+      _id: MONGO_LOAN._id.toString(),
+      userId: MONGO_LOAN.userId.toString(),
+    });
+    await MONGO_LOAN.save();
+    return CHANGED_LOAN;
+  },
   getCalculatedValuesAtTimestamp: async function getLoanCalculatedValuesAtTimestamp({
     loanId,
     interestRate,
@@ -486,6 +494,7 @@ export default {
       | 'calculatedPaidInterest'
       | 'calculatedLastTransactionTimestamp'
       | 'calculatedRelatedBudgets'
+      | 'transactionList'
     >
   > {
     let calculatedInvestedAmount = 0;
@@ -523,16 +532,10 @@ export default {
       timestampLimit: timestampLimit,
     });
     if (TRANSACTIONS_LIST.length > 0) {
-      for (let i = 0; i < TRANSACTIONS_LIST.length; i++) {
-        const TRANSACTION = TRANSACTIONS_LIST[i];
-        // TODO PARANAID CALCULATOR
-        if (TRANSACTION.principalCharge < 0) calculatedInvestedAmount -= TRANSACTION.principalCharge;
-        else if (TRANSACTION.principalCharge > 0) calculatedTotalPaidPrincipal += TRANSACTION.principalCharge;
-        if (TRANSACTION.interestCharge > 0) calculatedChargedInterest += TRANSACTION.interestCharge;
-        else if (TRANSACTION.interestCharge < 0) calculatedPaidInterest -= TRANSACTION.interestCharge;
-
-        //
-      }
+      calculatedInvestedAmount = TRANSACTIONS_LIST[TRANSACTIONS_LIST.length - 1].totalInvested;
+      calculatedChargedInterest = TRANSACTIONS_LIST[TRANSACTIONS_LIST.length - 1].outstandingInterest;
+      calculatedPaidInterest = TRANSACTIONS_LIST[TRANSACTIONS_LIST.length - 1].totalPaidInterest;
+      calculatedTotalPaidPrincipal = TRANSACTIONS_LIST[TRANSACTIONS_LIST.length - 1].totalPaidPrincipal;
     }
     return {
       calculatedInvestedAmount,
@@ -547,6 +550,7 @@ export default {
           withdrawn: parseInt(calculatedRelatedBudgets[key].withdrawn),
         } as IRelatedBudget;
       }),
+      transactionList: TRANSACTIONS_LIST,
     };
   },
   recalculateCalculatedValues: async function recalculateLoanCalculatedValues(
@@ -561,17 +565,37 @@ export default {
       interestRate: MONGO_LOAN.interestRate,
       timestampLimit: NOW_TIMESTAMP,
     });
-    MONGO_LOAN.calculatedInvestedAmount = CALCULATED_VALUES_UNTIL_NOW.calculatedInvestedAmount;
-    MONGO_LOAN.calculatedTotalPaidPrincipal = CALCULATED_VALUES_UNTIL_NOW.calculatedTotalPaidPrincipal;
-    MONGO_LOAN.calculatedChargedInterest = CALCULATED_VALUES_UNTIL_NOW.calculatedChargedInterest;
-    MONGO_LOAN.calculatedPaidInterest = CALCULATED_VALUES_UNTIL_NOW.calculatedPaidInterest;
-    MONGO_LOAN.calculatedLastTransactionTimestamp = CALCULATED_VALUES_UNTIL_NOW.calculatedLastTransactionTimestamp;
-    MONGO_LOAN.calculatedRelatedBudgets = [];
-    CALCULATED_VALUES_UNTIL_NOW.calculatedRelatedBudgets.forEach((relatedBudget) => {
-      MONGO_LOAN.calculatedRelatedBudgets.push(relatedBudget);
+
+    //const CHANGED_LOAN = await this.recalculateStatus(MONGO_LOAN);
+    if (
+      CALCULATED_VALUES_UNTIL_NOW.calculatedTotalPaidPrincipal >=
+        CALCULATED_VALUES_UNTIL_NOW.calculatedInvestedAmount &&
+      MONGO_LOAN.status === 'ACTIVE'
+    ) {
+      MONGO_LOAN.status = 'PAID';
+      MONGO_LOAN.save();
+    } else if (
+      CALCULATED_VALUES_UNTIL_NOW.calculatedTotalPaidPrincipal < CALCULATED_VALUES_UNTIL_NOW.calculatedInvestedAmount &&
+      MONGO_LOAN.status === 'PAID'
+    ) {
+      MONGO_LOAN.status = 'ACTIVE';
+      MONGO_LOAN.save();
+    }
+
+    const CHANGED_LOAN = loanHelpers.runtimeCast({
+      ...MONGO_LOAN.toObject(),
+      _id: MONGO_LOAN._id.toString(),
+      userId: MONGO_LOAN.userId.toString(),
     });
 
-    const CHANGED_LOAN = await this.recalculateStatus(MONGO_LOAN);
+    LoanCache.setCachedItem({
+      itemId: MONGO_LOAN._id.toString(),
+      value: {
+        ...CHANGED_LOAN,
+        ...CALCULATED_VALUES_UNTIL_NOW,
+      },
+    });
+
     // Saved in recalculateStatus  await MONGO_LOAN.save();
     return CHANGED_LOAN;
   },
@@ -658,18 +682,19 @@ export default {
         description: 'fixed-interest',
         from: {
           datatype: 'INTEREST',
-          addressId: '000000000000000000000000',
+          addressId: '',
         },
         to: {
           datatype: 'LOAN',
           addressId: loanId,
         },
         amount: interestRate.amount,
-        entryTimestamp: loanTransactions[loanTransactions.length - 1].transactionTimestamp,
+        entryTimestamp: loanTransactions[loanTransactions.length - 1].transactionTimestamp + 1, // Add fixed interest after first transaction
       });
     }
 
-    // add another empty loan transaction for now in order to calculate interest until now
+    // add another empty loan transaction in order to calculate interes
+    // Not ideal solution as frontend has to ignore it, but its simple...
     // POSSIBLE SOURCE OF BUGS IS DATA STRUCTURE IS CHANGED
     if (loanTransactions[0].transactionTimestamp < timestampLimit)
       loanTransactions.unshift({
@@ -684,10 +709,39 @@ export default {
       });
 
     const listOfTransactions: ITransactionInterval[] = [];
+
+    let totalInvested = 0;
+    let totalPaidPrincipal = 0;
+    let totalPaidInterest = 0;
     let outstandingPrincipal = 0;
     let outstandingInterest = 0;
     for (let i = loanTransactions.length - 1; i >= 0; i--) {
       const loanTransaction = loanTransactions[i];
+
+      const transactionInformation: Pick<
+        ITransactionInterval,
+        | 'id'
+        | 'timestamp'
+        | 'description'
+        | 'from'
+        | 'to'
+        | 'invested'
+        | 'interestCharged'
+        | 'feeCharged'
+        | 'principalPaid'
+        | 'interestPaid'
+      > = {
+        id: loanTransaction._id.toString(),
+        timestamp: loanTransaction.transactionTimestamp,
+        description: loanTransaction.description,
+        from: loanTransaction.from,
+        to: loanTransaction.to,
+        invested: 0,
+        feeCharged: 0,
+        interestCharged: 0,
+        principalPaid: 0,
+        interestPaid: 0,
+      };
 
       //
       let fromDateTimestamp;
@@ -700,47 +754,47 @@ export default {
       }
       // for calculating interest daily const differenceInDays = differenceInCalendarDays(new Date(toDateTimestamp), new Date(fromDateTimestamp));
       const DIFFERENCE_IN_HOURS = differenceInHours(new Date(toDateTimestamp), new Date(fromDateTimestamp));
-      let interestCharge = 0;
 
       if (!IS_FIXED_AMOUNT_INTEREST) {
         if (interestRate.type === 'PERCENTAGE_PER_DURATION' && interestRate.isCompounding) {
           for (let i = 0; i < DIFFERENCE_IN_HOURS; i++) {
-            interestCharge += (outstandingPrincipal + interestCharge) * interest_percentage_per_hour;
+            transactionInformation.interestCharged +=
+              (outstandingPrincipal + transactionInformation.interestCharged) * interest_percentage_per_hour;
           }
         } else if (interestRate.type === 'PERCENTAGE_PER_DURATION' && !interestRate.isCompounding) {
-          interestCharge = outstandingPrincipal * interest_percentage_per_hour * DIFFERENCE_IN_HOURS;
+          transactionInformation.interestCharged =
+            outstandingPrincipal * interest_percentage_per_hour * DIFFERENCE_IN_HOURS;
         } else if (interestRate.type === 'FIXED_PER_DURATION' && interestRate.duration !== 'FULL_DURATION') {
-          interestCharge = interest_per_hour * DIFFERENCE_IN_HOURS;
+          transactionInformation.interestCharged = interest_per_hour * DIFFERENCE_IN_HOURS;
         }
+        outstandingInterest += transactionInformation.interestCharged;
       }
       // calculate principal payment and next outstandingPrincipal
-      let principalCharge: number;
       if (loanTransaction.from.datatype === 'BUDGET') {
-        principalCharge = -loanTransaction.amount;
-        outstandingPrincipal = outstandingPrincipal - principalCharge;
+        totalInvested += loanTransaction.amount;
+        outstandingPrincipal += loanTransaction.amount;
       } else if (loanTransaction.from.datatype === 'INTEREST') {
-        principalCharge = 0;
-        interestCharge += loanTransaction.amount;
-        outstandingInterest = outstandingInterest + interestCharge;
+        transactionInformation.feeCharged = loanTransaction.amount;
+        outstandingInterest += loanTransaction.amount;
       } else if (loanTransaction.from.datatype === 'LOAN') {
-        outstandingInterest = outstandingInterest + interestCharge;
         if (loanTransaction.amount <= outstandingInterest) {
-          interestCharge = -loanTransaction.amount;
-          outstandingInterest = outstandingInterest + interestCharge;
-          principalCharge = 0;
+          transactionInformation.interestPaid = loanTransaction.amount;
+          outstandingInterest -= loanTransaction.amount;
+          totalPaidInterest += loanTransaction.amount;
         } else {
-          interestCharge = -outstandingInterest;
-          outstandingInterest = outstandingInterest + interestCharge;
-          principalCharge = loanTransaction.amount + interestCharge;
-          outstandingPrincipal = outstandingPrincipal - principalCharge;
+          transactionInformation.interestPaid = outstandingInterest;
+          totalPaidInterest += outstandingInterest;
+          transactionInformation.principalPaid = loanTransaction.amount - outstandingInterest;
+          totalPaidPrincipal += transactionInformation.principalPaid;
+          outstandingInterest = 0;
+          outstandingPrincipal -= transactionInformation.principalPaid;
         }
       }
-
       listOfTransactions.push({
-        fromDateTimestamp: fromDateTimestamp,
-        toDateTimestamp: toDateTimestamp,
-        interestCharge: interestCharge,
-        principalCharge: principalCharge,
+        ...transactionInformation,
+        totalInvested: totalInvested,
+        totalPaidPrincipal: totalPaidPrincipal,
+        totalPaidInterest: totalPaidInterest,
         outstandingPrincipal: outstandingPrincipal,
         outstandingInterest: outstandingInterest,
       });
