@@ -18,6 +18,7 @@ import { transactionHelpers } from './types/transaction/transactionHelpers.js';
 import { IInterestRate, IAmortizationInterval } from './types/interestRate/interestRateInterface.js';
 import LoanModel, { ILoanDocument } from './db/model/LoanModel.js';
 import LoanCache from './cache/loanCache.js';
+import _ from 'lodash';
 
 interface fund {
   budgetId: string;
@@ -466,10 +467,26 @@ export default {
     const MONGO_LOAN = typeof input === 'string' ? await LoanModel.findOne({ _id: input }) : input;
 
     if (MONGO_LOAN.status === 'PAID') throw new Error('Only PAID loans can be COMPLETED!');
+    const CALCULATED_VALES = await this.getCalculatedValuesAtTimestamp({
+      loanId: MONGO_LOAN._id.toString(),
+      interestRate: MONGO_LOAN.interestRate,
+      timestampLimit: new Date().getTime(),
+    });
 
-    const recalculatedLoan: ILoan = this.recalculateCalculatedValues(MONGO_LOAN);
+    if (
+      _.round(CALCULATED_VALES.calculatedInvestedAmount, 4) ===
+      _.round(CALCULATED_VALES.calculatedTotalPaidPrincipal, 4)
+    )
+      throw new Error('Loan can not be closed if it is not balanced.');
 
     MONGO_LOAN.status = 'COMPLETED';
+    MONGO_LOAN.calculatedInvestedAmount = CALCULATED_VALES.calculatedInvestedAmount;
+    MONGO_LOAN.calculatedLastTransactionTimestamp = CALCULATED_VALES.calculatedLastTransactionTimestamp;
+    MONGO_LOAN.calculatedOutstandingInterest = CALCULATED_VALES.calculatedOutstandingInterest;
+    MONGO_LOAN.calculatedPaidInterest = CALCULATED_VALES.calculatedPaidInterest;
+    MONGO_LOAN.calculatedRelatedBudgets = CALCULATED_VALES.calculatedRelatedBudgets;
+    MONGO_LOAN.calculatedTotalPaidPrincipal = CALCULATED_VALES.calculatedTotalPaidPrincipal;
+    MONGO_LOAN.transactionList = CALCULATED_VALES.transactionList;
 
     const CHANGED_LOAN = loanHelpers.runtimeCast({
       ...MONGO_LOAN.toObject(),
@@ -585,6 +602,7 @@ export default {
 
     const CHANGED_LOAN = loanHelpers.runtimeCast({
       ...MONGO_LOAN.toObject(),
+      ...CALCULATED_VALUES_UNTIL_NOW,
       _id: MONGO_LOAN._id.toString(),
       userId: MONGO_LOAN.userId.toString(),
     });
@@ -598,7 +616,10 @@ export default {
     });
 
     // Saved in recalculateStatus  await MONGO_LOAN.save();
-    return CHANGED_LOAN;
+    return {
+      ...CHANGED_LOAN,
+      ...CALCULATED_VALUES_UNTIL_NOW,
+    };
   },
   generateTransactionsList: function generateLoanTransactionsList({
     loanTransactions,
