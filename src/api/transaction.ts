@@ -7,7 +7,6 @@ import mongoose, { ClientSession } from 'mongoose';
 import * as User from './user.js';
 import Budget from './budget.js';
 import Loan from './loan.js';
-import LoanCache from './cache/loanCache.js';
 import paranoidCalculator from './utils/paranoidCalculator/paranoidCalculator.js';
 import { ILoan } from './types/loan/loanInterface.js';
 
@@ -211,16 +210,10 @@ export default {
         Budget.recalculateCalculatedValues(deletedTransaction.to.addressId.toString());
       }
       if (deletedTransaction.from.datatype === 'LOAN') {
-        LoanCache.setCachedItem({
-          itemId: deletedTransaction.to.addressId,
-          value: await Loan.recalculateCalculatedValues(deletedTransaction.from.addressId.toString()),
-        });
+        await Loan.recalculateCalculatedValues(deletedTransaction.from.addressId.toString());
       }
       if (deletedTransaction.to.datatype === 'LOAN') {
-        LoanCache.setCachedItem({
-          itemId: deletedTransaction.to.addressId,
-          value: await Loan.recalculateCalculatedValues(deletedTransaction.to.addressId.toString()),
-        });
+        await Loan.recalculateCalculatedValues(deletedTransaction.to.addressId.toString());
       }
       return true;
     } catch (err) {

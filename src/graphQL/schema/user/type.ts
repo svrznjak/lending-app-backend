@@ -23,7 +23,7 @@ export const userType = new GraphQLObjectType({
     loans: {
       type: new GraphQLList(loanType),
       resolve: async (parent: IUser): Promise<ILoan[]> => {
-        return await Loans.getAllFromUser({ userId: parent._id });
+        return await Loans.getFromUser({ userId: parent._id });
       },
     },
     currency: { type: new GraphQLNonNull(GraphQLString) },

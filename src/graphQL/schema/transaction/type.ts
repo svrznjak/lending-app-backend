@@ -40,7 +40,7 @@ export const transactionType = new GraphQLObjectType({
   }),
 });
 
-const transactionAddressType = new GraphQLObjectType({
+export const transactionAddressType = new GraphQLObjectType({
   name: 'TransactionAddressType',
   fields: (): any => ({
     datatype: {

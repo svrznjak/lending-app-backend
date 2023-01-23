@@ -152,5 +152,25 @@ export default new GraphQLObjectType({
         }
       },
     },
+    complete: {
+      type: loanType,
+      args: {
+        loanId: { type: new GraphQLNonNull(GraphQLID) },
+      },
+      async resolve(_parent: any, args: any, context: any): Promise<ILoan> {
+        const userAuthId = await context.getCurrentUserAuthIdOrThrowValidationError();
+        const user = await getUserByAuthId(userAuthId);
+
+        // get loan to check if loan with loanId exists for specified user userId
+        await Loan.getOneFromUser({ userId: user._id, loanId: args.loanId });
+
+        try {
+          return await Loan.complete(args.loanId);
+        } catch (err: any) {
+          console.log(err.message);
+          throw new Error(err);
+        }
+      },
+    },
   }),
 });

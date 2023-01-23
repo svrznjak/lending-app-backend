@@ -15,12 +15,3 @@ export interface IAmortizationInterval {
   interest: number;
   principalPayment: number;
 }
-
-export interface ITransactionInterval {
-  fromDateTimestamp: number;
-  toDateTimestamp: number;
-  interestCharge: number;
-  principalCharge: number;
-  outstandingPrincipal: number;
-  outstandingInterest: number;
-}

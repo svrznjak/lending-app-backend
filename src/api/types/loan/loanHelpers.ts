@@ -138,6 +138,7 @@ export const loanHelpers = {
       calculatedPaidInterest: loan.calculatedPaidInterest,
       calculatedLastTransactionTimestamp: loan.calculatedLastTransactionTimestamp,
       calculatedRelatedBudgets: loan.calculatedRelatedBudgets,
+      transactionList: loan.transactionList,
     };
   },
 };
