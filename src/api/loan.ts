@@ -65,7 +65,7 @@ export default {
           notes: [],
           status: 'ACTIVE',
           calculatedInvestedAmount: 0,
-          calculatedTotalChargedInterest: 0,
+          calculatedOutstandingInterest: 0,
           calculatedPaidInterest: 0,
           calculatedTotalPaidPrincipal: 0,
           calculatedLastTransactionTimestamp: input.openedTimestamp,
@@ -492,7 +492,7 @@ export default {
       ILoan,
       | 'calculatedInvestedAmount'
       | 'calculatedTotalPaidPrincipal'
-      | 'calculatedTotalChargedInterest'
+      | 'calculatedOutstandingInterest'
       | 'calculatedPaidInterest'
       | 'calculatedLastTransactionTimestamp'
       | 'calculatedRelatedBudgets'
@@ -501,7 +501,7 @@ export default {
   > {
     let calculatedInvestedAmount = 0;
     let calculatedTotalPaidPrincipal = 0;
-    let calculatedTotalChargedInterest = 0;
+    let calculatedOutstandingInterest = 0;
     let calculatedPaidInterest = 0;
     let calculatedLastTransactionTimestamp = 0;
     const calculatedRelatedBudgets = {};
@@ -535,13 +535,13 @@ export default {
     });
     if (TRANSACTIONS_LIST.length > 0) {
       calculatedInvestedAmount = TRANSACTIONS_LIST[TRANSACTIONS_LIST.length - 1].totalInvested;
-      calculatedTotalChargedInterest = TRANSACTIONS_LIST[TRANSACTIONS_LIST.length - 1].outstandingInterest;
+      calculatedOutstandingInterest = TRANSACTIONS_LIST[TRANSACTIONS_LIST.length - 1].outstandingInterest;
       calculatedPaidInterest = TRANSACTIONS_LIST[TRANSACTIONS_LIST.length - 1].totalPaidInterest;
       calculatedTotalPaidPrincipal = TRANSACTIONS_LIST[TRANSACTIONS_LIST.length - 1].totalPaidPrincipal;
     }
     return {
       calculatedInvestedAmount,
-      calculatedTotalChargedInterest,
+      calculatedOutstandingInterest,
       calculatedPaidInterest,
       calculatedTotalPaidPrincipal,
       calculatedLastTransactionTimestamp,

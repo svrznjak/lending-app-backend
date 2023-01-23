@@ -103,8 +103,8 @@ export const loanHelpers = {
       throw new Error('Type of loan.calculatedTotalPaidPrincipal must be a number!');
     if (!Number.isFinite(loan.calculatedTotalPaidPrincipal))
       throw new Error('Type of loan.calculatedTotalPaidPrincipal must be a number!');
-    if (!Number.isFinite(loan.calculatedTotalChargedInterest))
-      throw new Error('Type of loan.calculatedTotalChargedInterest must be a number!');
+    if (!Number.isFinite(loan.calculatedOutstandingInterest))
+      throw new Error('Type of loan.calculatedOutstandingInterest must be a number!');
     if (!Number.isFinite(loan.calculatedPaidInterest))
       throw new Error('Type of loan.calculatedPaidInterest must be a number!');
     if (!Number.isFinite(loan.calculatedLastTransactionTimestamp))
@@ -134,7 +134,7 @@ export const loanHelpers = {
       status: loan.status,
       calculatedInvestedAmount: loan.calculatedInvestedAmount,
       calculatedTotalPaidPrincipal: loan.calculatedTotalPaidPrincipal,
-      calculatedTotalChargedInterest: loan.calculatedTotalChargedInterest,
+      calculatedOutstandingInterest: loan.calculatedOutstandingInterest,
       calculatedPaidInterest: loan.calculatedPaidInterest,
       calculatedLastTransactionTimestamp: loan.calculatedLastTransactionTimestamp,
       calculatedRelatedBudgets: loan.calculatedRelatedBudgets,

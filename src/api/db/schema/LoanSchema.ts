@@ -34,7 +34,7 @@ export const LoanSchema = new mongoose.Schema(
     },
     calculatedInvestedAmount: { type: Number },
     calculatedTotalPaidPrincipal: { type: Number },
-    calculatedTotalChargedInterest: { type: Number },
+    calculatedOutstandingInterest: { type: Number },
     calculatedPaidInterest: { type: Number },
     calculatedLastTransactionTimestamp: { type: Number },
     calculatedRelatedBudgets: {

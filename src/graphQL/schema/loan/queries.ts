@@ -69,7 +69,7 @@ export default new GraphQLObjectType({
         Pick<
           ILoan,
           | 'calculatedTotalPaidPrincipal'
-          | 'calculatedTotalChargedInterest'
+          | 'calculatedOutstandingInterest'
           | 'calculatedPaidInterest'
           | 'calculatedLastTransactionTimestamp'
           | 'calculatedRelatedBudgets'

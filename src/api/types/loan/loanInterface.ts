@@ -14,7 +14,7 @@ export interface ILoan {
   status: 'ACTIVE' | 'PAUSED' | 'PAID' | 'COMPLETED' | 'DEFAULTED';
   calculatedInvestedAmount: number;
   calculatedTotalPaidPrincipal: number;
-  calculatedTotalChargedInterest: number;
+  calculatedOutstandingInterest: number;
   calculatedPaidInterest: number;
   calculatedLastTransactionTimestamp: number;
   calculatedRelatedBudgets: IRelatedBudget[];
