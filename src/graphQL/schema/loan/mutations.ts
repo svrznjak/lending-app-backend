@@ -9,6 +9,8 @@ import Loan from '../../../api/loan.js';
 import { loanType, fundInputType } from './type.js';
 import { transactionType } from '../transaction/type.js';
 import LoanModel from '../../../api/db/model/LoanModel.js';
+
+import Budget from '../../../api/budget.js';
 import BudgetModel from '../../../api/db/model/BudgetModel.js';
 export default new GraphQLObjectType({
   name: 'LoanMutations',
@@ -112,6 +114,40 @@ export default new GraphQLObjectType({
         }
       },
     },
+    addFunds: {
+      type: transactionType,
+      args: {
+        loanId: { type: new GraphQLNonNull(GraphQLID) },
+        budgetId: { type: new GraphQLNonNull(GraphQLID) },
+        description: { type: new GraphQLNonNull(GraphQLString) },
+        transactionTimestamp: { type: new GraphQLNonNull(GraphQLFloat) },
+        amount: { type: new GraphQLNonNull(GraphQLFloat) },
+      },
+      async resolve(_parent: any, args: any, context: any): Promise<ITransaction> {
+        const userAuthId = await context.getCurrentUserAuthIdOrThrowValidationError();
+        const user = await getUserByAuthId(userAuthId);
+
+        // get loan to check if loan with loanId exists for specified user userId
+        await Loan.getOneFromUser({ userId: user._id, loanId: args.loanId });
+        // get budget to check if budget with budgetId exists for specified user userId
+        await Budget.getOneFromUser({ userId: user._id, budgetId: args.budgetId });
+
+        try {
+          const newTransaction = await Loan.addFunds({
+            userId: user._id,
+            budgetId: args.budgetId,
+            loanId: args.loanId,
+            transactionTimestamp: args.transactionTimestamp,
+            description: args.description,
+            amount: args.amount,
+          });
+          return newTransaction;
+        } catch (err: any) {
+          console.log(err.message);
+          throw new Error(err);
+        }
+      },
+    },
     pause: {
       type: loanType,
       args: {
@@ -170,6 +206,26 @@ export default new GraphQLObjectType({
           console.log(err.message);
           throw new Error(err);
         }
+      },
+      default: {
+        type: loanType,
+        args: {
+          loanId: { type: new GraphQLNonNull(GraphQLID) },
+        },
+        async resolve(_parent: any, args: any, context: any): Promise<ILoan> {
+          const userAuthId = await context.getCurrentUserAuthIdOrThrowValidationError();
+          const user = await getUserByAuthId(userAuthId);
+
+          // get loan to check if loan with loanId exists for specified user userId
+          await Loan.getOneFromUser({ userId: user._id, loanId: args.loanId });
+
+          try {
+            return await Loan.default(args.loanId);
+          } catch (err: any) {
+            console.log(err.message);
+            throw new Error(err);
+          }
+        },
       },
     },
   }),

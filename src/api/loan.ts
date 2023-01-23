@@ -496,6 +496,34 @@ export default {
     await MONGO_LOAN.save();
     return CHANGED_LOAN;
   },
+  default: async function defaultLoan(input: string | ILoanDocument): Promise<ILoan> {
+    const MONGO_LOAN = typeof input === 'string' ? await LoanModel.findOne({ _id: input }) : input;
+
+    if (MONGO_LOAN.status !== 'PAID' && MONGO_LOAN.status !== 'COMPLETED' && MONGO_LOAN.status !== 'DEFAULTED')
+      throw new Error('Only PAID loans can be COMPLETED!');
+    const CALCULATED_VALES = await this.getCalculatedValuesAtTimestamp({
+      loanId: MONGO_LOAN._id.toString(),
+      interestRate: MONGO_LOAN.interestRate,
+      timestampLimit: new Date().getTime(),
+    });
+
+    MONGO_LOAN.status = 'DEFAULTED';
+    MONGO_LOAN.calculatedInvestedAmount = CALCULATED_VALES.calculatedInvestedAmount;
+    MONGO_LOAN.calculatedLastTransactionTimestamp = CALCULATED_VALES.calculatedLastTransactionTimestamp;
+    MONGO_LOAN.calculatedOutstandingInterest = CALCULATED_VALES.calculatedOutstandingInterest;
+    MONGO_LOAN.calculatedPaidInterest = CALCULATED_VALES.calculatedPaidInterest;
+    MONGO_LOAN.calculatedRelatedBudgets = CALCULATED_VALES.calculatedRelatedBudgets;
+    MONGO_LOAN.calculatedTotalPaidPrincipal = CALCULATED_VALES.calculatedTotalPaidPrincipal;
+    MONGO_LOAN.transactionList = CALCULATED_VALES.transactionList;
+
+    const CHANGED_LOAN = loanHelpers.runtimeCast({
+      ...MONGO_LOAN.toObject(),
+      _id: MONGO_LOAN._id.toString(),
+      userId: MONGO_LOAN.userId.toString(),
+    });
+    await MONGO_LOAN.save();
+    return CHANGED_LOAN;
+  },
   getCalculatedValuesAtTimestamp: async function getLoanCalculatedValuesAtTimestamp({
     loanId,
     interestRate,
