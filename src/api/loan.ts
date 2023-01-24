@@ -1,4 +1,4 @@
-import mongoose, { ClientSession, mongo } from 'mongoose';
+import mongoose, { ClientSession } from 'mongoose';
 import {
   //add,
   differenceInHours,
