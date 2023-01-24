@@ -1,4 +1,4 @@
-import mongoose, { ClientSession } from 'mongoose';
+import mongoose, { ClientSession, mongo } from 'mongoose';
 import {
   //add,
   differenceInHours,
@@ -19,6 +19,8 @@ import { IInterestRate, IAmortizationInterval } from './types/interestRate/inter
 import LoanModel, { ILoanDocument } from './db/model/LoanModel.js';
 import LoanCache from './cache/loanCache.js';
 import _ from 'lodash';
+import { INote } from './types/note/noteInterface.js';
+import { noteHelpers } from './types/note/noteHelpers.js';
 
 interface fund {
   budgetId: string;
@@ -404,6 +406,85 @@ export default {
     }
     return NEW_TRANSACTION;
   },
+  addNote: async function addNoteToLoan({ loanId, content }: { loanId: string; content: string }): Promise<ILoan> {
+    await this.checkIfExists(loanId);
+    const newNote: INote = {
+      _id: new mongoose.Types.ObjectId().toString(),
+      content: content,
+      entryTimestamp: new Date().getTime(),
+    };
+    noteHelpers.validate.all(newNote);
+    noteHelpers.sanitize.all(newNote);
+
+    const MONGO_LOAN: ILoanDocument = await LoanModel.findOne({ _id: loanId });
+
+    MONGO_LOAN.notes.push(newNote);
+
+    const changedloan: ILoan = loanHelpers.runtimeCast({
+      ...MONGO_LOAN.toObject(),
+      _id: MONGO_LOAN._id.toString(),
+      userId: MONGO_LOAN.userId.toString(),
+    });
+    await MONGO_LOAN.save();
+    return changedloan;
+  },
+  editNote: async function editNoteToLoan({
+    loanId,
+    noteId,
+    content,
+  }: {
+    loanId: string;
+    noteId: string;
+    content: string;
+  }): Promise<ILoan> {
+    await this.checkIfExists(loanId);
+
+    const MONGO_LOAN: ILoanDocument = await LoanModel.findOne({ _id: loanId });
+
+    for (let i = 0; i < MONGO_LOAN.notes.length; i++) {
+      if (MONGO_LOAN.notes[i]._id === noteId) {
+        const newNote: INote = {
+          _id: MONGO_LOAN.notes[i]._id,
+          content: content,
+          entryTimestamp: new Date().getTime(),
+          revisions: MONGO_LOAN.notes[i],
+        };
+        noteHelpers.validate.all(newNote);
+        noteHelpers.sanitize.all(newNote);
+      }
+    }
+
+    const changedloan: ILoan = loanHelpers.runtimeCast({
+      ...MONGO_LOAN.toObject(),
+      _id: MONGO_LOAN._id.toString(),
+      userId: MONGO_LOAN.userId.toString(),
+    });
+    await MONGO_LOAN.save();
+    return changedloan;
+  },
+  deleteNote: async function deleteNoteFromLoan({
+    loanId,
+    noteId,
+  }: {
+    loanId: string;
+    noteId: string;
+  }): Promise<ILoan> {
+    await this.checkIfExists(loanId);
+
+    const MONGO_LOAN: ILoanDocument = await LoanModel.findOne({ _id: loanId });
+
+    _.remove(MONGO_LOAN.notes, function (currentObject) {
+      return currentObject._id === noteId;
+    });
+
+    const changedloan: ILoan = loanHelpers.runtimeCast({
+      ...MONGO_LOAN.toObject(),
+      _id: MONGO_LOAN._id.toString(),
+      userId: MONGO_LOAN.userId.toString(),
+    });
+    await MONGO_LOAN.save();
+    return changedloan;
+  },
 
   // As a lender, I want to change the status of the loan, so that status reflects the real world.
   changeStatus: async function changeLoanStatus(
@@ -415,10 +496,10 @@ export default {
     loanHelpers.validate.status(newStatus);
 
     // Check if user exists
-    User.checkIfExists(userId);
+    await User.checkIfExists(userId);
 
     // Check if loan exists
-    this.checkIfExists(loanId);
+    await this.checkIfExists(loanId);
 
     // Get loan
     const loan: ILoanDocument = await LoanModel.findOne({ _id: loanId });
