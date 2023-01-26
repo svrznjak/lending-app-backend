@@ -103,6 +103,23 @@ export default {
     const transaction: any = await TransactionModel.findById(transactionId);
     if (transaction === null) throw new Error('Transaction you wanted to edit, does not exist.');
 
+    if (transaction.from.datatype === 'LOAN') {
+      const AFFECTED_LOAN: ILoan = await Loan.getOneFromUser({
+        userId: transaction.userId,
+        loanId: transaction.from.addressId,
+      });
+
+      if (AFFECTED_LOAN.status === 'COMPLETED' || AFFECTED_LOAN.status === 'DEFAULTED')
+        throw new Error('Transaction from loan with status "COMPLETED" or "DEFAULTED" can not be deleted');
+    } else if (transaction.to.datatype === 'LOAN') {
+      const AFFECTED_LOAN: ILoan = await Loan.getOneFromUser({
+        userId: transaction.userId,
+        loanId: transaction.to.addressId,
+      });
+
+      if (AFFECTED_LOAN.status === 'COMPLETED' || AFFECTED_LOAN.status === 'DEFAULTED')
+        throw new Error('Transaction from loan with status "COMPLETED" or "DEFAULTED" can not be deleted');
+    }
     transaction.revisions = transactionHelpers.runtimeCast({
       _id: transaction._id.toString(),
       userId: transaction.userId.toString(),
@@ -201,6 +218,24 @@ export default {
     // const transaction = await TransactionModel.findById(transactionId);
     // if (!transaction) throw new Error('Transaction you wanted to delete was not found!');
     try {
+      const TRANSACTION = await this.getOne({ transactionId });
+      if (TRANSACTION.from.datatype === 'LOAN') {
+        const AFFECTED_LOAN: ILoan = await Loan.getOneFromUser({
+          userId: TRANSACTION.userId,
+          loanId: TRANSACTION.from.addressId,
+        });
+
+        if (AFFECTED_LOAN.status === 'COMPLETED' || AFFECTED_LOAN.status === 'DEFAULTED')
+          throw new Error('Transaction from loan with status "COMPLETED" or "DEFAULTED" can not be deleted');
+      } else if (TRANSACTION.to.datatype === 'LOAN') {
+        const AFFECTED_LOAN: ILoan = await Loan.getOneFromUser({
+          userId: TRANSACTION.userId,
+          loanId: TRANSACTION.to.addressId,
+        });
+
+        if (AFFECTED_LOAN.status === 'COMPLETED' || AFFECTED_LOAN.status === 'DEFAULTED')
+          throw new Error('Transaction from loan with status "COMPLETED" or "DEFAULTED" can not be deleted');
+      }
       const deletedTransaction: ITransaction = await TransactionModel.findByIdAndDelete(transactionId).lean();
       if (deletedTransaction === null) throw new Error('Transaction you wanted to delete was not found!');
       if (deletedTransaction.from.datatype === 'BUDGET') {

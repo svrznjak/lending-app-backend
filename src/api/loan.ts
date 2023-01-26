@@ -547,16 +547,19 @@ export default {
   complete: async function completeLoan(input: string | ILoanDocument): Promise<ILoan> {
     const MONGO_LOAN = typeof input === 'string' ? await LoanModel.findOne({ _id: input }) : input;
 
-    if (MONGO_LOAN.status === 'PAID') throw new Error('Only PAID loans can be COMPLETED!');
+    // recalculate values just in case
+    await this.recalculateCalculatedValues(MONGO_LOAN);
+    if (MONGO_LOAN.status !== 'PAID') throw new Error('Only PAID loans can be COMPLETED!');
     const CALCULATED_VALES = await this.getCalculatedValuesAtTimestamp({
       loanId: MONGO_LOAN._id.toString(),
       interestRate: MONGO_LOAN.interestRate,
-      timestampLimit: new Date().getTime(),
+      timestampLimit: MONGO_LOAN.calculatedLastTransactionTimestamp,
     });
 
+    // Just in case recheck if loan is actualy paid at the time of last transaction
     if (
-      _.round(CALCULATED_VALES.calculatedInvestedAmount, 4) ===
-      _.round(CALCULATED_VALES.calculatedTotalPaidPrincipal, 4)
+      _.round(CALCULATED_VALES.calculatedInvestedAmount, 2) !==
+      _.round(CALCULATED_VALES.calculatedTotalPaidPrincipal, 2)
     )
       throw new Error('Loan can not be closed if it is not balanced.');
 
@@ -696,13 +699,21 @@ export default {
 
     // Check if PAID
     if (
-      CALCULATED_VALUES_UNTIL_NOW.calculatedTotalPaidPrincipal >=
-        CALCULATED_VALUES_UNTIL_NOW.calculatedInvestedAmount &&
+      _.round(CALCULATED_VALUES_UNTIL_NOW.calculatedTotalPaidPrincipal, 2) >=
+        _.round(CALCULATED_VALUES_UNTIL_NOW.calculatedInvestedAmount, 2) &&
       MONGO_LOAN.status === 'ACTIVE'
     ) {
       MONGO_LOAN.status = 'PAID';
+      MONGO_LOAN.calculatedInvestedAmount = CALCULATED_VALUES_UNTIL_NOW.calculatedInvestedAmount;
+      MONGO_LOAN.calculatedLastTransactionTimestamp = CALCULATED_VALUES_UNTIL_NOW.calculatedLastTransactionTimestamp;
+      MONGO_LOAN.calculatedOutstandingInterest = CALCULATED_VALUES_UNTIL_NOW.calculatedOutstandingInterest;
+      MONGO_LOAN.calculatedPaidInterest = CALCULATED_VALUES_UNTIL_NOW.calculatedPaidInterest;
+      MONGO_LOAN.calculatedRelatedBudgets = CALCULATED_VALUES_UNTIL_NOW.calculatedRelatedBudgets;
+      MONGO_LOAN.calculatedTotalPaidPrincipal = CALCULATED_VALUES_UNTIL_NOW.calculatedTotalPaidPrincipal;
+      MONGO_LOAN.transactionList = CALCULATED_VALUES_UNTIL_NOW.transactionList;
     } else if (
-      CALCULATED_VALUES_UNTIL_NOW.calculatedTotalPaidPrincipal < CALCULATED_VALUES_UNTIL_NOW.calculatedInvestedAmount &&
+      _.round(CALCULATED_VALUES_UNTIL_NOW.calculatedTotalPaidPrincipal, 2) <
+        _.round(CALCULATED_VALUES_UNTIL_NOW.calculatedInvestedAmount, 2) &&
       MONGO_LOAN.status === 'PAID'
     ) {
       MONGO_LOAN.status = 'ACTIVE';
@@ -896,6 +907,23 @@ export default {
           outstandingPrincipal -= transactionInformation.principalPaid;
         }
       }
+
+      /**
+       * If interestCharged is negative (loan principal is overpaid and reverse interest is charger)
+       * then interestCharged should be set back to zero.
+       */
+      if (transactionInformation.interestCharged < 0) transactionInformation.interestCharged = 0;
+
+      /**
+       * If transaction is causing loan principal to be paid withing 2 decimals
+       * then outstanding values should be set to 0
+       * to prevent further calculation of interest and interest on interest,
+       * in case when user does not complete paid loan in reasonable timeframe.
+       **/
+      if (_.round(outstandingPrincipal, 2) <= 0) {
+        outstandingInterest = 0;
+      }
+
       listOfTransactions.push({
         ...transactionInformation,
         totalInvested: totalInvested,
