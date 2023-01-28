@@ -701,6 +701,7 @@ export default {
     if (
       _.round(CALCULATED_VALUES_UNTIL_NOW.calculatedTotalPaidPrincipal, 2) >=
         _.round(CALCULATED_VALUES_UNTIL_NOW.calculatedInvestedAmount, 2) &&
+      _.round(CALCULATED_VALUES_UNTIL_NOW.calculatedOutstandingInterest, 2) === 0 &&
       MONGO_LOAN.status === 'ACTIVE'
     ) {
       MONGO_LOAN.status = 'PAID';
@@ -713,8 +714,8 @@ export default {
       MONGO_LOAN.transactionList = CALCULATED_VALUES_UNTIL_NOW.transactionList;
     } else if (
       _.round(CALCULATED_VALUES_UNTIL_NOW.calculatedTotalPaidPrincipal, 2) <
-        _.round(CALCULATED_VALUES_UNTIL_NOW.calculatedInvestedAmount, 2) &&
-      MONGO_LOAN.status === 'PAID'
+        _.round(CALCULATED_VALUES_UNTIL_NOW.calculatedInvestedAmount, 2) ||
+      (_.round(CALCULATED_VALUES_UNTIL_NOW.calculatedOutstandingInterest, 2) > 0 && MONGO_LOAN.status === 'PAID')
     ) {
       MONGO_LOAN.status = 'ACTIVE';
     }
@@ -819,8 +820,8 @@ export default {
         userId: '',
         transactionTimestamp: timestampLimit,
         description: '',
-        from: { datatype: 'INTEREST', addressId: '' },
-        to: { datatype: 'INTEREST', addressId: '' },
+        from: { datatype: 'OUTSIDE', addressId: '' },
+        to: { datatype: 'OUTSIDE', addressId: '' },
         amount: 0,
         entryTimestamp: timestampLimit,
       });
@@ -872,7 +873,12 @@ export default {
       // for calculating interest daily const differenceInDays = differenceInCalendarDays(new Date(toDateTimestamp), new Date(fromDateTimestamp));
       const DIFFERENCE_IN_HOURS = differenceInHours(new Date(toDateTimestamp), new Date(fromDateTimestamp));
 
-      if (!IS_FIXED_AMOUNT_INTEREST) {
+      /**
+       * If outstandingPrincipal is 0 or less
+       * then interestCharged should is not charged
+       * to prevent negative interest (interest to loaner)
+       */
+      if (!IS_FIXED_AMOUNT_INTEREST && outstandingPrincipal > 0) {
         if (interestRate.type === 'PERCENTAGE_PER_DURATION' && interestRate.isCompounding) {
           for (let i = 0; i < DIFFERENCE_IN_HOURS; i++) {
             transactionInformation.interestCharged +=
@@ -888,11 +894,24 @@ export default {
       }
       // calculate principal payment and next outstandingPrincipal
       if (loanTransaction.from.datatype === 'BUDGET') {
+        transactionInformation.invested = loanTransaction.amount;
         totalInvested += loanTransaction.amount;
         outstandingPrincipal += loanTransaction.amount;
       } else if (loanTransaction.from.datatype === 'INTEREST') {
-        transactionInformation.feeCharged = loanTransaction.amount;
-        outstandingInterest += loanTransaction.amount;
+        if (outstandingPrincipal < 0 && -outstandingPrincipal < loanTransaction.amount) {
+          transactionInformation.feeCharged = loanTransaction.amount;
+          totalPaidPrincipal += outstandingPrincipal;
+          outstandingInterest += loanTransaction.amount + outstandingPrincipal;
+          outstandingPrincipal = 0;
+        } else if (outstandingPrincipal < 0 && -outstandingPrincipal >= loanTransaction.amount) {
+          transactionInformation.feeCharged = loanTransaction.amount;
+          totalPaidPrincipal += outstandingPrincipal;
+          outstandingPrincipal = outstandingPrincipal + loanTransaction.amount;
+          outstandingInterest = 0;
+        } else {
+          transactionInformation.feeCharged = loanTransaction.amount;
+          outstandingInterest += loanTransaction.amount;
+        }
       } else if (loanTransaction.from.datatype === 'LOAN') {
         if (loanTransaction.amount <= outstandingInterest) {
           transactionInformation.interestPaid = loanTransaction.amount;
@@ -909,18 +928,12 @@ export default {
       }
 
       /**
-       * If interestCharged is negative (loan principal is overpaid and reverse interest is charger)
-       * then interestCharged should be set back to zero.
-       */
-      if (transactionInformation.interestCharged < 0) transactionInformation.interestCharged = 0;
-
-      /**
        * If transaction is causing loan principal to be paid withing 2 decimals
        * then outstanding values should be set to 0
        * to prevent further calculation of interest and interest on interest,
        * in case when user does not complete paid loan in reasonable timeframe.
        **/
-      if (_.round(outstandingPrincipal, 2) <= 0) {
+      if (_.round(outstandingPrincipal, 2) <= 0 && _.round(outstandingInterest, 2) === 0) {
         outstandingInterest = 0;
       }
 
