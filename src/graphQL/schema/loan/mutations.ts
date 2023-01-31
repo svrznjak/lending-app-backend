@@ -161,7 +161,9 @@ export default new GraphQLObjectType({
         await Loan.getOneFromUser({ userId: user._id, loanId: args.loanId });
 
         try {
-          return await Loan.pause(args.loanId);
+          const returnval = await Loan.pause(args.loanId);
+
+          return returnval;
         } catch (err: any) {
           console.log(err.message);
           throw new Error(err);

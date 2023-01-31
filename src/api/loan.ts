@@ -521,28 +521,18 @@ export default {
 
     MONGO_LOAN.status = 'PAUSED';
 
-    const CHANGED_LOAN = loanHelpers.runtimeCast({
-      ...MONGO_LOAN.toObject(),
-      _id: MONGO_LOAN._id.toString(),
-      userId: MONGO_LOAN.userId.toString(),
-    });
     await MONGO_LOAN.save();
-    return CHANGED_LOAN;
+    return await this.recalculateCalculatedValues(MONGO_LOAN);
   },
   unpause: async function pauseLoan(input: string | ILoanDocument): Promise<ILoan> {
     const MONGO_LOAN = typeof input === 'string' ? await LoanModel.findOne({ _id: input }) : input;
 
-    if (MONGO_LOAN.status !== 'PAUSED') throw new Error('Only ACTIVE loans can be paused!');
+    if (MONGO_LOAN.status !== 'PAUSED') throw new Error('Only PAUSED loans can be unpaused!');
 
     MONGO_LOAN.status = 'ACTIVE';
 
-    const CHANGED_LOAN = loanHelpers.runtimeCast({
-      ...MONGO_LOAN.toObject(),
-      _id: MONGO_LOAN._id.toString(),
-      userId: MONGO_LOAN.userId.toString(),
-    });
     await MONGO_LOAN.save();
-    return CHANGED_LOAN;
+    return await this.recalculateCalculatedValues(MONGO_LOAN);
   },
   complete: async function completeLoan(input: string | ILoanDocument): Promise<ILoan> {
     const MONGO_LOAN = typeof input === 'string' ? await LoanModel.findOne({ _id: input }) : input;
@@ -712,14 +702,15 @@ export default {
       MONGO_LOAN.calculatedRelatedBudgets = CALCULATED_VALUES_UNTIL_NOW.calculatedRelatedBudgets;
       MONGO_LOAN.calculatedTotalPaidPrincipal = CALCULATED_VALUES_UNTIL_NOW.calculatedTotalPaidPrincipal;
       MONGO_LOAN.transactionList = CALCULATED_VALUES_UNTIL_NOW.transactionList;
+      await MONGO_LOAN.save();
     } else if (
-      _.round(CALCULATED_VALUES_UNTIL_NOW.calculatedTotalPaidPrincipal, 2) <
+      _.round(CALCULATED_VALUES_UNTIL_NOW.calculatedTotalPaidPrincipal, 2) >
         _.round(CALCULATED_VALUES_UNTIL_NOW.calculatedInvestedAmount, 2) ||
       (_.round(CALCULATED_VALUES_UNTIL_NOW.calculatedOutstandingInterest, 2) > 0 && MONGO_LOAN.status === 'PAID')
     ) {
       MONGO_LOAN.status = 'ACTIVE';
+      await MONGO_LOAN.save();
     }
-    MONGO_LOAN.save();
 
     const CHANGED_LOAN = loanHelpers.runtimeCast({
       ...MONGO_LOAN.toObject(),
