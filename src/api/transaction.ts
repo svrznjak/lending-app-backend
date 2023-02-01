@@ -214,7 +214,7 @@ export default {
     // return edited transaction
     return editedTransaction;
   },
-  delete: async function deleteTransaction(transactionId: string): Promise<boolean> {
+  delete: async function deleteTransaction(transactionId: string): Promise<ITransaction> {
     // const transaction = await TransactionModel.findById(transactionId);
     // if (!transaction) throw new Error('Transaction you wanted to delete was not found!');
     try {
@@ -250,7 +250,7 @@ export default {
       if (deletedTransaction.to.datatype === 'LOAN') {
         await Loan.recalculateCalculatedValues(deletedTransaction.to.addressId.toString());
       }
-      return true;
+      return deletedTransaction;
     } catch (err) {
       console.log(err);
       throw new Error('Transaction deletion failed!');
