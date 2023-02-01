@@ -671,7 +671,7 @@ export default {
           withdrawn: parseInt(calculatedRelatedBudgets[key].withdrawn),
         } as IRelatedBudget;
       }),
-      transactionList: TRANSACTIONS_LIST,
+      transactionList: TRANSACTIONS_LIST.reverse(),
     };
   },
   recalculateCalculatedValues: async function recalculateLoanCalculatedValues(
@@ -704,7 +704,7 @@ export default {
       MONGO_LOAN.transactionList = CALCULATED_VALUES_UNTIL_NOW.transactionList;
       await MONGO_LOAN.save();
     } else if (
-      _.round(CALCULATED_VALUES_UNTIL_NOW.calculatedTotalPaidPrincipal, 2) >
+      _.round(CALCULATED_VALUES_UNTIL_NOW.calculatedTotalPaidPrincipal, 2) <
         _.round(CALCULATED_VALUES_UNTIL_NOW.calculatedInvestedAmount, 2) ||
       (_.round(CALCULATED_VALUES_UNTIL_NOW.calculatedOutstandingInterest, 2) > 0 && MONGO_LOAN.status === 'PAID')
     ) {
