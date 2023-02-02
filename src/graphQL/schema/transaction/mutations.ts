@@ -1,5 +1,5 @@
 import { ITransaction } from './../../../api/types/transaction/transactionInterface.js';
-import { GraphQLFloat, GraphQLID, GraphQLBoolean } from 'graphql';
+import { GraphQLFloat, GraphQLID } from 'graphql';
 import { GraphQLObjectType, GraphQLNonNull, GraphQLString } from 'graphql';
 import { getUserByAuthId } from '../../../api/user.js';
 
@@ -39,11 +39,11 @@ export default new GraphQLObjectType({
       },
     },
     delete: {
-      type: GraphQLBoolean,
+      type: transactionType,
       args: {
         transactionId: { type: new GraphQLNonNull(GraphQLID) },
       },
-      async resolve(_parent: any, args: any, context: any): Promise<boolean> {
+      async resolve(_parent: any, args: any, context: any): Promise<ITransaction> {
         const userAuthId = await context.getCurrentUserAuthIdOrThrowValidationError();
         const Mongo_user = await getUserByAuthId(userAuthId);
         const Mongo_transaction: any = await TransactionModel.findById(args.transactionId);

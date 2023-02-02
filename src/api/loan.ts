@@ -201,9 +201,7 @@ export default {
     const returnValue: ILoan[] = [];
     for (let i = 0; i < LOANS.length; i++) {
       const LOAN_ID = LOANS[i]._id.toString();
-      if (LOANS[i].status === 'COMPLETED' || LOANS[i].status === 'DEFAULTED') {
-        returnValue.push(LOANS[i]);
-      } else if (LoanCache.getCachedItem({ itemId: LOAN_ID })) {
+      if (LoanCache.getCachedItem({ itemId: LOAN_ID })) {
         returnValue.push(LoanCache.getCachedItem({ itemId: LOAN_ID }) as ILoan);
       } else {
         const recalculatedLoan = await this.recalculateCalculatedValues(LOANS[i]);
@@ -560,7 +558,6 @@ export default {
     MONGO_LOAN.calculatedPaidInterest = CALCULATED_VALES.calculatedPaidInterest;
     MONGO_LOAN.calculatedRelatedBudgets = CALCULATED_VALES.calculatedRelatedBudgets;
     MONGO_LOAN.calculatedTotalPaidPrincipal = CALCULATED_VALES.calculatedTotalPaidPrincipal;
-    MONGO_LOAN.transactionList = CALCULATED_VALES.transactionList;
 
     const CHANGED_LOAN = loanHelpers.runtimeCast({
       ...MONGO_LOAN.toObject(),
@@ -588,7 +585,6 @@ export default {
     MONGO_LOAN.calculatedPaidInterest = CALCULATED_VALES.calculatedPaidInterest;
     MONGO_LOAN.calculatedRelatedBudgets = CALCULATED_VALES.calculatedRelatedBudgets;
     MONGO_LOAN.calculatedTotalPaidPrincipal = CALCULATED_VALES.calculatedTotalPaidPrincipal;
-    MONGO_LOAN.transactionList = CALCULATED_VALES.transactionList;
 
     const CHANGED_LOAN = loanHelpers.runtimeCast({
       ...MONGO_LOAN.toObject(),
@@ -706,10 +702,12 @@ export default {
     } else if (
       _.round(CALCULATED_VALUES_UNTIL_NOW.calculatedTotalPaidPrincipal, 2) <
         _.round(CALCULATED_VALUES_UNTIL_NOW.calculatedInvestedAmount, 2) ||
-      (_.round(CALCULATED_VALUES_UNTIL_NOW.calculatedOutstandingInterest, 2) > 0 && MONGO_LOAN.status === 'PAID')
+      _.round(CALCULATED_VALUES_UNTIL_NOW.calculatedOutstandingInterest, 2) > 0
     ) {
-      MONGO_LOAN.status = 'ACTIVE';
-      await MONGO_LOAN.save();
+      if (MONGO_LOAN.status === 'PAID') {
+        MONGO_LOAN.status = 'ACTIVE';
+        await MONGO_LOAN.save();
+      }
     }
 
     const CHANGED_LOAN = loanHelpers.runtimeCast({
