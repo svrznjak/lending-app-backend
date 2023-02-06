@@ -567,32 +567,77 @@ export default {
     await MONGO_LOAN.save();
     return CHANGED_LOAN;
   },
-  default: async function defaultLoan(input: string | ILoanDocument): Promise<ILoan> {
+  default: async function defaultLoan(
+    input: string | ILoanDocument,
+    defaultTransactionDescription: string,
+  ): Promise<ILoan> {
     const MONGO_LOAN = typeof input === 'string' ? await LoanModel.findOne({ _id: input }) : input;
 
-    if (MONGO_LOAN.status !== 'PAID' && MONGO_LOAN.status !== 'COMPLETED' && MONGO_LOAN.status !== 'DEFAULTED')
-      throw new Error('Only PAID loans can be COMPLETED!');
-    const CALCULATED_VALES = await this.getCalculatedValuesAtTimestamp({
-      loanId: MONGO_LOAN._id.toString(),
-      interestRate: MONGO_LOAN.interestRate,
-      timestampLimit: new Date().getTime(),
-    });
+    // recalculate values just in case
+    const RECALCULATED_LOAN = await this.recalculateCalculatedValues(MONGO_LOAN);
+    if (MONGO_LOAN.status === 'PAID' || MONGO_LOAN.status === 'COMPLETED' || MONGO_LOAN.status === 'DEFAULTED')
+      throw new Error('Only active and paused loans can be DEFAULTED!');
 
-    MONGO_LOAN.status = 'DEFAULTED';
-    MONGO_LOAN.calculatedInvestedAmount = CALCULATED_VALES.calculatedInvestedAmount;
-    MONGO_LOAN.calculatedLastTransactionTimestamp = CALCULATED_VALES.calculatedLastTransactionTimestamp;
-    MONGO_LOAN.calculatedOutstandingInterest = CALCULATED_VALES.calculatedOutstandingInterest;
-    MONGO_LOAN.calculatedPaidInterest = CALCULATED_VALES.calculatedPaidInterest;
-    MONGO_LOAN.calculatedRelatedBudgets = CALCULATED_VALES.calculatedRelatedBudgets;
-    MONGO_LOAN.calculatedTotalPaidPrincipal = CALCULATED_VALES.calculatedTotalPaidPrincipal;
+    const OUTSTANDING_AMOUNT =
+      RECALCULATED_LOAN.calculatedInvestedAmount +
+      RECALCULATED_LOAN.calculatedOutstandingInterest -
+      RECALCULATED_LOAN.calculatedTotalPaidPrincipal;
 
-    const CHANGED_LOAN = loanHelpers.runtimeCast({
-      ...MONGO_LOAN.toObject(),
-      _id: MONGO_LOAN._id.toString(),
-      userId: MONGO_LOAN.userId.toString(),
-    });
-    await MONGO_LOAN.save();
-    return CHANGED_LOAN;
+    transactionHelpers.validate.description(defaultTransactionDescription);
+    defaultTransactionDescription = transactionHelpers.sanitize.description(defaultTransactionDescription);
+
+    const session: ClientSession = await mongoose.connection.startSession();
+    try {
+      session.startTransaction();
+      const NEW_TRANSACTION = await transaction.add(
+        {
+          userId: MONGO_LOAN.userId.toString(),
+          transactionTimestamp: transactionHelpers.validate.entryTimestamp(new Date().getTime()),
+          description: defaultTransactionDescription,
+          from: {
+            datatype: 'LOAN',
+            addressId: MONGO_LOAN._id.toString(),
+          },
+          to: {
+            datatype: 'OUTSIDE',
+            addressId: '000000000000000000000000',
+          },
+          amount: transactionHelpers.validate.amount(OUTSTANDING_AMOUNT),
+          entryTimestamp: transactionHelpers.validate.entryTimestamp(new Date().getTime()),
+        } as Pick<
+          ITransaction,
+          'userId' | 'transactionTimestamp' | 'description' | 'from' | 'to' | 'amount' | 'entryTimestamp'
+        >,
+        { session: session },
+      );
+
+      if (_.round(NEW_TRANSACTION.amount, 8) !== _.round(OUTSTANDING_AMOUNT, 8))
+        throw new Error(
+          'Transaction that defaults loan does not have same amount as loan outstanding amount! This should not happen.',
+        );
+
+      MONGO_LOAN.status = 'DEFAULTED';
+      /* TODO : when getLoan will return databese values in case loan is COMPLETED of DEFAULTED
+      
+      MONGO_LOAN.calculatedInvestedAmount = RECALCULATED_LOAN.calculatedInvestedAmount;
+      MONGO_LOAN.calculatedLastTransactionTimestamp = RECALCULATED_LOAN.calculatedLastTransactionTimestamp;
+      MONGO_LOAN.calculatedOutstandingInterest = RECALCULATED_LOAN.calculatedOutstandingInterest;
+      MONGO_LOAN.calculatedPaidInterest = RECALCULATED_LOAN.calculatedPaidInterest;
+      MONGO_LOAN.calculatedRelatedBudgets = RECALCULATED_LOAN.calculatedRelatedBudgets;
+      MONGO_LOAN.calculatedTotalPaidPrincipal = RECALCULATED_LOAN.calculatedTotalPaidPrincipal;
+*/
+      await MONGO_LOAN.save({ session });
+
+      await session.commitTransaction();
+
+      return await this.recalculateCalculatedValues(MONGO_LOAN);
+    } catch (err) {
+      console.log(err);
+      await session.abortTransaction();
+      throw new Error(err);
+    } finally {
+      session.endSession();
+    }
   },
   getCalculatedValuesAtTimestamp: async function getLoanCalculatedValuesAtTimestamp({
     loanId,
