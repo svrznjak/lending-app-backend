@@ -22,7 +22,7 @@ export const LoanSchema = new mongoose.Schema(
       ref: 'Users',
     },
     name: { type: String, required: true },
-    description: { type: String, required: true },
+    description: { type: String },
     notes: { type: [NoteSchema], default: [], required: true },
     openedTimestamp: { type: Number, required: true },
     closesTimestamp: { type: Number, required: true },

@@ -19,7 +19,7 @@ export default new GraphQLObjectType({
       type: loanType,
       args: {
         name: { type: new GraphQLNonNull(GraphQLString) },
-        description: { type: new GraphQLNonNull(GraphQLString) },
+        description: { type: GraphQLString },
         openedTimestamp: { type: new GraphQLNonNull(GraphQLFloat) },
         closesTimestamp: { type: new GraphQLNonNull(GraphQLFloat) },
         interestRate: { type: new GraphQLNonNull(interestRateInputType) },
