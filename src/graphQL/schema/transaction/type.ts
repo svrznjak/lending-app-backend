@@ -31,9 +31,9 @@ export const transactionType = new GraphQLObjectType({
       type: loanType,
       resolve: async (parent: ITransaction): Promise<ILoan | undefined> => {
         if (parent.from.datatype === 'LOAN')
-          return await Loans.getOneFromUser({ userId: parent._id, loanId: parent.from.addressId });
+          return await Loans.getOneFromUser({ userId: parent.userId, loanId: parent.from.addressId });
         else if (parent.to.datatype === 'LOAN')
-          return await Loans.getOneFromUser({ userId: parent._id, loanId: parent.to.addressId });
+          return await Loans.getOneFromUser({ userId: parent.userId, loanId: parent.to.addressId });
         return undefined;
       },
     },
