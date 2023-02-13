@@ -36,7 +36,7 @@ export default new GraphQLObjectType({
           return await Budget.create(user._id, newBudgetInfo, args.initialAmount, args.initialTransactionDescription);
         } catch (err: any) {
           console.log(err.message);
-          throw new Error(err);
+          throw new Error(err.message);
         }
       },
     },
@@ -66,7 +66,7 @@ export default new GraphQLObjectType({
           });
         } catch (err: any) {
           console.log(err.message);
-          throw new Error(err);
+          throw new Error(err.message);
         }
       },
     },
@@ -93,7 +93,7 @@ export default new GraphQLObjectType({
           });
         } catch (err: any) {
           console.log(err.message);
-          throw new Error(err);
+          throw new Error(err.message);
         }
       },
     },
@@ -120,7 +120,7 @@ export default new GraphQLObjectType({
           });
         } catch (err: any) {
           console.log(err.message);
-          throw new Error(err);
+          throw new Error(err.message);
         }
       },
     },
@@ -141,7 +141,7 @@ export default new GraphQLObjectType({
           });
         } catch (err: any) {
           console.log(err.message);
-          throw new Error(err);
+          throw new Error(err.message);
         }
       },
     },
@@ -162,7 +162,7 @@ export default new GraphQLObjectType({
           });
         } catch (err: any) {
           console.log(err.message);
-          throw new Error(err);
+          throw new Error(err.message);
         }
       },
     },

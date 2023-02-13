@@ -62,7 +62,7 @@ export default {
         await this.checkIfTransactionCanExist({ transaction: validatedTransaction }, { session: session });
       } catch (err) {
         console.log(err);
-        throw new Error(err);
+        throw new Error(err.message);
       }
     }
     try {
@@ -166,7 +166,7 @@ export default {
       });
     } catch (err) {
       console.log(err);
-      throw new Error(err);
+      throw new Error(err.message);
     }
 
     // Save edited transaction into DB
@@ -389,9 +389,7 @@ export default {
           budgetFunds = paranoidCalculator.add(budgetFunds, TRANSACTION.amount);
         }
         if (budgetFunds < 0) {
-          throw new Error(
-            'New transaction would make budget funds negative at (timestamp): ' + TRANSACTION.entryTimestamp,
-          );
+          throw new Error('transaction would make budget funds negative');
         }
       }
     }

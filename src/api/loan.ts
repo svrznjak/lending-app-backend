@@ -111,7 +111,7 @@ export default {
     } catch (err) {
       console.log(err);
       await session.abortTransaction();
-      throw new Error(err);
+      throw new Error(err.message);
     } finally {
       session.endSession();
     }
@@ -634,7 +634,7 @@ export default {
     } catch (err) {
       console.log(err);
       await session.abortTransaction();
-      throw new Error(err);
+      throw new Error(err.message);
     } finally {
       session.endSession();
     }

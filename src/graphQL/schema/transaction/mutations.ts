@@ -34,7 +34,7 @@ export default new GraphQLObjectType({
           return updatedTransaction;
         } catch (err: any) {
           console.log(err.message);
-          throw new Error(err);
+          throw new Error(err.message);
         }
       },
     },
@@ -53,7 +53,7 @@ export default new GraphQLObjectType({
           return await Transaction.delete(args.transactionId);
         } catch (err: any) {
           console.log(err.message);
-          throw new Error(err);
+          throw new Error(err.message);
         }
       },
     },

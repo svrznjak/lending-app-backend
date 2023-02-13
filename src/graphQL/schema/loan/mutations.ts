@@ -45,7 +45,7 @@ export default new GraphQLObjectType({
           return await Loan.create(user._id.toString(), newLoanInfo, args.funds, args.initialTransactionDescription);
         } catch (err: any) {
           console.log(err.message);
-          throw new Error(err);
+          throw new Error(err.message);
         }
       },
     },
@@ -80,7 +80,7 @@ export default new GraphQLObjectType({
           return newTransaction;
         } catch (err: any) {
           console.log(err.message);
-          throw new Error(err);
+          throw new Error(err.message);
         }
       },
     },
@@ -110,7 +110,7 @@ export default new GraphQLObjectType({
           return newTransaction;
         } catch (err: any) {
           console.log(err.message);
-          throw new Error(err);
+          throw new Error(err.message);
         }
       },
     },
@@ -144,7 +144,7 @@ export default new GraphQLObjectType({
           return newTransaction;
         } catch (err: any) {
           console.log(err.message);
-          throw new Error(err);
+          throw new Error(err.message);
         }
       },
     },
@@ -166,7 +166,7 @@ export default new GraphQLObjectType({
           return returnval;
         } catch (err: any) {
           console.log(err.message);
-          throw new Error(err);
+          throw new Error(err.message);
         }
       },
     },
@@ -186,7 +186,7 @@ export default new GraphQLObjectType({
           return await Loan.unpause(args.loanId);
         } catch (err: any) {
           console.log(err.message);
-          throw new Error(err);
+          throw new Error(err.message);
         }
       },
     },
@@ -206,7 +206,7 @@ export default new GraphQLObjectType({
           return await Loan.complete(args.loanId);
         } catch (err: any) {
           console.log(err.message);
-          throw new Error(err);
+          throw new Error(err.message);
         }
       },
     },
@@ -227,7 +227,7 @@ export default new GraphQLObjectType({
           return await Loan.default(args.loanId, args.defaultTransactionDescription);
         } catch (err: any) {
           console.log(err.message);
-          throw new Error(err);
+          throw new Error(err.message);
         }
       },
     },
@@ -248,7 +248,7 @@ export default new GraphQLObjectType({
           return await Loan.addNote({ loanId: args.loanId, content: args.content });
         } catch (err: any) {
           console.log(err.message);
-          throw new Error(err);
+          throw new Error(err.message);
         }
       },
     },
@@ -270,7 +270,7 @@ export default new GraphQLObjectType({
           return await Loan.editNote({ loanId: args.loanId, noteId: args.noteId, content: args.content });
         } catch (err: any) {
           console.log(err.message);
-          throw new Error(err);
+          throw new Error(err.message);
         }
       },
     },
@@ -291,7 +291,7 @@ export default new GraphQLObjectType({
           return await Loan.deleteNote({ loanId: args.loanId, noteId: args.noteId });
         } catch (err: any) {
           console.log(err.message);
-          throw new Error(err);
+          throw new Error(err.message);
         }
       },
     },
