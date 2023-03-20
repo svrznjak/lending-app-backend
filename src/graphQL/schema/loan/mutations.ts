@@ -49,6 +49,36 @@ export default new GraphQLObjectType({
         }
       },
     },
+    editLoan: {
+      type: loanType,
+      args: {
+        loanId: { type: new GraphQLNonNull(GraphQLID) },
+        name: { type: new GraphQLNonNull(GraphQLString) },
+        description: { type: GraphQLString },
+        closesTimestamp: { type: new GraphQLNonNull(GraphQLFloat) },
+      },
+      async resolve(_parent: any, args: any, context: any): Promise<ILoan> {
+        const userAuthId = await context.getCurrentUserAuthIdOrThrowValidationError();
+        const user = await getUserByAuthId(userAuthId);
+
+        // get loan to check if loan with loanId exists for specified user userId
+        await Loan.getOneFromUser({ userId: user._id, loanId: args.loanId });
+
+        try {
+          const updatedLoan = await Loan.edit({
+            userId: user._id,
+            loanId: args.loanId,
+            name: args.name,
+            description: args.description,
+            closesTimestamp: args.closesTimestamp,
+          });
+          return updatedLoan;
+        } catch (err: any) {
+          console.log(err.message);
+          throw new Error(err.message);
+        }
+      },
+    },
     addPayment: {
       type: transactionType,
       args: {

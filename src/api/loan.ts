@@ -156,13 +156,13 @@ export default {
     }
     loan.set(newInfo);
 
-    const changedloan: ILoan = loanHelpers.runtimeCast({
+    loanHelpers.runtimeCast({
       ...loan.toObject(),
       _id: loan._id.toString(),
       userId: loan.userId.toString(),
     });
     await loan.save();
-    return changedloan;
+    return await this.recalculateCalculatedValues(loan);
   },
   checkIfExists: async function checkIfLoanExists(loanId: string, session?: ClientSession): Promise<void> {
     if (!(await LoanModel.existsOneWithId(loanId, session))) throw new Error('Loan with prodived _id does not exist!');
