@@ -42,11 +42,11 @@ export default {
     if (funds.length <= 0) throw new Error('Funds should be provided to new loan!');
 
     // check if user exists
-    User.checkIfExists(userId);
+    await User.checkIfExists(userId);
 
     // check if budgets exist
     for (let i = 0; i < funds.length; i++) {
-      Budget.checkIfExists(funds[i].budgetId);
+      await Budget.checkIfExists(funds[i].budgetId);
 
       // TODO: This is incorrect + real test happens on transaction level
       /*
@@ -134,10 +134,10 @@ export default {
     closesTimestamp?: number;
   }): Promise<ILoan> {
     // Check if user exists
-    User.checkIfExists(userId);
+    await User.checkIfExists(userId);
 
     // Check if loan exists
-    this.checkIfExists(loanId);
+    await this.checkIfExists(loanId);
 
     // Get loan
     const loan: ILoanDocument = await LoanModel.findOne({ _id: loanId });
@@ -418,13 +418,9 @@ export default {
 
     MONGO_LOAN.notes.push(newNote);
 
-    const changedloan: ILoan = loanHelpers.runtimeCast({
-      ...MONGO_LOAN.toObject(),
-      _id: MONGO_LOAN._id.toString(),
-      userId: MONGO_LOAN.userId.toString(),
-    });
+    MONGO_LOAN.markModified('notes');
     await MONGO_LOAN.save();
-    return changedloan;
+    return await this.recalculateCalculatedValues(MONGO_LOAN);
   },
   editNote: async function editNoteToLoan({
     loanId,
@@ -440,7 +436,7 @@ export default {
     const MONGO_LOAN: ILoanDocument = await LoanModel.findOne({ _id: loanId });
 
     for (let i = 0; i < MONGO_LOAN.notes.length; i++) {
-      if (MONGO_LOAN.notes[i]._id === noteId) {
+      if (MONGO_LOAN.notes[i]._id.toString() === noteId) {
         const newNote: INote = {
           _id: MONGO_LOAN.notes[i]._id,
           content: content,
@@ -449,16 +445,14 @@ export default {
         };
         noteHelpers.validate.all(newNote);
         noteHelpers.sanitize.all(newNote);
+        MONGO_LOAN.notes[i] = newNote;
+        break;
       }
     }
 
-    const changedloan: ILoan = loanHelpers.runtimeCast({
-      ...MONGO_LOAN.toObject(),
-      _id: MONGO_LOAN._id.toString(),
-      userId: MONGO_LOAN.userId.toString(),
-    });
+    MONGO_LOAN.markModified('notes');
     await MONGO_LOAN.save();
-    return changedloan;
+    return await this.recalculateCalculatedValues(MONGO_LOAN);
   },
   deleteNote: async function deleteNoteFromLoan({
     loanId,
@@ -472,16 +466,11 @@ export default {
     const MONGO_LOAN: ILoanDocument = await LoanModel.findOne({ _id: loanId });
 
     _.remove(MONGO_LOAN.notes, function (currentObject) {
-      return currentObject._id === noteId;
+      return currentObject._id == noteId;
     });
-
-    const changedloan: ILoan = loanHelpers.runtimeCast({
-      ...MONGO_LOAN.toObject(),
-      _id: MONGO_LOAN._id.toString(),
-      userId: MONGO_LOAN.userId.toString(),
-    });
+    MONGO_LOAN.markModified('notes');
     await MONGO_LOAN.save();
-    return changedloan;
+    return await this.recalculateCalculatedValues(MONGO_LOAN);
   },
 
   // As a lender, I want to change the status of the loan, so that status reflects the real world.
@@ -504,13 +493,13 @@ export default {
 
     // TODO : dirty fix is used to cast into loan.status
     loan.status = newStatus;
-    const changedloan: ILoan = loanHelpers.runtimeCast({
+    loanHelpers.runtimeCast({
       ...loan.toObject(),
       _id: loan._id.toString(),
       userId: loan.userId.toString(),
     });
     await loan.save();
-    return changedloan;
+    return await this.recalculateCalculatedValues(loan);
   },
   pause: async function pauseLoan(input: string | ILoanDocument): Promise<ILoan> {
     const MONGO_LOAN = typeof input === 'string' ? await LoanModel.findOne({ _id: input }) : input;

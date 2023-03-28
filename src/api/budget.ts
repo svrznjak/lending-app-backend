@@ -21,7 +21,7 @@ export default {
     budgetHelpers.sanitize.all(input);
 
     // Check if user exists
-    User.checkIfExists(userId);
+    await User.checkIfExists(userId);
 
     const budget: IBudget = budgetHelpers.runtimeCast({
       _id: new mongoose.Types.ObjectId().toString(),
