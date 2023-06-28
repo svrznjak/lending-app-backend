@@ -1,7 +1,7 @@
-import Loan, { calculateLoanPaymentAmount, calculateEquivalentInterestRate } from './loan.js';
+import { calculateLoanPaymentAmount, calculateEquivalentInterestRate } from './loan.js';
 
 describe('calculateExpectedInterest', () => {
-  test('manualtest', async () => {
+  /*test('manualtest', async () => {
     const result = await Loan.calculateExpetedAmortization({
       openedTimestamp: 1640995200000,
       closesTimestamp: 1672444800000,
@@ -19,7 +19,7 @@ describe('calculateExpectedInterest', () => {
     }, 0);
     console.log(interest);
     expect(interest).toBe(932.56);
-  });
+  });*/
 });
 
 describe('calculateLoanPaymentAmount', () => {

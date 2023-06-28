@@ -1,5 +1,5 @@
 import { isValidTimestamp, isValidAmountOfMoney, isValidOption } from './../../utils/inputValidator/inputValidator.js';
-import { ILoan } from './loanInterface.js';
+import { IExpectedPayment, ILoan, IPaymentFrequency } from './loanInterface.js';
 
 import { sanitizeText } from './../../utils/inputSanitizer/inputSanitizer.js';
 import { interestRateHelpers } from '../interestRate/interestRateHelpers.js';
@@ -64,6 +64,59 @@ export const loanHelpers = {
       if (!isValidAmountOfMoney({ amount: amount })) throw new Error('(validation) amount is invalid!');
       return amount;
     },
+    paymentFrequency: function validatePaymentFrequency(paymentFrequency: IPaymentFrequency): IPaymentFrequency {
+      if (
+        !isValidOption({
+          option: paymentFrequency.occurrence,
+          validOptions: ['ONE_TIME', 'DAILY', 'WEEKLY', 'BIWEEKLY', 'MONTHLY', 'QUARTERLY', 'YEARLY'],
+          caseSensitive: true,
+        })
+      )
+        throw new Error('(validation) paymentFrequency.occurrence is invalid!');
+      if (paymentFrequency.isStrict === true) {
+        if (
+          !isValidOption({
+            option: paymentFrequency.strictValue,
+            validOptions: [
+              '1',
+              '2',
+              '3',
+              '4',
+              '5',
+              '6',
+              '7',
+              '8',
+              '9',
+              '10',
+              '11',
+              '12',
+              '13',
+              '14',
+              '15',
+              '16',
+              '17',
+              '18',
+              '19',
+              '20',
+              '21',
+              '22',
+              '23',
+              '24',
+              '25',
+              '26',
+              '27',
+              '28',
+              '29',
+              '30',
+              '31',
+            ],
+            caseSensitive: true,
+          })
+        )
+          throw new Error('(validation) paymentFrequency.day is invalid!');
+      }
+      return paymentFrequency;
+    },
     status: function validateStatus(status: ILoan['status']): ILoan['status'] {
       if (
         !isValidOption({
@@ -109,6 +162,31 @@ export const loanHelpers = {
       throw new Error('Type of loan.calculatedPaidInterest must be a number!');
     if (!Number.isFinite(loan.calculatedLastTransactionTimestamp))
       throw new Error('Type of loan.calculatedLastTransactionTimestamp must be a number!');
+
+    // typecheck paymentFrequency
+    if (typeof loan.paymentFrequency !== 'object' || loan.paymentFrequency === null)
+      throw new Error('Type of loan.paymentFrequency must be an object!');
+    if (!_.isString(loan.paymentFrequency.occurrence))
+      throw new Error('Type of loan.paymentFrequency.occurrence must be a string!');
+    if (!_.isBoolean(loan.paymentFrequency.isStrict))
+      throw new Error('Type of loan.paymentFrequency.isStrict must be a boolean!');
+    if (loan.paymentFrequency.isStrict === true) {
+      if (!_.isString(loan.paymentFrequency.strictValue))
+        throw new Error('Type of loan.paymentFrequency.strictValue must be a string!');
+    }
+
+    // typecheck expectedPayments
+    loan.expectedPayments.forEach((expectedPayment: IExpectedPayment) => {
+      if (typeof expectedPayment !== 'object' || expectedPayment === null)
+        throw new Error('Type of loan.expectedPayments must be an object!');
+      if (!_.isFinite(expectedPayment.timestamp))
+        throw new Error('Type of loan.expectedPayments.timestamp must be a number!');
+      if (!_.isFinite(expectedPayment.principalPayment))
+        throw new Error('Type of loan.expectedPayments.principalPayment must be a number!');
+      if (!_.isFinite(expectedPayment.interestPayment))
+        throw new Error('Type of loan.expectedPayments.interestPayment must be a number!');
+    });
+
     interestRateHelpers.runtimeCast(loan.interestRate);
 
     // typecheck relatedBudgets
@@ -127,10 +205,13 @@ export const loanHelpers = {
       userId: loan.userId,
       name: loan.name,
       description: loan.description,
+      customerId: loan.customerId,
       notes: loan.notes,
       openedTimestamp: loan.openedTimestamp,
       closesTimestamp: loan.closesTimestamp,
       interestRate: loan.interestRate,
+      paymentFrequency: loan.paymentFrequency,
+      expectedPayments: loan.expectedPayments,
       status: loan.status,
       calculatedInvestedAmount: loan.calculatedInvestedAmount,
       calculatedTotalPaidPrincipal: loan.calculatedTotalPaidPrincipal,

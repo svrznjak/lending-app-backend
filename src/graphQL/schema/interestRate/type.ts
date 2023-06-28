@@ -36,20 +36,6 @@ export const interestRateType = new GraphQLObjectType({
         }),
       ),
     },
-    expectedPayments: {
-      type: new GraphQLNonNull(
-        new GraphQLEnumType({
-          name: 'expectedPaymentsType',
-          values: {
-            ONE_TIME: { value: 'ONE_TIME' },
-            DAILY: { value: 'DAILY' },
-            WEEKLY: { value: 'WEEKLY' },
-            MONTHLY: { value: 'MONTHLY' },
-            YEARLY: { value: 'YEARLY' },
-          },
-        }),
-      ),
-    },
     amount: { type: new GraphQLNonNull(GraphQLInt) },
     isCompounding: { type: new GraphQLNonNull(GraphQLBoolean) },
     entryTimestamp: { type: new GraphQLNonNull(GraphQLFloat) },
@@ -80,20 +66,6 @@ export const interestRateInputType = new GraphQLInputObjectType({
             MONTH: { value: 'MONTH' },
             YEAR: { value: 'YEAR' },
             FULL_DURATION: { value: 'FULL_DURATION' },
-          },
-        }),
-      ),
-    },
-    expectedPayments: {
-      type: new GraphQLNonNull(
-        new GraphQLEnumType({
-          name: 'expectedPaymentsInputType',
-          values: {
-            ONE_TIME: { value: 'ONE_TIME' },
-            DAILY: { value: 'DAILY' },
-            WEEKLY: { value: 'WEEKLY' },
-            MONTHLY: { value: 'MONTHLY' },
-            YEARLY: { value: 'YEARLY' },
           },
         }),
       ),

@@ -61,7 +61,6 @@ export default new GraphQLObjectType({
             defaultInterestRateType: args.defaultInterestRate.type,
             defaultInterestRateDuration: args.defaultInterestRate.duration,
             defaultInterestRateAmount: args.defaultInterestRate.amount,
-            defaultInterestRateExpectedPayments: args.defaultInterestRate.expectedPayments,
             defaultInterestRateIsCompounding: args.defaultInterestRate.isCompounding,
           });
         } catch (err: any) {

@@ -253,7 +253,6 @@ export default {
     description,
     defaultInterestRateType,
     defaultInterestRateDuration,
-    defaultInterestRateExpectedPayments,
     defaultInterestRateAmount,
     defaultInterestRateIsCompounding,
     isArchived,
@@ -263,7 +262,6 @@ export default {
     description?: string;
     defaultInterestRateType?: string;
     defaultInterestRateDuration?: string;
-    defaultInterestRateExpectedPayments?: string;
     defaultInterestRateAmount?: number;
     defaultInterestRateIsCompounding?: number;
     isArchived?: boolean;
@@ -286,7 +284,6 @@ export default {
     if (
       defaultInterestRateType !== undefined ||
       defaultInterestRateDuration !== undefined ||
-      defaultInterestRateExpectedPayments !== undefined ||
       defaultInterestRateAmount !== undefined ||
       defaultInterestRateIsCompounding !== undefined
     ) {
@@ -295,7 +292,6 @@ export default {
       newInfo.defaultInterestRate.revisions = {
         type: newInfo.defaultInterestRate.type,
         duration: newInfo.defaultInterestRate.duration,
-        expectedPayments: newInfo.defaultInterestRate.expectedPayments,
         amount: newInfo.defaultInterestRate.amount,
         isCompounding: newInfo.defaultInterestRate.isCompounding,
         entryTimestamp: newInfo.defaultInterestRate.entryTimestamp,
@@ -304,10 +300,6 @@ export default {
         newInfo.defaultInterestRate.type = interestRateHelpers.validate.type(defaultInterestRateType);
       if (defaultInterestRateDuration !== undefined)
         newInfo.defaultInterestRate.duration = interestRateHelpers.validate.duration(defaultInterestRateDuration);
-      if (defaultInterestRateExpectedPayments !== undefined)
-        newInfo.defaultInterestRate.expectedPayments = interestRateHelpers.validate.expectedPayments(
-          defaultInterestRateExpectedPayments,
-        );
       if (defaultInterestRateAmount !== undefined)
         newInfo.defaultInterestRate.amount = interestRateHelpers.validate.amount(defaultInterestRateAmount);
       if (defaultInterestRateIsCompounding !== undefined)
@@ -334,7 +326,7 @@ export default {
     timestampLimit,
   }: {
     budgetId: string;
-    timestampLimit: number;
+    timestampLimit?: number;
   }): Promise<
     Pick<IBudget, 'calculatedTotalInvestedAmount' | 'calculatedTotalWithdrawnAmount' | 'calculatedTotalAvailableAmount'>
   > {
@@ -368,8 +360,8 @@ export default {
 
     // Abstractions
     function applyTransactionToTotalInvestedAmount(transaction: ITransaction): void {
-      // totalInvestedAmount is only affected until timestampLimit
-      if (transaction.transactionTimestamp <= timestampLimit)
+      // totalInvestedAmount is only affected until timestampLimit (or get all transactions if timestampLimit is undefined)
+      if (transaction.transactionTimestamp <= timestampLimit || timestampLimit === undefined)
         if (transaction.to.datatype === 'BUDGET' && transaction.from.datatype === 'OUTSIDE') {
           calculatedValues.calculatedTotalInvestedAmount = paranoidCalculator.add(
             calculatedValues.calculatedTotalInvestedAmount,
@@ -378,8 +370,8 @@ export default {
         }
     }
     function applyTransactionToTotalWithdrawnAmount(transaction: ITransaction): void {
-      // totalWithdrawnAmount is only affected until timestampLimit
-      if (transaction.transactionTimestamp <= timestampLimit)
+      // totalWithdrawnAmount is only affected until timestampLimit (or get all transactions if timestampLimit is undefined)
+      if (transaction.transactionTimestamp <= timestampLimit || timestampLimit === undefined)
         if (transaction.to.datatype === 'OUTSIDE' && transaction.from.datatype === 'BUDGET') {
           calculatedValues.calculatedTotalWithdrawnAmount = paranoidCalculator.add(
             calculatedValues.calculatedTotalWithdrawnAmount,
@@ -410,16 +402,15 @@ export default {
   ): Promise<IBudget> {
     const MONGO_BUDGET = typeof input === 'string' ? await BudgetModel.findOne({ _id: input }) : input;
 
-    const NOW_TIMESTAMP = new Date().getTime();
-    const CALCULATED_VALUES_UNTIL_NOW = await this.getCalculatedValuesAtTimestamp({
+    const CALCULATED_VALUES = await this.getCalculatedValuesAtTimestamp({
       budgetId: MONGO_BUDGET._id.toString(),
-      timestampLimit: NOW_TIMESTAMP,
+      timestampLimit: undefined, // get all transactions
     });
 
     // save calculations to DB
-    MONGO_BUDGET.calculatedTotalInvestedAmount = CALCULATED_VALUES_UNTIL_NOW.calculatedTotalInvestedAmount;
-    MONGO_BUDGET.calculatedTotalWithdrawnAmount = CALCULATED_VALUES_UNTIL_NOW.calculatedTotalWithdrawnAmount;
-    MONGO_BUDGET.calculatedTotalAvailableAmount = CALCULATED_VALUES_UNTIL_NOW.calculatedTotalAvailableAmount;
+    MONGO_BUDGET.calculatedTotalInvestedAmount = CALCULATED_VALUES.calculatedTotalInvestedAmount;
+    MONGO_BUDGET.calculatedTotalWithdrawnAmount = CALCULATED_VALUES.calculatedTotalWithdrawnAmount;
+    MONGO_BUDGET.calculatedTotalAvailableAmount = CALCULATED_VALUES.calculatedTotalAvailableAmount;
 
     await MONGO_BUDGET.save();
     return budgetHelpers.runtimeCast({

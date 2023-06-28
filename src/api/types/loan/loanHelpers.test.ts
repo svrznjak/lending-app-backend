@@ -20,7 +20,6 @@ describe('loanHelpers', () => {
           entryTimestamp: 1663012853,
           revisions: undefined,
           isCompounding: false,
-          expectedPayments: 'WEEKLY',
         },
       },
       {
@@ -35,7 +34,6 @@ describe('loanHelpers', () => {
           entryTimestamp: 1663012853,
           revisions: undefined,
           isCompounding: false,
-          expectedPayments: 'WEEKLY',
         },
       },
     ];
@@ -61,7 +59,6 @@ describe('loanHelpers', () => {
           entryTimestamp: 1663012853,
           revisions: undefined,
           isCompounding: false,
-          expectedPayments: 'WEEKLY',
         },
       },
       {
@@ -77,7 +74,6 @@ describe('loanHelpers', () => {
           entryTimestamp: 1663012853,
           revisions: undefined,
           isCompounding: false,
-          expectedPayments: 'WEEKLY',
         },
       },
       {
@@ -93,7 +89,6 @@ describe('loanHelpers', () => {
           entryTimestamp: 1663012853,
           revisions: undefined,
           isCompounding: false,
-          expectedPayments: 'WEEKLY',
         },
       },
       {
@@ -110,7 +105,6 @@ describe('loanHelpers', () => {
           entryTimestamp: 1663012853,
           revisions: undefined,
           isCompounding: false,
-          expectedPayments: 'WEEKLY',
         },
       },
       {
@@ -126,7 +120,6 @@ describe('loanHelpers', () => {
           entryTimestamp: 1663012853,
           revisions: undefined,
           isCompounding: false,
-          expectedPayments: 'WEEKLY',
         },
       },
       {
@@ -142,7 +135,6 @@ describe('loanHelpers', () => {
           entryTimestamp: 1663012853,
           revisions: undefined,
           isCompounding: false,
-          expectedPayments: 'WEEKLY',
         },
       },
       {
@@ -158,7 +150,6 @@ describe('loanHelpers', () => {
           entryTimestamp: 1663012853,
           revisions: undefined,
           isCompounding: false,
-          expectedPayments: 'WEEKLY',
         },
       },
       {
@@ -174,7 +165,6 @@ describe('loanHelpers', () => {
           entryTimestamp: 1663012853,
           revisions: undefined,
           isCompounding: false,
-          expectedPayments: 'WEEKLY',
         },
       },
       {
@@ -189,7 +179,6 @@ describe('loanHelpers', () => {
           entryTimestamp: 1663012853,
           revisions: undefined,
           isCompounding: false,
-          expectedPayments: 'WEEKLY',
         },
       },
       {
@@ -205,7 +194,6 @@ describe('loanHelpers', () => {
           entryTimestamp: 1663012853,
           revisions: undefined,
           isCompounding: false,
-          expectedPayments: 'WEEKLY',
         },
       },
       {
@@ -221,7 +209,6 @@ describe('loanHelpers', () => {
           entryTimestamp: 1663012853,
           revisions: undefined,
           isCompounding: false,
-          expectedPayments: 'WEEKLY',
         },
       },
       {
@@ -237,7 +224,6 @@ describe('loanHelpers', () => {
           entryTimestamp: 1663012853,
           revisions: undefined,
           isCompounding: false,
-          expectedPayments: 'WEEKLY',
         },
       },
       {
@@ -253,7 +239,6 @@ describe('loanHelpers', () => {
           entryTimestamp: 1663012853,
           revisions: undefined,
           isCompounding: false,
-          expectedPayments: 'WEEKLY',
         },
       },
       {
@@ -269,7 +254,6 @@ describe('loanHelpers', () => {
           entryTimestamp: 1663012853,
           revisions: undefined,
           isCompounding: false,
-          expectedPayments: 'WEEKLY',
         },
       },
       {
@@ -285,7 +269,6 @@ describe('loanHelpers', () => {
           entryTimestamp: -1,
           revisions: undefined,
           isCompounding: false,
-          expectedPayments: 'WEEKLY',
         },
       },
       {
@@ -301,7 +284,6 @@ describe('loanHelpers', () => {
           entryTimestamp: Infinity,
           revisions: undefined,
           isCompounding: false,
-          expectedPayments: 'WEEKLY',
         },
       },
       {
@@ -317,7 +299,6 @@ describe('loanHelpers', () => {
           entryTimestamp: null,
           revisions: undefined,
           isCompounding: false,
-          expectedPayments: 'WEEKLY',
         },
       },
     ];
@@ -347,7 +328,6 @@ describe('loanHelpers', () => {
             entryTimestamp: 1663012853,
             revisions: undefined,
             isCompounding: false,
-            expectedPayments: 'ONE_TIME',
           },
           status: 'ACTIVE',
           calculatedInvestedAmount: 100,

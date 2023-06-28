@@ -2,20 +2,20 @@ import mongoose, { ClientSession } from 'mongoose';
 import {
   //add,
   differenceInHours,
-  differenceInCalendarDays,
-  eachDayOfInterval,
-  eachWeekOfInterval,
-  eachMonthOfInterval,
-  eachYearOfInterval,
+  //differenceInCalendarDays,
+  //eachDayOfInterval,
+  //eachWeekOfInterval,
+  //eachMonthOfInterval,
+  //eachYearOfInterval,
 } from 'date-fns';
 import * as User from './user.js';
 import transaction from './transaction.js';
 import { loanHelpers } from './types/loan/loanHelpers.js';
-import { ILoan, IRelatedBudget, ITransactionInterval } from './types/loan/loanInterface.js';
+import { ILoan, IPaymentFrequency, IRelatedBudget, ITransactionInterval } from './types/loan/loanInterface.js';
 import { ITransaction } from './types/transaction/transactionInterface.js';
 import Budget from './budget.js';
 import { transactionHelpers } from './types/transaction/transactionHelpers.js';
-import { IInterestRate, IAmortizationInterval } from './types/interestRate/interestRateInterface.js';
+import { IInterestRate } from './types/interestRate/interestRateInterface.js';
 import LoanModel, { ILoanDocument } from './db/model/LoanModel.js';
 import LoanCache from './cache/loanCache.js';
 import _ from 'lodash';
@@ -31,7 +31,16 @@ export default {
   // As a lender, I want to create new loans, so that I can later track specific loan transactions and info.
   create: async function createLoan(
     userId: string,
-    input: Pick<ILoan, 'name' | 'description' | 'openedTimestamp' | 'closesTimestamp' | 'interestRate'>,
+    input: Pick<
+      ILoan,
+      | 'name'
+      | 'description'
+      | 'openedTimestamp'
+      | 'closesTimestamp'
+      | 'interestRate'
+      | 'paymentFrequency'
+      | 'expectedPayments'
+    >,
     funds: fund[],
     initialTransactionDescription: string,
   ): Promise<ILoan> {
@@ -126,12 +135,14 @@ export default {
     name,
     description,
     closesTimestamp,
+    paymentFrequency,
   }: {
     userId: string;
     loanId: string;
     name?: string;
     description?: string;
     closesTimestamp?: number;
+    paymentFrequency?: IPaymentFrequency;
   }): Promise<ILoan> {
     // Check if user exists
     await User.checkIfExists(userId);
@@ -142,7 +153,7 @@ export default {
     // Get loan
     const loan: ILoanDocument = await LoanModel.findOne({ _id: loanId });
 
-    const newInfo: Partial<Pick<ILoan, 'name' | 'description' | 'closesTimestamp'>> = {};
+    const newInfo: Partial<Pick<ILoan, 'name' | 'description' | 'closesTimestamp' | 'paymentFrequency'>> = {};
     if (name !== undefined) {
       newInfo.name = loanHelpers.validate.name(name);
       newInfo.name = loanHelpers.sanitize.name(newInfo.name);
@@ -153,6 +164,9 @@ export default {
     }
     if (closesTimestamp !== undefined) {
       newInfo.closesTimestamp = loanHelpers.validate.closesTimestamp(closesTimestamp);
+    }
+    if (paymentFrequency !== undefined) {
+      newInfo.paymentFrequency = loanHelpers.validate.paymentFrequency(paymentFrequency);
     }
     loan.set(newInfo);
 
@@ -182,6 +196,14 @@ export default {
     } else {
       const MONGO_LOAN = await LoanModel.findOne({ _id: loanId, userId: userId }).session(session);
       if (MONGO_LOAN === null) throw new Error('Loan could not be found');
+      // Do not recalculate if session is provided, because changes to data will be made in the end of successful session
+      if (session !== undefined)
+        return loanHelpers.runtimeCast({
+          ...MONGO_LOAN.toObject(),
+          _id: MONGO_LOAN._id.toString(),
+          userId: MONGO_LOAN.userId.toString(),
+        });
+
       const recalculatedLoan = await this.recalculateCalculatedValues(MONGO_LOAN);
       return recalculatedLoan;
     }
@@ -204,8 +226,19 @@ export default {
       if (LoanCache.getCachedItem({ itemId: LOAN_ID })) {
         returnValue.push(LoanCache.getCachedItem({ itemId: LOAN_ID }) as ILoan);
       } else {
-        const recalculatedLoan = await this.recalculateCalculatedValues(LOANS[i]);
-        returnValue.push(recalculatedLoan);
+        // Do not recalculate if session is provided, because changes to data will be made in the end of successful session
+        if (session !== undefined) {
+          returnValue.push(
+            loanHelpers.runtimeCast({
+              ...LOANS[i].toObject(),
+              _id: LOANS[i]._id.toString(),
+              userId: LOANS[i].userId.toString(),
+            }),
+          );
+        } else {
+          const recalculatedLoan = await this.recalculateCalculatedValues(LOANS[i]);
+          returnValue.push(recalculatedLoan);
+        }
       }
     }
     return returnValue;
@@ -548,13 +581,13 @@ export default {
     MONGO_LOAN.calculatedRelatedBudgets = CALCULATED_VALES.calculatedRelatedBudgets;
     MONGO_LOAN.calculatedTotalPaidPrincipal = CALCULATED_VALES.calculatedTotalPaidPrincipal;
 
-    const CHANGED_LOAN = loanHelpers.runtimeCast({
+    loanHelpers.runtimeCast({
       ...MONGO_LOAN.toObject(),
       _id: MONGO_LOAN._id.toString(),
       userId: MONGO_LOAN.userId.toString(),
     });
     await MONGO_LOAN.save();
-    return CHANGED_LOAN;
+    return await this.recalculateCalculatedValues(MONGO_LOAN);
   },
   default: async function defaultLoan(
     input: string | ILoanDocument,
@@ -627,6 +660,24 @@ export default {
     } finally {
       session.endSession();
     }
+  },
+  /*
+
+  */
+  updateExpectedPayments: async function updateExpactedLoanPayments(
+    input: string | ILoanDocument,
+    expectedPayments: ILoan['expectedPayments'],
+  ): Promise<ILoan> {
+    const MONGO_LOAN = typeof input === 'string' ? await LoanModel.findOne({ _id: input }) : input;
+    MONGO_LOAN.expectedPayments = expectedPayments;
+
+    const UPDATED_LOAN = loanHelpers.runtimeCast({
+      ...MONGO_LOAN.toObject(),
+      _id: MONGO_LOAN._id.toString(),
+      userId: MONGO_LOAN.userId.toString(),
+    });
+    await MONGO_LOAN.save();
+    return UPDATED_LOAN;
   },
   getCalculatedValuesAtTimestamp: async function getLoanCalculatedValuesAtTimestamp({
     loanId,
@@ -709,12 +760,10 @@ export default {
   ): Promise<ILoan> {
     const MONGO_LOAN = typeof input === 'string' ? await LoanModel.findOne({ _id: input }) : input;
 
-    const NOW_TIMESTAMP = new Date().getTime();
-
     const CALCULATED_VALUES_UNTIL_NOW = await this.getCalculatedValuesAtTimestamp({
       loanId: MONGO_LOAN._id.toString(),
       interestRate: MONGO_LOAN.interestRate,
-      timestampLimit: NOW_TIMESTAMP,
+      timestampLimit: MONGO_LOAN.calculatedLastTransactionTimestamp,
     });
 
     // Check if PAID
@@ -837,7 +886,7 @@ export default {
     // add another empty loan transaction in order to calculate interes
     // Not ideal solution as frontend has to ignore it, but its simple...
     // POSSIBLE SOURCE OF BUGS IS DATA STRUCTURE IS CHANGED
-    if (loanTransactions[0].transactionTimestamp < timestampLimit)
+    if (loanTransactions[0].transactionTimestamp <= timestampLimit)
       loanTransactions.unshift({
         _id: '',
         userId: '',
@@ -972,7 +1021,7 @@ export default {
     return listOfTransactions;
   },
 
-  // TODO NOT WORKING...
+  /*
   calculateExpetedAmortization: async function calculateExpectedLoanAmortization({
     openedTimestamp,
     closesTimestamp,
@@ -1043,9 +1092,7 @@ export default {
         interest = outstandingPrincipal * interestPercentagePerDay * differenceInDays;
       } else if (interestRate.type === 'FIXED_PER_DURATION' && interestRate.duration !== 'FULL_DURATION') {
         interest = interestPerDay * differenceInDays;
-      } /* else if (interestRate.type === 'FIXED_PER_DURATION' && interestRate.duration === 'FULL_DURATION') {
-        interest = interestRate.amount / loanDurationInDays;
-      } */
+      } 
 
       listOfPayments.push({
         fromDateTimestamp: fromDateTimestamp,
@@ -1060,13 +1107,13 @@ export default {
     // get amount of durations between fromDate and toDate
     // multiply durations by interestRate.Amount
     return listOfPayments;
-  },
+  },*/
   // As a lender, I want to export loan data and transactions, so that I can archive them or import them to other software.
   export: function joinLoanTransactionsIntoAccountingTable(): void {
     // TODO
   },
 };
-
+/*
 function getTimestampsOfPaydays({
   openedTimestamp,
   closesTimestamp,
@@ -1124,6 +1171,7 @@ function getTimestampsOfPaydays({
   }
   return paymentDaysTimestamps;
 }
+*/
 function normalizeInterestRateToDay(interestRate: Omit<IInterestRate, 'entryTimestamp' | 'revisions'>): number {
   if (interestRate.duration === 'DAY') {
     return interestRate.amount;
@@ -1137,7 +1185,6 @@ function normalizeInterestRateToDay(interestRate: Omit<IInterestRate, 'entryTime
     throw new Error('Error when calculating daily interest rate!');
   }
 }
-
 /**
  * Calculates amount that has to be paid for each loan payment.
  * @param  {number} LOAN_AMOUNT - Is positive amount of loan given (without the interest)

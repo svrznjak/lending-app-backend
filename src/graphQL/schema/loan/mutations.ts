@@ -6,7 +6,7 @@ import { getUserByAuthId } from '../../../api/user.js';
 import { interestRateInputType } from '../interestRate/type.js';
 
 import Loan from '../../../api/loan.js';
-import { loanType, fundInputType } from './type.js';
+import { loanType, fundInputType, loanPaymentFrequencyInput, loanExpectedPaymentInput } from './type.js';
 import { transactionType } from '../transaction/type.js';
 import LoanModel from '../../../api/db/model/LoanModel.js';
 
@@ -23,6 +23,8 @@ export default new GraphQLObjectType({
         openedTimestamp: { type: new GraphQLNonNull(GraphQLFloat) },
         closesTimestamp: { type: new GraphQLNonNull(GraphQLFloat) },
         interestRate: { type: new GraphQLNonNull(interestRateInputType) },
+        paymentFrequency: { type: new GraphQLNonNull(loanPaymentFrequencyInput) },
+        expectedPayments: { type: new GraphQLList(loanExpectedPaymentInput) },
         initialTransactionDescription: { type: new GraphQLNonNull(GraphQLString) },
         funds: { type: new GraphQLList(fundInputType) },
       },
@@ -33,13 +35,21 @@ export default new GraphQLObjectType({
         try {
           const newLoanInfo: Pick<
             ILoan,
-            'name' | 'description' | 'openedTimestamp' | 'closesTimestamp' | 'interestRate'
+            | 'name'
+            | 'description'
+            | 'openedTimestamp'
+            | 'closesTimestamp'
+            | 'interestRate'
+            | 'paymentFrequency'
+            | 'expectedPayments'
           > = {
             name: args.name,
             description: args.description,
             openedTimestamp: args.openedTimestamp,
             closesTimestamp: args.closesTimestamp,
             interestRate: args.interestRate,
+            paymentFrequency: args.paymentFrequency,
+            expectedPayments: args.expectedPayments,
           };
           newLoanInfo.interestRate.entryTimestamp = new Date().getTime();
           return await Loan.create(user._id.toString(), newLoanInfo, args.funds, args.initialTransactionDescription);
@@ -53,9 +63,10 @@ export default new GraphQLObjectType({
       type: loanType,
       args: {
         loanId: { type: new GraphQLNonNull(GraphQLID) },
-        name: { type: new GraphQLNonNull(GraphQLString) },
+        name: { type: GraphQLString },
         description: { type: GraphQLString },
-        closesTimestamp: { type: new GraphQLNonNull(GraphQLFloat) },
+        closesTimestamp: { type: GraphQLFloat },
+        paymentFrequency: { type: loanPaymentFrequencyInput },
       },
       async resolve(_parent: any, args: any, context: any): Promise<ILoan> {
         const userAuthId = await context.getCurrentUserAuthIdOrThrowValidationError();
@@ -255,6 +266,27 @@ export default new GraphQLObjectType({
 
         try {
           return await Loan.default(args.loanId, args.defaultTransactionDescription);
+        } catch (err: any) {
+          console.log(err.message);
+          throw new Error(err.message);
+        }
+      },
+    },
+    updateExpactedPayments: {
+      type: loanType,
+      args: {
+        loanId: { type: new GraphQLNonNull(GraphQLID) },
+        expectedPayments: { type: new GraphQLList(loanExpectedPaymentInput) },
+      },
+      async resolve(_parent: any, args: any, context: any): Promise<ILoan> {
+        const userAuthId = await context.getCurrentUserAuthIdOrThrowValidationError();
+        const user = await getUserByAuthId(userAuthId);
+
+        // get loan to check if loan with loanId exists for specified user userId
+        await Loan.getOneFromUser({ userId: user._id, loanId: args.loanId });
+
+        try {
+          return await Loan.updateExpectedPayments(args.loanId, args.expectedPayments);
         } catch (err: any) {
           console.log(err.message);
           throw new Error(err.message);

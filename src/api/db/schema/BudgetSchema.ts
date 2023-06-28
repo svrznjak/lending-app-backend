@@ -15,7 +15,7 @@ export const BudgetSchema = new mongoose.Schema(
       ref: 'Users',
     },
     name: { type: String, required: true },
-    description: { type: String, required: true },
+    description: { type: String },
     defaultInterestRate: { type: LoanInterestRateSchema },
     calculatedTotalInvestedAmount: { type: Number },
     calculatedTotalWithdrawnAmount: { type: Number },

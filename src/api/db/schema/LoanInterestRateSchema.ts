@@ -11,11 +11,6 @@ const LoanInterestRate = new mongoose.Schema({
     enum: ['DAY', 'WEEK', 'MONTH', 'YEAR', 'FULL_DURATION'],
     required: true,
   },
-  expectedPayments: {
-    type: String,
-    enum: ['ONE_TIME', 'DAILY', 'WEEKLY', 'MONTHLY', 'YEARLY'],
-    required: true,
-  },
   amount: { type: Number, required: true },
   isCompounding: { type: Boolean, required: true },
   entryTimestamp: { type: Number, required: true },

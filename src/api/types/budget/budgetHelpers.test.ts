@@ -15,7 +15,6 @@ describe('budgetHelpers', () => {
           entryTimestamp: 1663012853,
           revisions: undefined,
           isCompounding: false,
-          expectedPayments: 'YEARLY',
         },
       },
       {
@@ -28,7 +27,6 @@ describe('budgetHelpers', () => {
           entryTimestamp: 1663017539,
           revisions: undefined,
           isCompounding: false,
-          expectedPayments: 'YEARLY',
         },
       },
       {
@@ -41,7 +39,6 @@ describe('budgetHelpers', () => {
           entryTimestamp: 1663024156,
           revisions: undefined,
           isCompounding: false,
-          expectedPayments: 'YEARLY',
         },
       },
     ];
@@ -62,7 +59,6 @@ describe('budgetHelpers', () => {
           entryTimestamp: 1663012853,
           revisions: undefined,
           isCompounding: false,
-          expectedPayments: 'YEARLY',
         },
       },
       {
@@ -76,7 +72,6 @@ describe('budgetHelpers', () => {
           entryTimestamp: 1663012853,
           revisions: undefined,
           isCompounding: false,
-          expectedPayments: 'YEARLY',
         },
       },
       {
@@ -91,7 +86,6 @@ describe('budgetHelpers', () => {
           entryTimestamp: 1663012853,
           revisions: undefined,
           isCompounding: false,
-          expectedPayments: 'YEARLY',
         },
       },
       {
@@ -106,7 +100,6 @@ describe('budgetHelpers', () => {
           entryTimestamp: 1663012853,
           revisions: undefined,
           isCompounding: false,
-          expectedPayments: 'YEARLY',
         },
       },
       {
@@ -120,7 +113,6 @@ describe('budgetHelpers', () => {
           entryTimestamp: 1663024156,
           revisions: undefined,
           isCompounding: false,
-          expectedPayments: 'YEARLY',
         },
       },
       {
@@ -134,7 +126,6 @@ describe('budgetHelpers', () => {
           entryTimestamp: 1663024156,
           revisions: undefined,
           isCompounding: false,
-          expectedPayments: 'YEARLY',
         },
       },
       {
@@ -148,7 +139,6 @@ describe('budgetHelpers', () => {
           entryTimestamp: 1663024156,
           revisions: undefined,
           isCompounding: false,
-          expectedPayments: 'YEARLY',
         },
       },
       {
@@ -162,7 +152,6 @@ describe('budgetHelpers', () => {
           entryTimestamp: -1,
           revisions: undefined,
           isCompounding: false,
-          expectedPayments: 'YEARLY',
         },
       },
       {
@@ -176,7 +165,6 @@ describe('budgetHelpers', () => {
           entryTimestamp: Infinity,
           revisions: undefined,
           isCompounding: false,
-          expectedPayments: 'YEARLY',
         },
       },
       {
@@ -190,7 +178,6 @@ describe('budgetHelpers', () => {
           entryTimestamp: null,
           revisions: undefined,
           isCompounding: false,
-          expectedPayments: 'YEARLY',
         },
       },
     ];

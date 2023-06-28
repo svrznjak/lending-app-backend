@@ -1,0 +1,13 @@
+next task:
+I want to add support for notifications that will be sent using firebase. Notifications will be sent when loan.expected payment is now.
+This means that the user will be notified when the expected payment date is now.
+Array of expected payments is stored in the loan.expected_payments. Each expected payment has a timespamp field, that is the date when the payment is expected.
+If the timestamp is now, then the user should be notified.
+Add a new function to the loan model, that will be called notify.
+notify function will be called by setInterval that is started when this nodejs app is started.
+Todo plan:
+
+1. Add a new field to the loan.expected_payments, that will be called notified. This field will be boolean and will be false by default.
+2. Add a new function to the loan model, that will be called notify. This function will check if the loan.expected_payments array contains any expected payments that have a timestamp that is older than now and have the notified field set to false. If there are any expected payments that meet these conditions, then the user will be notified.
+3. Notify function will user firebase to send a notifications to the user.
+4. This is the code to be used:

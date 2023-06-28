@@ -65,7 +65,6 @@ export async function initializeUser(
         defaultInterestRate: {
           type: 'FIXED_PER_DURATION',
           duration: 'FULL_DURATION',
-          expectedPayments: 'ONE_TIME',
           amount: 0,
           isCompounding: false,
           entryTimestamp: new Date().getTime(),
