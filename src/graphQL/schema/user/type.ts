@@ -29,6 +29,7 @@ export const userType = new GraphQLObjectType({
     currency: { type: new GraphQLNonNull(GraphQLString) },
     language: { type: new GraphQLNonNull(GraphQLString) },
     subscription: { type: new GraphQLNonNull(userSubscriptionType) },
+    notificationTokens: { type: new GraphQLList(GraphQLString) },
   }),
 });
 

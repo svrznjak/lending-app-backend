@@ -49,7 +49,9 @@ export default new GraphQLObjectType({
         defaultInterestRate: { type: new GraphQLNonNull(interestRateInputType) },
       },
       async resolve(_parent: any, args: any, context: any): Promise<IBudget> {
-        await context.getCurrentUserAuthIdOrThrowValidationError();
+        const userAuthId = await context.getCurrentUserAuthIdOrThrowValidationError();
+        const user = await getUserByAuthId(userAuthId);
+        await Budget.getOneFromUser({ userId: user._id, budgetId: args.budgetId }); // check if user has access to budget
         const now = transactionHelpers.validate.entryTimestamp(new Date().getTime());
         args.defaultInterestRate.entryTimestamp = now;
 

@@ -2,7 +2,7 @@ import { ITransaction } from './../../../api/types/transaction/transactionInterf
 import { transactionType } from './../transaction/type.js';
 import { GraphQLFloat, GraphQLID, GraphQLList, GraphQLNonNull, GraphQLObjectType } from 'graphql';
 import { getUserByAuthId } from '../../../api/user.js';
-import loan from '../../../api/loan.js';
+import Loan from '../../../api/loan.js';
 import { paginationInputType } from '../commonTypes.js';
 import LoanModel from '../../../api/db/model/LoanModel.js';
 import { loanCalculatedValues, loanStatus, loanType } from './type.js';
@@ -23,7 +23,7 @@ export default new GraphQLObjectType({
       resolve: async (_parent: any, args: any, context: any): Promise<ILoan[]> => {
         const authId = await context.getCurrentUserAuthIdOrThrowValidationError();
         const user = await getUserByAuthId(authId);
-        return await loan.getFromUser({
+        return await Loan.getFromUser({
           userId: user._id,
           loanId: args.loanId,
           status: args.status,
@@ -43,7 +43,7 @@ export default new GraphQLObjectType({
         if (Mongo_loan === null) throw new Error('Loan does not exist!');
         if (Mongo_loan.userId.toString() !== Mongo_user._id.toString()) throw new Error('Unauthorized');
 
-        return await loan.getTransactions(args.loanId, {
+        return await Loan.getTransactions(args.loanId, {
           pageSize: args.pagination?.pageSize,
           pageNumber: args.pagination?.pageNumber,
         });
@@ -75,8 +75,13 @@ export default new GraphQLObjectType({
           | 'calculatedRelatedBudgets'
         >
       > {
-        await context.getCurrentUserAuthIdOrThrowValidationError();
-        return await loan.getCalculatedValuesAtTimestamp({
+        const userAuthId = await context.getCurrentUserAuthIdOrThrowValidationError();
+
+        //check if user has access to loan
+        const user = await getUserByAuthId(userAuthId);
+        await Loan.getOneFromUser({ userId: user._id, loanId: args.loanId });
+
+        return await Loan.getCalculatedValuesAtTimestamp({
           loanId: args.loanId,
           interestRate: args.interestRate,
           timestampLimit: args.timestamp,

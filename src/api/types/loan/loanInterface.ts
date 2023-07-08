@@ -83,7 +83,7 @@ export interface IExpectedPayment {
   timestamp: number;
   principalPayment: number;
   interestPayment: number;
-  notified: boolean;
+  notified?: boolean;
 }
 
 export interface IRelatedBudget {

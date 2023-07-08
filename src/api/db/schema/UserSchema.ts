@@ -28,6 +28,10 @@ export default new mongoose.Schema(
         type: 'FREE',
       },
     },
+    notificationTokens: {
+      type: [String],
+      default: [],
+    },
   },
   {
     statics: {

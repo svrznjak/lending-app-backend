@@ -1,6 +1,12 @@
 import { GraphQLFloat, GraphQLNonNull, GraphQLObjectType, GraphQLString } from 'graphql';
 import { IUser, IUserInitializeInfo, IUserRegistrationInfo } from '../../../api/types/user/userInterface.js';
-import { createUser, initializeUser } from '../../../api/user.js';
+import {
+  createUser,
+  initializeUser,
+  addNotificationToken,
+  removeNotificationToken,
+  getUserByAuthId,
+} from '../../../api/user.js';
 import { userType } from './type.js';
 
 export default new GraphQLObjectType({
@@ -60,6 +66,40 @@ export default new GraphQLObjectType({
             args.initialBudgetFunds,
             args.initiaTransactionDescription,
           );
+        } catch (err: any) {
+          console.log(err.message);
+          throw new Error(err.message);
+        }
+      },
+    },
+    // use User.addNotificationToken to add a notification token
+    addNotificationToken: {
+      type: userType,
+      args: {
+        notificationToken: { type: new GraphQLNonNull(GraphQLString) },
+      },
+      async resolve(_parent: any, args: any, context: any): Promise<IUser> {
+        try {
+          const authId = await context.getCurrentUserAuthIdOrThrowValidationError();
+          const user = await getUserByAuthId(authId);
+          return await addNotificationToken(user._id, args.notificationToken);
+        } catch (err: any) {
+          console.log(err.message);
+          throw new Error(err.message);
+        }
+      },
+    },
+    // use User.removeNotificationToken to remove a notification token
+    removeNotificationToken: {
+      type: userType,
+      args: {
+        notificationToken: { type: new GraphQLNonNull(GraphQLString) },
+      },
+      async resolve(_parent: any, args: any, context: any): Promise<IUser> {
+        try {
+          const authId = await context.getCurrentUserAuthIdOrThrowValidationError();
+          const user = await getUserByAuthId(authId);
+          return await removeNotificationToken(user._id, args.notificationToken);
         } catch (err: any) {
           console.log(err.message);
           throw new Error(err.message);

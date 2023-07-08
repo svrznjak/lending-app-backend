@@ -29,6 +29,7 @@ export async function createUser(userRegistrationInfo: IUserRegistrationInfo): P
         currency: newUser.currency,
         language: newUser.language,
         subscription: newUser.subscription,
+        notificationTokens: newUser.notificationTokens,
       });
     } catch (err) {
       await auth.deleteUserByAuthId(newUserAuthId);
@@ -82,6 +83,7 @@ export async function initializeUser(
       currency: newUser.currency,
       language: newUser.language,
       subscription: newUser.subscription,
+      notificationTokens: newUser.notificationTokens,
     });
   } catch (err) {
     await session.abortTransaction();
@@ -104,6 +106,7 @@ export async function getUserByAuthId(authId: string): Promise<IUser | undefined
       currency: user.currency,
       language: user.language,
       subscription: user.subscription,
+      notificationTokens: user.notificationTokens,
     });
   } catch (err) {
     if (err.message === 'User not found') throw new Error('User not found');
@@ -123,6 +126,7 @@ export async function getUserById(id: string | object): Promise<IUser | undefine
       currency: user.currency,
       language: user.language,
       subscription: user.subscription,
+      notificationTokens: user.notificationTokens,
     });
   } catch (err) {
     throw new Error('User fetching failed...');
@@ -141,6 +145,34 @@ export async function updateUserById(id: string | object, updatedUserInfo: IUser
     const result = await UserModel.updateOne({ _id: id }, updatedUserInfo).exec();
     if (result.modifiedCount !== 1) throw new Error('Could not find user to update!');
     return await getUserById(id);
+  } catch (err) {
+    throw new Error('DB query error!');
+  }
+}
+
+// As a user, i want to add notification tokens to my account, so that i can receive notifications.
+export async function addNotificationToken(userId: string, notificationToken: string): Promise<IUser> {
+  try {
+    const result = await UserModel.updateOne(
+      { _id: userId },
+      { $addToSet: { notificationTokens: notificationToken } },
+    ).exec();
+    if (result.modifiedCount !== 1) throw new Error('Could not find user to update!');
+    return await getUserById(userId);
+  } catch (err) {
+    throw new Error('DB query error!');
+  }
+}
+
+// As a user, i want to remove notification tokens from my account, so that i can stop receiving notifications.
+export async function removeNotificationToken(userId: string, notificationToken: string): Promise<IUser> {
+  try {
+    const result = await UserModel.updateOne(
+      { _id: userId },
+      { $pull: { notificationTokens: notificationToken } },
+    ).exec();
+    if (result.modifiedCount !== 1) throw new Error('Could not find user to update!');
+    return await getUserById(userId);
   } catch (err) {
     throw new Error('DB query error!');
   }

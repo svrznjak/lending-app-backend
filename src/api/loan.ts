@@ -21,13 +21,17 @@ import LoanCache from './cache/loanCache.js';
 import _ from 'lodash';
 import { INote } from './types/note/noteInterface.js';
 import { noteHelpers } from './types/note/noteHelpers.js';
+import { IUser } from './types/user/userInterface.js';
+import { TokenMessage } from 'firebase-admin/messaging';
+import { sendNotifications } from './utils/cloudMessaging/cloudMessaging.js';
+import UserModel from './db/model/UserModel.js';
 
 interface fund {
   budgetId: string;
   amount: number;
 }
 
-export default {
+const Loan = {
   // As a lender, I want to create new loans, so that I can later track specific loan transactions and info.
   create: async function createLoan(
     userId: string,
@@ -1020,7 +1024,93 @@ export default {
     }
     return listOfTransactions;
   },
+  notifyUsers: async function notifyUsers(): Promise<void> {
+    // 1. get all loans with status 'ACTIVE' and expectedPayments that are older than now and have not been notified and get loan.userId notificationTokens
+    type PopulatedLoan = ILoan & { userId: IUser };
+    const loans = await LoanModel.find<PopulatedLoan>({
+      status: 'ACTIVE',
+      expectedPayments: {
+        $elemMatch: {
+          timestamp: {
+            $lte: Date.now(),
+          },
+          notified: false,
+        },
+      },
+    }).populate('userId', 'notificationTokens');
+    //  2. send notification using sendNotifications function
+    /* send notifications accepts argument array of Message that has following structure:
+    {
+      data: {
+        loanId: loan._id.toString(),
+      };
+      notification: {
+          title: `Loan is expecting payment`, // TODO: Multilingual support
+          body: `Your loan &{loan.name} is expecting payment of &{loan.expectedPayments[0].amount}`,
+      };
+      token: notificationToken,
+    }
 
+    each users notificationToken represents one device, so if user has multiple devices, then multiple messages should be
+    pushed to array of messages (one for each notification token).
+
+    */
+    const messages: TokenMessage[] = [];
+    loans.forEach((loan) => {
+      loan.userId.notificationTokens.forEach((notificationToken) => {
+        messages.push({
+          data: {
+            loanId: loan._id.toString(),
+            userId: loan.userId._id.toString(),
+          },
+          notification: {
+            title: `Loan is expecting payment`, // TODO: Multilingual support
+            body: `Your loan ${loan.name} is expecting payment of ${
+              loan.expectedPayments[0].principalPayment + loan.expectedPayments[0].interestPayment
+            }`,
+          },
+          token: notificationToken,
+        });
+      });
+    });
+    if (messages.length === 0) return;
+    const feedback = await sendNotifications(messages, false);
+    // 3. update loans with notified: true
+    await LoanModel.updateMany(
+      {
+        status: 'ACTIVE',
+        expectedPayments: {
+          $elemMatch: {
+            timestamp: {
+              $lte: Date.now(),
+            },
+            notified: false,
+          },
+        },
+      },
+      {
+        $set: {
+          'expectedPayments.$.notified': true,
+        },
+      },
+    );
+    // 4. remove notificationTokens that are not valid anymore
+    feedback.responses.forEach(async (response, index) => {
+      if (response.error && response.error.code === 'messaging/registration-token-not-registered') {
+        // remove notificationToken from user document ( userId: messages[index].data.userId, token: messages[index].token )
+        await UserModel.updateOne(
+          {
+            _id: messages[index].data.userId,
+          },
+          {
+            $pull: {
+              notificationTokens: messages[index].token,
+            },
+          },
+        );
+      }
+    });
+  },
   /*
   calculateExpetedAmortization: async function calculateExpectedLoanAmortization({
     openedTimestamp,
@@ -1113,6 +1203,15 @@ export default {
     // TODO
   },
 };
+
+Loan.notifyUsers();
+// notify users about payments that are due every hour
+setInterval(() => {
+  Loan.notifyUsers();
+}, 1000 * 60 * 60);
+
+export default Loan;
+
 /*
 function getTimestampsOfPaydays({
   openedTimestamp,

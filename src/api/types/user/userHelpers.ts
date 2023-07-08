@@ -31,6 +31,13 @@ export const userHelpers = {
 
     subscriptionHelpers.runtimeCast(user.subscription);
 
+    // check if all notificationTokens are strings
+    if (!Array.isArray(user.notificationTokens)) throw new Error('Type of User.notificationTokens must be an array!');
+    for (const notificationToken of user.notificationTokens) {
+      if (!_.isString(notificationToken))
+        throw new Error('Type of User.notificationTokens must be an array of strings!');
+    }
+
     return {
       _id: user._id,
       name: user.name,
@@ -39,6 +46,7 @@ export const userHelpers = {
       currency: user.currency,
       language: user.language,
       subscription: user.subscription,
+      notificationTokens: user.notificationTokens,
     };
   },
 };

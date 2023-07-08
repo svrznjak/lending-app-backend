@@ -85,6 +85,7 @@ export const loanExpectedPayment = new GraphQLObjectType({
     timestamp: { type: new GraphQLNonNull(GraphQLFloat) },
     principalPayment: { type: new GraphQLNonNull(GraphQLFloat) },
     interestPayment: { type: new GraphQLNonNull(GraphQLFloat) },
+    notified: { type: new GraphQLNonNull(GraphQLBoolean) },
   }),
 });
 

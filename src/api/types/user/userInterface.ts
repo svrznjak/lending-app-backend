@@ -6,6 +6,7 @@ export interface IUser {
   currency: string;
   language: string;
   subscription: ISubscription;
+  notificationTokens: string[];
 }
 
 export interface ISubscription {
