@@ -32,5 +32,5 @@ dist/
 .DS_Store
 
 # FirebaseConfig
-firebaseConfig.ts
-firebaseConfig.js
+src/firebase/firebaseConfig.ts
+src/firebase/firebaseConfig.js
