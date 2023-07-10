@@ -1058,16 +1058,24 @@ const Loan = {
     const messages: TokenMessage[] = [];
     loans.forEach((loan) => {
       loan.userId.notificationTokens.forEach((notificationToken) => {
+        // Get the amount from first expected payment that is not notified
+        const expectedPayment = loan.expectedPayments.find((expectedPayment) => !expectedPayment.notified);
+        let amount = undefined;
+        expectedPayment !== undefined
+          ? (amount = expectedPayment.principalPayment + expectedPayment.interestPayment)
+          : (amount = 0);
+
         messages.push({
           data: {
+            notificationType: 'paymentReminder',
             loanId: loan._id.toString(),
+            loanName: loan.name,
+            amount: amount.toString(),
             userId: loan.userId._id.toString(),
           },
           notification: {
             title: `Loan is expecting payment`, // TODO: Multilingual support
-            body: `Your loan ${loan.name} is expecting payment of ${
-              loan.expectedPayments[0].principalPayment + loan.expectedPayments[0].interestPayment
-            }`,
+            body: `Your loan ${loan.name} is expecting payment!`,
           },
           token: notificationToken,
         });
