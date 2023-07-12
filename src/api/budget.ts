@@ -389,7 +389,7 @@ export default {
        * Apply every new tmpCalculatedAvaiableAmount until timestampLimit,
        * after that only apply tmpCalculatedAvaiableAmount if it reaches new low value.
        */
-      if (transaction.transactionTimestamp <= timestampLimit) {
+      if (transaction.transactionTimestamp <= timestampLimit || timestampLimit === undefined) {
         calculatedValues.calculatedTotalAvailableAmount = tmpCalculatedAvaiableAmount;
       } else {
         if (tmpCalculatedAvaiableAmount < calculatedValues.calculatedTotalAvailableAmount)
