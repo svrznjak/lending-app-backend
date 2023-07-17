@@ -31,7 +31,7 @@ app.use(
   }),
 );
 
-app.listen(9000);
+app.listen(process.env.PORT || 9000);
 
 process.stdin.resume(); //so the program will not close instantly
 
