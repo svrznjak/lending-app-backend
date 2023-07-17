@@ -33,4 +33,3 @@ dist/
 
 # FirebaseConfig
 src/firebase/firebaseConfig.ts
-src/firebase/firebaseConfig.js
