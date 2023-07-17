@@ -4,7 +4,8 @@
   "description": "Backend for application that helps lenders keep track of loans.",
   "type": "module",
   "engines": {
-    "node": ">= 16.13 <17"
+    "node": ">= 16.13 <17",
+    "npm": "8.x"
   },
   "devDependencies": {
     "@types/jest": "~27.5",
