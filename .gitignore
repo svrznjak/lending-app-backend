@@ -30,6 +30,3 @@ dist/
 
 # Misc
 .DS_Store
-
-# FirebaseConfig
-src/firebase/firebaseConfig.ts
