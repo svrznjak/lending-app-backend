@@ -14,6 +14,9 @@ export const budgetsType = new GraphQLObjectType({
     calculatedTotalInvestedAmount: { type: new GraphQLNonNull(GraphQLFloat) },
     calculatedTotalWithdrawnAmount: { type: new GraphQLNonNull(GraphQLFloat) },
     calculatedTotalAvailableAmount: { type: new GraphQLNonNull(GraphQLFloat) },
+    calculatedTotalLendedPrincipalToActiveLoansAmount: { type: new GraphQLNonNull(GraphQLFloat) },
+    calculatedTotalLostPrincipalToCompletedAndDefaultedLoansAmount: { type: new GraphQLNonNull(GraphQLFloat) },
+    calculatedTotalProfitAmount: { type: new GraphQLNonNull(GraphQLFloat) },
     isArchived: { type: new GraphQLNonNull(GraphQLBoolean) },
   }),
 });
@@ -25,5 +28,8 @@ export const budgetCalculatedValues = new GraphQLObjectType({
     calculatedTotalInvestedAmount: { type: new GraphQLNonNull(GraphQLFloat) },
     calculatedTotalWithdrawnAmount: { type: new GraphQLNonNull(GraphQLFloat) },
     calculatedTotalAvailableAmount: { type: new GraphQLNonNull(GraphQLFloat) },
+    calculatedTotalLendedPrincipalToActiveLoansAmount: { type: new GraphQLNonNull(GraphQLFloat) },
+    calculatedTotalLostPrincipalToCompletedAndDefaultedLoansAmount: { type: new GraphQLNonNull(GraphQLFloat) },
+    calculatedTotalProfitAmount: { type: new GraphQLNonNull(GraphQLFloat) },
   }),
 });

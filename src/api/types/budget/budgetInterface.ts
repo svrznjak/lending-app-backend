@@ -11,5 +11,8 @@ export interface IBudget {
   calculatedTotalInvestedAmount: number;
   calculatedTotalWithdrawnAmount: number;
   calculatedTotalAvailableAmount: number;
+  calculatedTotalLendedPrincipalToActiveLoansAmount: number;
+  calculatedTotalLostPrincipalToCompletedAndDefaultedLoansAmount: number;
+  calculatedTotalProfitAmount: number;
   isArchived: boolean;
 }

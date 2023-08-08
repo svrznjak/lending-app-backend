@@ -69,14 +69,22 @@ export default new GraphQLObjectType({
       ): Promise<
         Pick<
           IBudget,
-          '_id' | 'calculatedTotalInvestedAmount' | 'calculatedTotalWithdrawnAmount' | 'calculatedTotalAvailableAmount'
+          | '_id'
+          | 'calculatedTotalInvestedAmount'
+          | 'calculatedTotalWithdrawnAmount'
+          | 'calculatedTotalAvailableAmount'
+          | 'calculatedTotalLendedPrincipalToActiveLoansAmount'
         >[]
       > {
         await context.getCurrentUserAuthIdOrThrowValidationError();
         if (args.budgetIds.length === 0) return [];
         const CALCULATED_VALUES: Pick<
           IBudget,
-          '_id' | 'calculatedTotalInvestedAmount' | 'calculatedTotalWithdrawnAmount' | 'calculatedTotalAvailableAmount'
+          | '_id'
+          | 'calculatedTotalInvestedAmount'
+          | 'calculatedTotalWithdrawnAmount'
+          | 'calculatedTotalAvailableAmount'
+          | 'calculatedTotalLendedPrincipalToActiveLoansAmount'
         >[] = await args.budgetIds.map(async (budgetId: string) => {
           return {
             _id: budgetId,

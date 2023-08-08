@@ -8,6 +8,7 @@ import { interestRateHelpers } from './types/interestRate/interestRateHelpers.js
 import paranoidCalculator from './utils/paranoidCalculator/paranoidCalculator.js';
 import BudgetModel, { IBudgetDocument } from './db/model/BudgetModel.js';
 import { paymentFrequencyHelpers } from './types/paymentFrequency/paymentFrequencyHelpers.js';
+import loan from './loan.js';
 
 export default {
   // As a lender, I want to create a budget, so that I can categorize my investments.
@@ -366,7 +367,15 @@ export default {
     budgetId: string;
     timestampLimit?: number;
   }): Promise<
-    Pick<IBudget, 'calculatedTotalInvestedAmount' | 'calculatedTotalWithdrawnAmount' | 'calculatedTotalAvailableAmount'>
+    Pick<
+      IBudget,
+      | 'calculatedTotalInvestedAmount'
+      | 'calculatedTotalWithdrawnAmount'
+      | 'calculatedTotalAvailableAmount'
+      | 'calculatedTotalLendedPrincipalToActiveLoansAmount'
+      | 'calculatedTotalLostPrincipalToCompletedAndDefaultedLoansAmount'
+      | 'calculatedTotalProfitAmount'
+    >
   > {
     // get all transactions
     // NOTE TO SELF: Transactions should maybe be passed as argument.
@@ -378,13 +387,22 @@ export default {
     // initialize variables
     const calculatedValues: Pick<
       IBudget,
-      'calculatedTotalInvestedAmount' | 'calculatedTotalWithdrawnAmount' | 'calculatedTotalAvailableAmount'
+      | 'calculatedTotalInvestedAmount'
+      | 'calculatedTotalWithdrawnAmount'
+      | 'calculatedTotalAvailableAmount'
+      | 'calculatedTotalLendedPrincipalToActiveLoansAmount'
+      | 'calculatedTotalLostPrincipalToCompletedAndDefaultedLoansAmount'
+      | 'calculatedTotalProfitAmount'
     > = {
       calculatedTotalInvestedAmount: 0,
       calculatedTotalWithdrawnAmount: 0,
       calculatedTotalAvailableAmount: 0,
+      calculatedTotalLendedPrincipalToActiveLoansAmount: 0,
+      calculatedTotalLostPrincipalToCompletedAndDefaultedLoansAmount: 0,
+      calculatedTotalProfitAmount: 0,
     };
     let tmpCalculatedAvaiableAmount = 0;
+    const tmpAmountsLendedToLoans = {};
 
     // Loop and affect calculatedValues
     for (let i = budgetTransactions.length - 1; i >= 0; i--) {
@@ -392,7 +410,33 @@ export default {
       applyTransactionToTotalInvestedAmount(TRANSACTION);
       applyTransactionToTotalWithdrawnAmount(TRANSACTION);
       applyTransactionToTotalAvaiableAmount(TRANSACTION);
+      await applyTransactionToTotalLendedToActiveLoansAmount(TRANSACTION);
     }
+
+    Object.keys(tmpAmountsLendedToLoans).forEach(async (key) => {
+      const loanStatus = (await loan.getOneFromUser({ userId: budgetTransactions[0].userId, loanId: key })).status;
+      if (loanStatus === 'ACTIVE' || loanStatus === 'PAUSED' || loanStatus === 'PAID') {
+        if (tmpAmountsLendedToLoans[key] > 0) {
+          calculatedValues.calculatedTotalLendedPrincipalToActiveLoansAmount = paranoidCalculator.add(
+            calculatedValues.calculatedTotalLendedPrincipalToActiveLoansAmount,
+            tmpAmountsLendedToLoans[key],
+          );
+        }
+      } else {
+        if (tmpAmountsLendedToLoans[key] > 0) {
+          calculatedValues.calculatedTotalLostPrincipalToCompletedAndDefaultedLoansAmount = paranoidCalculator.add(
+            calculatedValues.calculatedTotalLostPrincipalToCompletedAndDefaultedLoansAmount,
+            tmpAmountsLendedToLoans[key],
+          );
+        }
+      }
+      if (tmpAmountsLendedToLoans[key] < 0) {
+        calculatedValues.calculatedTotalProfitAmount = paranoidCalculator.add(
+          calculatedValues.calculatedTotalProfitAmount,
+          tmpAmountsLendedToLoans[key],
+        );
+      }
+    });
 
     return calculatedValues;
 
@@ -434,6 +478,23 @@ export default {
           calculatedValues.calculatedTotalAvailableAmount = tmpCalculatedAvaiableAmount;
       }
     }
+    async function applyTransactionToTotalLendedToActiveLoansAmount(transaction: ITransaction): Promise<void> {
+      if (transaction.to.datatype === 'LOAN') {
+        if (tmpAmountsLendedToLoans[transaction.to.addressId] === undefined)
+          tmpAmountsLendedToLoans[transaction.to.addressId] = 0;
+        tmpAmountsLendedToLoans[transaction.to.addressId] = paranoidCalculator.add(
+          tmpAmountsLendedToLoans[transaction.to.addressId],
+          transaction.amount,
+        );
+      } else if (transaction.from.datatype === 'LOAN') {
+        if (tmpAmountsLendedToLoans[transaction.from.addressId] === undefined)
+          tmpAmountsLendedToLoans[transaction.from.addressId] = 0;
+        tmpAmountsLendedToLoans[transaction.from.addressId] = paranoidCalculator.subtract(
+          tmpAmountsLendedToLoans[transaction.from.addressId],
+          transaction.amount,
+        );
+      }
+    }
   },
   recalculateCalculatedValues: async function recalculateCalculatedBudgetValues(
     input: string | IBudgetDocument,
@@ -449,6 +510,11 @@ export default {
     MONGO_BUDGET.calculatedTotalInvestedAmount = CALCULATED_VALUES.calculatedTotalInvestedAmount;
     MONGO_BUDGET.calculatedTotalWithdrawnAmount = CALCULATED_VALUES.calculatedTotalWithdrawnAmount;
     MONGO_BUDGET.calculatedTotalAvailableAmount = CALCULATED_VALUES.calculatedTotalAvailableAmount;
+    MONGO_BUDGET.calculatedTotalLendedPrincipalToActiveLoansAmount =
+      CALCULATED_VALUES.calculatedTotalLendedPrincipalToActiveLoansAmount;
+    MONGO_BUDGET.calculatedTotalLostPrincipalToCompletedAndDefaultedLoansAmount =
+      CALCULATED_VALUES.calculatedTotalLostPrincipalToCompletedAndDefaultedLoansAmount;
+    MONGO_BUDGET.calculatedTotalProfitAmount = CALCULATED_VALUES.calculatedTotalProfitAmount;
 
     await MONGO_BUDGET.save();
     return budgetHelpers.runtimeCast({

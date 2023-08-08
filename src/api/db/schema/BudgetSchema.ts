@@ -22,6 +22,9 @@ export const BudgetSchema = new mongoose.Schema(
     calculatedTotalInvestedAmount: { type: Number },
     calculatedTotalWithdrawnAmount: { type: Number },
     calculatedTotalAvailableAmount: { type: Number },
+    calculatedTotalLendedPrincipalToActiveLoansAmount: { type: Number },
+    calculatedTotalLostPrincipalToCompletedAndDefaultedLoansAmount: { type: Number },
+    calculatedTotalProfitAmount: { type: Number },
     isArchived: { type: Boolean, required: true },
   },
   {
