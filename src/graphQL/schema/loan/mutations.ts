@@ -6,7 +6,8 @@ import { getUserByAuthId } from '../../../api/user.js';
 import { interestRateInputType } from '../interestRate/type.js';
 
 import Loan from '../../../api/loan.js';
-import { loanType, fundInputType, loanPaymentFrequencyInput, loanExpectedPaymentInput } from './type.js';
+import { loanType, fundInputType, loanExpectedPaymentInput } from './type.js';
+import { paymentFrequencyInputType } from '../paymentFrequency/type.js';
 import { transactionType } from '../transaction/type.js';
 import LoanModel from '../../../api/db/model/LoanModel.js';
 
@@ -23,7 +24,7 @@ export default new GraphQLObjectType({
         openedTimestamp: { type: new GraphQLNonNull(GraphQLFloat) },
         closesTimestamp: { type: new GraphQLNonNull(GraphQLFloat) },
         interestRate: { type: new GraphQLNonNull(interestRateInputType) },
-        paymentFrequency: { type: new GraphQLNonNull(loanPaymentFrequencyInput) },
+        paymentFrequency: { type: new GraphQLNonNull(paymentFrequencyInputType) },
         expectedPayments: { type: new GraphQLList(loanExpectedPaymentInput) },
         initialTransactionDescription: { type: new GraphQLNonNull(GraphQLString) },
         funds: { type: new GraphQLList(fundInputType) },
@@ -66,7 +67,7 @@ export default new GraphQLObjectType({
         name: { type: GraphQLString },
         description: { type: GraphQLString },
         closesTimestamp: { type: GraphQLFloat },
-        paymentFrequency: { type: loanPaymentFrequencyInput },
+        paymentFrequency: { type: paymentFrequencyInputType },
       },
       async resolve(_parent: any, args: any, context: any): Promise<ILoan> {
         const userAuthId = await context.getCurrentUserAuthIdOrThrowValidationError();
@@ -82,6 +83,7 @@ export default new GraphQLObjectType({
             name: args.name,
             description: args.description,
             closesTimestamp: args.closesTimestamp,
+            paymentFrequency: args.paymentFrequency,
           });
           return updatedLoan;
         } catch (err: any) {

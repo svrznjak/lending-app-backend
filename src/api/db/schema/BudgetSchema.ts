@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import existsOneWithId from '../plugins/existsOneWithId.js';
 
 import { LoanInterestRateSchema } from './LoanInterestRateSchema.js';
+import { LoanPaymentFrequencySchema } from './LoanPaymentFrequencySchema.js';
 
 export const BudgetSchema = new mongoose.Schema(
   {
@@ -17,6 +18,7 @@ export const BudgetSchema = new mongoose.Schema(
     name: { type: String, required: true },
     description: { type: String },
     defaultInterestRate: { type: LoanInterestRateSchema },
+    defaultPaymentFrequency: { type: LoanPaymentFrequencySchema },
     calculatedTotalInvestedAmount: { type: Number },
     calculatedTotalWithdrawnAmount: { type: Number },
     calculatedTotalAvailableAmount: { type: Number },

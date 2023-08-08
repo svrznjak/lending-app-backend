@@ -7,12 +7,13 @@ import { IBudget } from './types/budget/budgetInterface.js';
 import { interestRateHelpers } from './types/interestRate/interestRateHelpers.js';
 import paranoidCalculator from './utils/paranoidCalculator/paranoidCalculator.js';
 import BudgetModel, { IBudgetDocument } from './db/model/BudgetModel.js';
+import { paymentFrequencyHelpers } from './types/paymentFrequency/paymentFrequencyHelpers.js';
 
 export default {
   // As a lender, I want to create a budget, so that I can categorize my investments.
   create: async function createBudget(
     userId: string,
-    input: Pick<IBudget, 'name' | 'description' | 'defaultInterestRate'>,
+    input: Pick<IBudget, 'name' | 'description' | 'defaultInterestRate' | 'defaultPaymentFrequency'>,
     inititalTransactionAmount: number,
     initialTransactionDescription: string,
   ): Promise<IBudget> {
@@ -29,6 +30,7 @@ export default {
       name: input.name,
       description: input.description,
       defaultInterestRate: input.defaultInterestRate,
+      defaultPaymentFrequency: input.defaultPaymentFrequency,
       calculatedTotalWithdrawnAmount: 0,
       calculatedTotalInvestedAmount: inititalTransactionAmount,
       calculatedTotalAvailableAmount: inititalTransactionAmount,
@@ -255,6 +257,9 @@ export default {
     defaultInterestRateDuration,
     defaultInterestRateAmount,
     defaultInterestRateIsCompounding,
+    defaultPaymentFrequencyOccurrence,
+    defaultPaymentFrequencyIsStrict,
+    defaultPaymentFrequencyStrictValue,
     isArchived,
   }: {
     budgetId: string;
@@ -264,6 +269,9 @@ export default {
     defaultInterestRateDuration?: string;
     defaultInterestRateAmount?: number;
     defaultInterestRateIsCompounding?: number;
+    defaultPaymentFrequencyOccurrence?: string;
+    defaultPaymentFrequencyIsStrict?: boolean;
+    defaultPaymentFrequencyStrictValue?: string;
     isArchived?: boolean;
   }): Promise<IBudget> {
     // Get budget
@@ -295,6 +303,7 @@ export default {
         amount: newInfo.defaultInterestRate.amount,
         isCompounding: newInfo.defaultInterestRate.isCompounding,
         entryTimestamp: newInfo.defaultInterestRate.entryTimestamp,
+        revisions: newInfo.defaultInterestRate.revisions,
       };
       if (defaultInterestRateType !== undefined)
         newInfo.defaultInterestRate.type = interestRateHelpers.validate.type(defaultInterestRateType);
@@ -304,7 +313,36 @@ export default {
         newInfo.defaultInterestRate.amount = interestRateHelpers.validate.amount(defaultInterestRateAmount);
       if (defaultInterestRateIsCompounding !== undefined)
         newInfo.defaultInterestRate.isCompounding = defaultInterestRateIsCompounding;
-      newInfo.defaultInterestRate.entryTimestamp = interestRateHelpers.validate.entryTimestamp(new Date().getTime());
+      newInfo.defaultInterestRate.entryTimestamp = interestRateHelpers.validate.entryTimestamp(Date.now());
+    }
+    // check if defaultPaymentFrequency needs to change
+    if (
+      defaultPaymentFrequencyOccurrence !== undefined ||
+      defaultPaymentFrequencyIsStrict !== undefined ||
+      defaultPaymentFrequencyStrictValue !== undefined
+    ) {
+      // push current defaultPaymentFrequency into revisions
+      newInfo.defaultPaymentFrequency = budget.defaultPaymentFrequency;
+      newInfo.defaultPaymentFrequency.revisions = {
+        occurrence: newInfo.defaultPaymentFrequency.occurrence,
+        isStrict: newInfo.defaultPaymentFrequency.isStrict,
+        strictValue: newInfo.defaultPaymentFrequency.strictValue,
+        entryTimestamp: newInfo.defaultPaymentFrequency.entryTimestamp,
+        revisions: newInfo.defaultPaymentFrequency.revisions,
+      };
+      if (defaultPaymentFrequencyOccurrence !== undefined)
+        newInfo.defaultPaymentFrequency.occurrence = paymentFrequencyHelpers.validate.occurrence(
+          defaultPaymentFrequencyOccurrence,
+        );
+      if (defaultPaymentFrequencyIsStrict !== undefined)
+        newInfo.defaultPaymentFrequency.isStrict = paymentFrequencyHelpers.validate.isStrict(
+          defaultPaymentFrequencyIsStrict,
+        );
+      if (defaultPaymentFrequencyStrictValue !== undefined)
+        newInfo.defaultPaymentFrequency.strictValue = paymentFrequencyHelpers.validate.strictValue(
+          defaultPaymentFrequencyStrictValue,
+        );
+      newInfo.defaultPaymentFrequency.entryTimestamp = paymentFrequencyHelpers.validate.entryTimestamp(Date.now());
     }
     budget.set(newInfo);
     const changedBudget = budgetHelpers.runtimeCast({

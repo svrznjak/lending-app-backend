@@ -10,6 +10,7 @@ import {
   GraphQLBoolean,
 } from 'graphql';
 import { interestRateType } from '../interestRate/type.js';
+import { paymentFrequencyType } from '../paymentFrequency/type.js';
 import { noteType } from '../note/type.js';
 import { transactionAddressType } from '../transaction/type.js';
 
@@ -25,7 +26,7 @@ export const loanType = new GraphQLObjectType({
     openedTimestamp: { type: new GraphQLNonNull(GraphQLFloat) },
     closesTimestamp: { type: new GraphQLNonNull(GraphQLFloat) },
     interestRate: { type: new GraphQLNonNull(interestRateType) },
-    paymentFrequency: { type: new GraphQLNonNull(loanPaymentFrequency) },
+    paymentFrequency: { type: new GraphQLNonNull(paymentFrequencyType) },
     expectedPayments: { type: new GraphQLList(loanExpectedPayment) },
     status: {
       type: new GraphQLNonNull(loanStatus),
@@ -46,37 +47,6 @@ export const fundInputType = new GraphQLInputObjectType({
     budgetId: { type: new GraphQLNonNull(GraphQLID) },
     amount: { type: new GraphQLNonNull(GraphQLFloat) },
   }),
-});
-
-export const loanPaymentFrequency = new GraphQLObjectType({
-  name: 'loanPaymentFrequencyType',
-  fields: (): any => ({
-    occurrence: { type: new GraphQLNonNull(loanPaymentFrequencyOccurrence) },
-    isStrict: { type: new GraphQLNonNull(GraphQLBoolean) },
-    strictValue: { type: GraphQLString },
-  }),
-});
-
-export const loanPaymentFrequencyInput = new GraphQLInputObjectType({
-  name: 'loanPaymentFrequencyInputType',
-  fields: (): any => ({
-    occurrence: { type: new GraphQLNonNull(loanPaymentFrequencyOccurrence) },
-    isStrict: { type: new GraphQLNonNull(GraphQLBoolean) },
-    strictValue: { type: GraphQLString },
-  }),
-});
-
-const loanPaymentFrequencyOccurrence = new GraphQLEnumType({
-  name: 'loanPaymentFrequencyOccurrenceType',
-  values: {
-    ONE_TIME: { value: 'ONE_TIME' },
-    DAILY: { value: 'DAILY' },
-    WEEKLY: { value: 'WEEKLY' },
-    BIWEELKY: { value: 'BIWEELKY' },
-    MONTHLY: { value: 'MONTHLY' },
-    QUARTERLY: { value: 'QUARTERLY' },
-    YEARLY: { value: 'YEARLY' },
-  },
 });
 
 export const loanExpectedPayment = new GraphQLObjectType({

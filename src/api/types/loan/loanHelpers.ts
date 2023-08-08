@@ -1,21 +1,29 @@
 import { isValidTimestamp, isValidAmountOfMoney, isValidOption } from './../../utils/inputValidator/inputValidator.js';
-import { IExpectedPayment, ILoan, IPaymentFrequency } from './loanInterface.js';
+import { IExpectedPayment, ILoan } from './loanInterface.js';
 
 import { sanitizeText } from './../../utils/inputSanitizer/inputSanitizer.js';
 import { interestRateHelpers } from '../interestRate/interestRateHelpers.js';
+import { paymentFrequencyHelpers } from '../paymentFrequency/paymentFrequencyHelpers.js';
 import { isValidText } from '../../utils/inputValidator/inputValidator.js';
 import _ from 'lodash';
 export const loanHelpers = {
   validate: {
     all: function validateAll(
-      loan: Pick<ILoan, 'name' | 'description' | 'openedTimestamp' | 'closesTimestamp' | 'interestRate'>,
-    ): Pick<ILoan, 'name' | 'description' | 'openedTimestamp' | 'closesTimestamp' | 'interestRate'> {
+      loan: Pick<
+        ILoan,
+        'name' | 'description' | 'openedTimestamp' | 'closesTimestamp' | 'interestRate' | 'paymentFrequency'
+      >,
+    ): Pick<
+      ILoan,
+      'name' | 'description' | 'openedTimestamp' | 'closesTimestamp' | 'interestRate' | 'paymentFrequency'
+    > {
       this.name(loan.name);
       this.description(loan.description);
       this.openedTimestamp(loan.openedTimestamp);
       this.closesTimestamp(loan.closesTimestamp);
 
       interestRateHelpers.validate.all(loan.interestRate);
+      paymentFrequencyHelpers.validate.all(loan.paymentFrequency);
 
       return loan;
     },
@@ -63,59 +71,6 @@ export const loanHelpers = {
     amount: function validateAmount(amount: number): number {
       if (!isValidAmountOfMoney({ amount: amount })) throw new Error('(validation) amount is invalid!');
       return amount;
-    },
-    paymentFrequency: function validatePaymentFrequency(paymentFrequency: IPaymentFrequency): IPaymentFrequency {
-      if (
-        !isValidOption({
-          option: paymentFrequency.occurrence,
-          validOptions: ['ONE_TIME', 'DAILY', 'WEEKLY', 'BIWEEKLY', 'MONTHLY', 'QUARTERLY', 'YEARLY'],
-          caseSensitive: true,
-        })
-      )
-        throw new Error('(validation) paymentFrequency.occurrence is invalid!');
-      if (paymentFrequency.isStrict === true) {
-        if (
-          !isValidOption({
-            option: paymentFrequency.strictValue,
-            validOptions: [
-              '1',
-              '2',
-              '3',
-              '4',
-              '5',
-              '6',
-              '7',
-              '8',
-              '9',
-              '10',
-              '11',
-              '12',
-              '13',
-              '14',
-              '15',
-              '16',
-              '17',
-              '18',
-              '19',
-              '20',
-              '21',
-              '22',
-              '23',
-              '24',
-              '25',
-              '26',
-              '27',
-              '28',
-              '29',
-              '30',
-              '31',
-            ],
-            caseSensitive: true,
-          })
-        )
-          throw new Error('(validation) paymentFrequency.day is invalid!');
-      }
-      return paymentFrequency;
     },
     status: function validateStatus(status: ILoan['status']): ILoan['status'] {
       if (
@@ -175,19 +130,8 @@ export const loanHelpers = {
         throw new Error('Type of loan.paymentFrequency.strictValue must be a string!');
     }
 
-    // typecheck expectedPayments
-    loan.expectedPayments.forEach((expectedPayment: IExpectedPayment) => {
-      if (typeof expectedPayment !== 'object' || expectedPayment === null)
-        throw new Error('Type of loan.expectedPayments must be an object!');
-      if (!_.isFinite(expectedPayment.timestamp))
-        throw new Error('Type of loan.expectedPayments.timestamp must be a number!');
-      if (!_.isFinite(expectedPayment.principalPayment))
-        throw new Error('Type of loan.expectedPayments.principalPayment must be a number!');
-      if (!_.isFinite(expectedPayment.interestPayment))
-        throw new Error('Type of loan.expectedPayments.interestPayment must be a number!');
-    });
-
     interestRateHelpers.runtimeCast(loan.interestRate);
+    paymentFrequencyHelpers.runtimeCast(loan.paymentFrequency);
 
     // typecheck relatedBudgets
     loan.calculatedRelatedBudgets.forEach((relatedBudget) => {

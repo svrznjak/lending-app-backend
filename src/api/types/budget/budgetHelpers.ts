@@ -3,15 +3,17 @@ import { IBudget } from './budgetInterface.js';
 
 import { sanitizeText } from './../../utils/inputSanitizer/inputSanitizer.js';
 import { interestRateHelpers } from '../interestRate/interestRateHelpers.js';
+import { paymentFrequencyHelpers } from '../paymentFrequency/paymentFrequencyHelpers.js';
 import { isValidText } from '../../utils/inputValidator/inputValidator.js';
 export const budgetHelpers = {
   validate: {
     all: function validateAll(
-      budget: Pick<IBudget, 'name' | 'description' | 'defaultInterestRate'>,
-    ): Pick<IBudget, 'name' | 'description' | 'defaultInterestRate'> {
+      budget: Pick<IBudget, 'name' | 'description' | 'defaultInterestRate' | 'defaultPaymentFrequency'>,
+    ): Pick<IBudget, 'name' | 'description' | 'defaultInterestRate' | 'defaultPaymentFrequency'> {
       this.name(budget.name);
       this.description(budget.description);
-      if (budget.defaultInterestRate !== undefined) interestRateHelpers.validate.all(budget.defaultInterestRate);
+      interestRateHelpers.validate.all(budget.defaultInterestRate);
+      paymentFrequencyHelpers.validate.all(budget.defaultPaymentFrequency);
 
       return budget;
     },
@@ -66,6 +68,7 @@ export const budgetHelpers = {
     if (!_.isBoolean(budget.isArchived)) throw new Error('Type of budget.isArchived must be a boolean!');
 
     interestRateHelpers.runtimeCast(budget.defaultInterestRate);
+    paymentFrequencyHelpers.runtimeCast(budget.defaultPaymentFrequency);
 
     return {
       _id: budget._id,
@@ -73,6 +76,7 @@ export const budgetHelpers = {
       name: budget.name,
       description: budget.description,
       defaultInterestRate: budget.defaultInterestRate,
+      defaultPaymentFrequency: budget.defaultPaymentFrequency,
       calculatedTotalInvestedAmount: budget.calculatedTotalInvestedAmount,
       calculatedTotalWithdrawnAmount: budget.calculatedTotalWithdrawnAmount,
       calculatedTotalAvailableAmount: budget.calculatedTotalAvailableAmount,

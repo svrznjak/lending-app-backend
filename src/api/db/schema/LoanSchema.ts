@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import existsOneWithId from '../plugins/existsOneWithId.js';
 
 import { LoanInterestRateSchema } from './LoanInterestRateSchema.js';
+import { LoanPaymentFrequencySchema } from './LoanPaymentFrequencySchema.js';
 
 const NoteSchema = new mongoose.Schema({
   content: { type: String, required: true },
@@ -39,11 +40,7 @@ export const LoanSchema = new mongoose.Schema(
     closesTimestamp: { type: Number, required: true },
     interestRate: { type: LoanInterestRateSchema, required: true },
     paymentFrequency: {
-      type: {
-        occurrence: { type: String, required: true },
-        isStrict: { type: Boolean, required: true },
-        strictValue: { type: String },
-      },
+      type: LoanPaymentFrequencySchema,
       required: true,
     },
     expectedPayments: {

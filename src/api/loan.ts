@@ -11,7 +11,8 @@ import {
 import * as User from './user.js';
 import transaction from './transaction.js';
 import { loanHelpers } from './types/loan/loanHelpers.js';
-import { ILoan, IPaymentFrequency, IRelatedBudget, ITransactionInterval } from './types/loan/loanInterface.js';
+import { ILoan, IRelatedBudget, ITransactionInterval } from './types/loan/loanInterface.js';
+import { IPaymentFrequency } from './types/paymentFrequency/paymentFrequencyInterface.js';
 import { ITransaction } from './types/transaction/transactionInterface.js';
 import Budget from './budget.js';
 import { transactionHelpers } from './types/transaction/transactionHelpers.js';
@@ -25,6 +26,7 @@ import { IUser } from './types/user/userInterface.js';
 import { TokenMessage } from 'firebase-admin/messaging';
 import { sendNotifications } from './utils/cloudMessaging/cloudMessaging.js';
 import UserModel from './db/model/UserModel.js';
+import { paymentFrequencyHelpers } from './types/paymentFrequency/paymentFrequencyHelpers.js';
 
 interface fund {
   budgetId: string;
@@ -170,7 +172,14 @@ const Loan = {
       newInfo.closesTimestamp = loanHelpers.validate.closesTimestamp(closesTimestamp);
     }
     if (paymentFrequency !== undefined) {
-      newInfo.paymentFrequency = loanHelpers.validate.paymentFrequency(paymentFrequency);
+      newInfo.paymentFrequency.revisions = {
+        occurrence: loan.paymentFrequency.occurrence,
+        isStrict: loan.paymentFrequency.isStrict,
+        strictValue: loan.paymentFrequency.strictValue,
+        revisions: loan.paymentFrequency.revisions,
+        entryTimestamp: loan.paymentFrequency.entryTimestamp,
+      };
+      newInfo.paymentFrequency = paymentFrequencyHelpers.validate.all(paymentFrequency);
     }
     loan.set(newInfo);
 

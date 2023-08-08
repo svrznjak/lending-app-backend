@@ -4,6 +4,7 @@ import { IBudget } from '../../../api/types/budget/budgetInterface.js';
 import { transactionHelpers } from '../../../api/types/transaction/transactionHelpers.js';
 import { getUserByAuthId } from '../../../api/user.js';
 import { interestRateInputType } from '../interestRate/type.js';
+import { paymentFrequencyInputType } from '../paymentFrequency/type.js';
 
 import Budget from '../../../api/budget.js';
 import { budgetsType } from './type.js';
@@ -18,20 +19,23 @@ export default new GraphQLObjectType({
         name: { type: new GraphQLNonNull(GraphQLString) },
         description: { type: new GraphQLNonNull(GraphQLString) },
         defaultInterestRate: { type: new GraphQLNonNull(interestRateInputType) },
+        defaultPaymentFrequency: { type: new GraphQLNonNull(paymentFrequencyInputType) },
         initialAmount: { type: new GraphQLNonNull(GraphQLInt) },
         initialTransactionDescription: { type: new GraphQLNonNull(GraphQLString) },
       },
       async resolve(_parent: any, args: any, context: any): Promise<IBudget> {
         const userAuthId = await context.getCurrentUserAuthIdOrThrowValidationError();
         const user = await getUserByAuthId(userAuthId);
-        const now = transactionHelpers.validate.entryTimestamp(new Date().getTime());
-        args.defaultInterestRate.entryTimestamp = now;
 
         try {
-          const newBudgetInfo: Pick<IBudget, 'name' | 'description' | 'defaultInterestRate'> = {
+          const newBudgetInfo: Pick<
+            IBudget,
+            'name' | 'description' | 'defaultInterestRate' | 'defaultPaymentFrequency'
+          > = {
             name: args.name,
             description: args.description,
             defaultInterestRate: args.defaultInterestRate,
+            defaultPaymentFrequency: args.defaultPaymentFrequency,
           };
           return await Budget.create(user._id, newBudgetInfo, args.initialAmount, args.initialTransactionDescription);
         } catch (err: any) {
@@ -47,13 +51,12 @@ export default new GraphQLObjectType({
         name: { type: new GraphQLNonNull(GraphQLString) },
         description: { type: new GraphQLNonNull(GraphQLString) },
         defaultInterestRate: { type: new GraphQLNonNull(interestRateInputType) },
+        defaultPaymentFrequency: { type: new GraphQLNonNull(paymentFrequencyInputType) },
       },
       async resolve(_parent: any, args: any, context: any): Promise<IBudget> {
         const userAuthId = await context.getCurrentUserAuthIdOrThrowValidationError();
         const user = await getUserByAuthId(userAuthId);
         await Budget.getOneFromUser({ userId: user._id, budgetId: args.budgetId }); // check if user has access to budget
-        const now = transactionHelpers.validate.entryTimestamp(new Date().getTime());
-        args.defaultInterestRate.entryTimestamp = now;
 
         try {
           return await Budget.edit({
@@ -64,6 +67,9 @@ export default new GraphQLObjectType({
             defaultInterestRateDuration: args.defaultInterestRate.duration,
             defaultInterestRateAmount: args.defaultInterestRate.amount,
             defaultInterestRateIsCompounding: args.defaultInterestRate.isCompounding,
+            defaultPaymentFrequencyOccurrence: args.defaultPaymentFrequency.occurrence,
+            defaultPaymentFrequencyIsStrict: args.defaultPaymentFrequency.isStrict,
+            defaultPaymentFrequencyStrictValue: args.defaultPaymentFrequency.strictValue,
           });
         } catch (err: any) {
           console.log(err.message);

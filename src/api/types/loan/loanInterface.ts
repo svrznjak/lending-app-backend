@@ -1,4 +1,5 @@
 import { IInterestRate } from '../interestRate/interestRateInterface.js';
+import { IPaymentFrequency } from '../paymentFrequency/paymentFrequencyInterface.js';
 import { INote } from '../note/noteInterface.js';
 import { ITransactionAddress } from '../transactionAddress/transactionAddressInterface.js';
 
@@ -40,43 +41,6 @@ export interface ITransactionInterval {
   interestPaid: number;
   outstandingPrincipal: number;
   outstandingInterest: number;
-}
-
-export interface IPaymentFrequency {
-  occurrence: 'ONE_TIME' | 'DAILY' | 'WEEKLY' | 'BIWEEKLY' | 'MONTHLY' | 'QUARTERLY' | 'YEARLY';
-  isStrict: boolean;
-  strictValue?:
-    | '1'
-    | '2'
-    | '3'
-    | '4'
-    | '5'
-    | '6'
-    | '7'
-    | '8'
-    | '9'
-    | '10'
-    | '11'
-    | '12'
-    | '13'
-    | '14'
-    | '15'
-    | '16'
-    | '17'
-    | '18'
-    | '19'
-    | '20'
-    | '21'
-    | '22'
-    | '23'
-    | '24'
-    | '25'
-    | '26'
-    | '27'
-    | '28'
-    | '29'
-    | '30'
-    | '31';
 }
 
 export interface IExpectedPayment {
