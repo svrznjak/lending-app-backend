@@ -210,12 +210,25 @@ const Loan = {
       const MONGO_LOAN = await LoanModel.findOne({ _id: loanId, userId: userId }).session(session);
       if (MONGO_LOAN === null) throw new Error('Loan could not be found');
       // Do not recalculate if session is provided, because changes to data will be made in the end of successful session
-      if (session !== undefined)
+      if (session !== undefined) {
         return loanHelpers.runtimeCast({
           ...MONGO_LOAN.toObject(),
           _id: MONGO_LOAN._id.toString(),
           userId: MONGO_LOAN.userId.toString(),
         });
+        // Do not recalculate if loan is completed or defaulted, because no change to data will ever be made
+      } else if (MONGO_LOAN.status === 'COMPLETED' || MONGO_LOAN.status === 'DEFAULTED') {
+        const LOAN = loanHelpers.runtimeCast({
+          ...MONGO_LOAN.toObject(),
+          _id: MONGO_LOAN._id.toString(),
+          userId: MONGO_LOAN.userId.toString(),
+        });
+        LoanCache.setCachedItem({
+          itemId: MONGO_LOAN._id.toString(),
+          value: LOAN,
+        });
+        return LOAN;
+      }
 
       const recalculatedLoan = await this.recalculateCalculatedValues(MONGO_LOAN);
       return recalculatedLoan;
@@ -248,6 +261,18 @@ const Loan = {
               userId: LOANS[i].userId.toString(),
             }),
           );
+          // Do not recalculate if loan is completed or defaulted, because no change to data will ever be made
+        } else if (LOANS[i].status === 'COMPLETED' || LOANS[i].status === 'DEFAULTED') {
+          const LOAN = loanHelpers.runtimeCast({
+            ...LOANS[i].toObject(),
+            _id: LOANS[i]._id.toString(),
+            userId: LOANS[i].userId.toString(),
+          });
+          LoanCache.setCachedItem({
+            itemId: LOANS[i]._id.toString(),
+            value: LOAN,
+          });
+          returnValue.push(LOAN);
         } else {
           const recalculatedLoan = await this.recalculateCalculatedValues(LOANS[i]);
           returnValue.push(recalculatedLoan);
@@ -600,6 +625,9 @@ const Loan = {
       userId: MONGO_LOAN.userId.toString(),
     });
     await MONGO_LOAN.save();
+    MONGO_LOAN.calculatedRelatedBudgets.forEach(async (budget: IRelatedBudget) => {
+      await Budget.recalculateCalculatedValues(budget.budgetId);
+    });
     return await this.recalculateCalculatedValues(MONGO_LOAN);
   },
   default: async function defaultLoan(
@@ -613,65 +641,31 @@ const Loan = {
     if (MONGO_LOAN.status === 'PAID' || MONGO_LOAN.status === 'COMPLETED' || MONGO_LOAN.status === 'DEFAULTED')
       throw new Error('Only active and paused loans can be DEFAULTED!');
 
-    const OUTSTANDING_AMOUNT =
-      RECALCULATED_LOAN.calculatedInvestedAmount +
-      RECALCULATED_LOAN.calculatedOutstandingInterest -
-      RECALCULATED_LOAN.calculatedTotalPaidPrincipal;
-
     transactionHelpers.validate.description(defaultTransactionDescription);
     defaultTransactionDescription = transactionHelpers.sanitize.description(defaultTransactionDescription);
-
-    const session: ClientSession = await mongoose.connection.startSession();
     try {
-      session.startTransaction();
-      const NEW_TRANSACTION = await transaction.add(
-        {
-          userId: MONGO_LOAN.userId.toString(),
-          transactionTimestamp: transactionHelpers.validate.entryTimestamp(new Date().getTime()),
-          description: defaultTransactionDescription,
-          from: {
-            datatype: 'LOAN',
-            addressId: MONGO_LOAN._id.toString(),
-          },
-          to: {
-            datatype: 'OUTSIDE',
-            addressId: '000000000000000000000000',
-          },
-          amount: transactionHelpers.validate.amount(OUTSTANDING_AMOUNT),
-          entryTimestamp: transactionHelpers.validate.entryTimestamp(new Date().getTime()),
-        } as Pick<
-          ITransaction,
-          'userId' | 'transactionTimestamp' | 'description' | 'from' | 'to' | 'amount' | 'entryTimestamp'
-        >,
-        { session: session },
-      );
-
-      if (_.round(NEW_TRANSACTION.amount, 8) !== _.round(OUTSTANDING_AMOUNT, 8))
-        throw new Error(
-          'Transaction that defaults loan does not have same amount as loan outstanding amount! This should not happen.',
-        );
-
       MONGO_LOAN.status = 'DEFAULTED';
-      /* TODO : when getLoan will return databese values in case loan is COMPLETED of DEFAULTED
-      
       MONGO_LOAN.calculatedInvestedAmount = RECALCULATED_LOAN.calculatedInvestedAmount;
       MONGO_LOAN.calculatedLastTransactionTimestamp = RECALCULATED_LOAN.calculatedLastTransactionTimestamp;
       MONGO_LOAN.calculatedOutstandingInterest = RECALCULATED_LOAN.calculatedOutstandingInterest;
       MONGO_LOAN.calculatedPaidInterest = RECALCULATED_LOAN.calculatedPaidInterest;
       MONGO_LOAN.calculatedRelatedBudgets = RECALCULATED_LOAN.calculatedRelatedBudgets;
       MONGO_LOAN.calculatedTotalPaidPrincipal = RECALCULATED_LOAN.calculatedTotalPaidPrincipal;
-*/
-      await MONGO_LOAN.save({ session });
 
-      await session.commitTransaction();
+      loanHelpers.runtimeCast({
+        ...MONGO_LOAN.toObject(),
+        _id: MONGO_LOAN._id.toString(),
+        userId: MONGO_LOAN.userId.toString(),
+      });
+      await MONGO_LOAN.save();
 
+      MONGO_LOAN.calculatedRelatedBudgets.forEach(async (budget: IRelatedBudget) => {
+        await Budget.recalculateCalculatedValues(budget.budgetId);
+      });
       return await this.recalculateCalculatedValues(MONGO_LOAN);
     } catch (err) {
       console.log(err);
-      await session.abortTransaction();
       throw new Error(err.message);
-    } finally {
-      session.endSession();
     }
   },
   /*
