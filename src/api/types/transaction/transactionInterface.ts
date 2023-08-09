@@ -7,6 +7,7 @@ export interface ITransaction {
   description: string;
   from: ITransactionAddress;
   to: ITransactionAddress;
+  refund?: boolean;
   amount: number;
   entryTimestamp: number;
   revisions?: ITransaction;

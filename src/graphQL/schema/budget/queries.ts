@@ -74,6 +74,8 @@ export default new GraphQLObjectType({
           | 'calculatedTotalWithdrawnAmount'
           | 'calculatedTotalAvailableAmount'
           | 'calculatedTotalLendedPrincipalToActiveLoansAmount'
+          | 'calculatedTotalLostPrincipalToCompletedAndDefaultedLoansAmount'
+          | 'calculatedTotalProfitAmount'
         >[]
       > {
         await context.getCurrentUserAuthIdOrThrowValidationError();
@@ -85,6 +87,8 @@ export default new GraphQLObjectType({
           | 'calculatedTotalWithdrawnAmount'
           | 'calculatedTotalAvailableAmount'
           | 'calculatedTotalLendedPrincipalToActiveLoansAmount'
+          | 'calculatedTotalLostPrincipalToCompletedAndDefaultedLoansAmount'
+          | 'calculatedTotalProfitAmount'
         >[] = await args.budgetIds.map(async (budgetId: string) => {
           return {
             _id: budgetId,

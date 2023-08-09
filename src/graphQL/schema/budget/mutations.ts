@@ -1,7 +1,6 @@
 import { GraphQLFloat } from 'graphql';
 import { GraphQLObjectType, GraphQLNonNull, GraphQLString, GraphQLInt, GraphQLID } from 'graphql';
 import { IBudget } from '../../../api/types/budget/budgetInterface.js';
-import { transactionHelpers } from '../../../api/types/transaction/transactionHelpers.js';
 import { getUserByAuthId } from '../../../api/user.js';
 import { interestRateInputType } from '../interestRate/type.js';
 import { paymentFrequencyInputType } from '../paymentFrequency/type.js';

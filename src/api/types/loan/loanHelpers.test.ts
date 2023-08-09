@@ -6,7 +6,7 @@ describe('loanHelpers', () => {
   describe('validate', () => {
     const correctValidationInputs: Pick<
       ILoan,
-      'name' | 'description' | 'openedTimestamp' | 'closesTimestamp' | 'interestRate'
+      'name' | 'description' | 'openedTimestamp' | 'closesTimestamp' | 'interestRate' | 'paymentFrequency'
     >[] = [
       {
         name: 'Loan 1',
@@ -20,6 +20,12 @@ describe('loanHelpers', () => {
           entryTimestamp: 1663012853,
           revisions: undefined,
           isCompounding: false,
+        },
+        paymentFrequency: {
+          occurrence: 'MONTHLY',
+          isStrict: true,
+          strictValue: '1',
+          entryTimestamp: 1663012853,
         },
       },
       {
@@ -35,6 +41,12 @@ describe('loanHelpers', () => {
           revisions: undefined,
           isCompounding: false,
         },
+        paymentFrequency: {
+          occurrence: 'MONTHLY',
+          isStrict: true,
+          strictValue: '1',
+          entryTimestamp: 1663012853,
+        },
       },
     ];
     test.each(correctValidationInputs)('It works with correct input', (input) => {
@@ -44,7 +56,7 @@ describe('loanHelpers', () => {
 
     const invalidValidationInputs: Pick<
       ILoan,
-      'name' | 'description' | 'openedTimestamp' | 'closesTimestamp' | 'interestRate'
+      'name' | 'description' | 'openedTimestamp' | 'closesTimestamp' | 'interestRate' | 'paymentFrequency'
     >[] = [
       {
         // To short name
@@ -59,6 +71,12 @@ describe('loanHelpers', () => {
           entryTimestamp: 1663012853,
           revisions: undefined,
           isCompounding: false,
+        },
+        paymentFrequency: {
+          occurrence: 'MONTHLY',
+          isStrict: true,
+          strictValue: '1',
+          entryTimestamp: 1663012853,
         },
       },
       {
@@ -75,6 +93,12 @@ describe('loanHelpers', () => {
           revisions: undefined,
           isCompounding: false,
         },
+        paymentFrequency: {
+          occurrence: 'MONTHLY',
+          isStrict: true,
+          strictValue: '1',
+          entryTimestamp: 1663012853,
+        },
       },
       {
         //To long name
@@ -89,6 +113,12 @@ describe('loanHelpers', () => {
           entryTimestamp: 1663012853,
           revisions: undefined,
           isCompounding: false,
+        },
+        paymentFrequency: {
+          occurrence: 'MONTHLY',
+          isStrict: true,
+          strictValue: '1',
+          entryTimestamp: 1663012853,
         },
       },
       {
@@ -106,6 +136,12 @@ describe('loanHelpers', () => {
           revisions: undefined,
           isCompounding: false,
         },
+        paymentFrequency: {
+          occurrence: 'MONTHLY',
+          isStrict: true,
+          strictValue: '1',
+          entryTimestamp: 1663012853,
+        },
       },
       {
         // description is undefined
@@ -120,6 +156,12 @@ describe('loanHelpers', () => {
           entryTimestamp: 1663012853,
           revisions: undefined,
           isCompounding: false,
+        },
+        paymentFrequency: {
+          occurrence: 'MONTHLY',
+          isStrict: true,
+          strictValue: '1',
+          entryTimestamp: 1663012853,
         },
       },
       {
@@ -136,6 +178,12 @@ describe('loanHelpers', () => {
           revisions: undefined,
           isCompounding: false,
         },
+        paymentFrequency: {
+          occurrence: 'MONTHLY',
+          isStrict: true,
+          strictValue: '1',
+          entryTimestamp: 1663012853,
+        },
       },
       {
         // openedTimestamp and closesTimestamp is NaN (check if validation is called)
@@ -150,6 +198,12 @@ describe('loanHelpers', () => {
           entryTimestamp: 1663012853,
           revisions: undefined,
           isCompounding: false,
+        },
+        paymentFrequency: {
+          occurrence: 'MONTHLY',
+          isStrict: true,
+          strictValue: '1',
+          entryTimestamp: 1663012853,
         },
       },
       {
@@ -166,6 +220,12 @@ describe('loanHelpers', () => {
           revisions: undefined,
           isCompounding: false,
         },
+        paymentFrequency: {
+          occurrence: 'MONTHLY',
+          isStrict: true,
+          strictValue: '1',
+          entryTimestamp: 1663012853,
+        },
       },
       {
         name: 'Loan 1',
@@ -179,6 +239,12 @@ describe('loanHelpers', () => {
           entryTimestamp: 1663012853,
           revisions: undefined,
           isCompounding: false,
+        },
+        paymentFrequency: {
+          occurrence: 'MONTHLY',
+          isStrict: true,
+          strictValue: '1',
+          entryTimestamp: 1663012853,
         },
       },
       {
@@ -195,6 +261,12 @@ describe('loanHelpers', () => {
           revisions: undefined,
           isCompounding: false,
         },
+        paymentFrequency: {
+          occurrence: 'MONTHLY',
+          isStrict: true,
+          strictValue: '1',
+          entryTimestamp: 1663012853,
+        },
       },
       {
         // initialPrinciple is undefined
@@ -209,6 +281,12 @@ describe('loanHelpers', () => {
           entryTimestamp: 1663012853,
           revisions: undefined,
           isCompounding: false,
+        },
+        paymentFrequency: {
+          occurrence: 'MONTHLY',
+          isStrict: true,
+          strictValue: '1',
+          entryTimestamp: 1663012853,
         },
       },
       {
@@ -225,6 +303,12 @@ describe('loanHelpers', () => {
           revisions: undefined,
           isCompounding: false,
         },
+        paymentFrequency: {
+          occurrence: 'MONTHLY',
+          isStrict: true,
+          strictValue: '1',
+          entryTimestamp: 1663012853,
+        },
       },
       {
         // interestRate.amount is NaN
@@ -239,6 +323,12 @@ describe('loanHelpers', () => {
           entryTimestamp: 1663012853,
           revisions: undefined,
           isCompounding: false,
+        },
+        paymentFrequency: {
+          occurrence: 'MONTHLY',
+          isStrict: true,
+          strictValue: '1',
+          entryTimestamp: 1663012853,
         },
       },
       {
@@ -255,6 +345,12 @@ describe('loanHelpers', () => {
           revisions: undefined,
           isCompounding: false,
         },
+        paymentFrequency: {
+          occurrence: 'MONTHLY',
+          isStrict: true,
+          strictValue: '1',
+          entryTimestamp: 1663012853,
+        },
       },
       {
         // interestRate.entryTimestamp is negative
@@ -269,6 +365,12 @@ describe('loanHelpers', () => {
           entryTimestamp: -1,
           revisions: undefined,
           isCompounding: false,
+        },
+        paymentFrequency: {
+          occurrence: 'MONTHLY',
+          isStrict: true,
+          strictValue: '1',
+          entryTimestamp: 1663012853,
         },
       },
       {
@@ -285,6 +387,12 @@ describe('loanHelpers', () => {
           revisions: undefined,
           isCompounding: false,
         },
+        paymentFrequency: {
+          occurrence: 'MONTHLY',
+          isStrict: true,
+          strictValue: '1',
+          entryTimestamp: 1663012853,
+        },
       },
       {
         //interestRate.entryTimestamp in null
@@ -299,6 +407,12 @@ describe('loanHelpers', () => {
           entryTimestamp: null,
           revisions: undefined,
           isCompounding: false,
+        },
+        paymentFrequency: {
+          occurrence: 'MONTHLY',
+          isStrict: true,
+          strictValue: '1',
+          entryTimestamp: 1663012853,
         },
       },
     ];
@@ -358,6 +472,12 @@ describe('loanHelpers', () => {
           entryTimestamp: 1663012853,
           revisions: undefined,
         },
+        paymentFrequency: {
+          occurrence: 'MONTHLY',
+          isStrict: true,
+          strictValue: '1',
+          entryTimestamp: 1663012853,
+        },
         calculatedTotalPaidPrincipal: 100,
         calculatedOutstandingInterest: 50,
         calculatedPaidInterest: 50,
@@ -375,6 +495,12 @@ describe('loanHelpers', () => {
           amount: 15,
           entryTimestamp: 1663212853,
           revisions: undefined,
+        },
+        paymentFrequency: {
+          occurrence: 'MONTHLY',
+          isStrict: true,
+          strictValue: '1',
+          entryTimestamp: 1663012853,
         },
         calculatedTotalPaidPrincipal: 0,
         calculatedOutstandingInterest: 10,

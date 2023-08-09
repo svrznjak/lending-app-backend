@@ -29,6 +29,7 @@ const TransactionSchema = new mongoose.Schema(
     description: { type: String },
     from: { type: TransactionAddressSchema, required: true },
     to: { type: TransactionAddressSchema, required: true },
+    refund: { type: Boolean, default: false },
     amount: { type: Number, required: true },
     entryTimestamp: { type: Number, required: true },
   },

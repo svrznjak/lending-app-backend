@@ -26,6 +26,12 @@ describe('Manual tests', () => {
           isCompounding: false,
           entryTimestamp: 2123145213123,
         },
+        defaultPaymentFrequency: {
+          occurrence: 'MONTHLY',
+          isStrict: true,
+          strictValue: '1',
+          entryTimestamp: 2123145213123,
+        },
       },
       1000,
       'FIRST TRANSACTION',

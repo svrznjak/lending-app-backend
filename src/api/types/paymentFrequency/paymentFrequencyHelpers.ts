@@ -73,7 +73,8 @@ export const paymentFrequencyHelpers = {
       return strictValue;
     },
     entryTimestamp: function validateEntryTimestamp(entryTimestamp: number): number {
-      if (!Number.isFinite(entryTimestamp)) throw new Error('(validation) entryTimestamp is invalid!');
+      if (!Number.isFinite(entryTimestamp) && entryTimestamp !== undefined)
+        throw new Error('(validation) entryTimestamp is invalid!');
       return entryTimestamp;
     },
   },
@@ -88,7 +89,7 @@ export const paymentFrequencyHelpers = {
       if (!_.isString(paymentFrequency.strictValue))
         throw new Error('Type of loan.paymentFrequency.strictValue must be a string!');
     }
-    if (!Number.isFinite(paymentFrequency.entryTimestamp))
+    if (!Number.isFinite(paymentFrequency.entryTimestamp) && paymentFrequency.entryTimestamp !== undefined)
       throw new Error('Type of loan.paymentFrequency.entryTimestamp must be a number!');
 
     return {

@@ -420,7 +420,6 @@ const Loan = {
     }
     return NEW_TRANSACTION;
   },
-
   addManualInterest: async function addManualInterestToLoan(
     {
       userId,
@@ -461,6 +460,117 @@ const Loan = {
           datatype: 'LOAN',
           addressId: loanId,
         },
+        amount: amount,
+        entryTimestamp: transactionHelpers.validate.entryTimestamp(new Date().getTime()),
+      } as Pick<
+        ITransaction,
+        'userId' | 'transactionTimestamp' | 'description' | 'from' | 'to' | 'amount' | 'entryTimestamp'
+      >,
+      { session: session },
+    );
+
+    if (runRecalculate) {
+      await this.recalculateCalculatedValues(loanId);
+    }
+    return NEW_TRANSACTION;
+  },
+  addLoanForgivness: async function addLoanForgivness(
+    {
+      userId,
+      loanId,
+      transactionTimestamp,
+      description,
+      amount,
+    }: {
+      userId: string;
+      loanId: string;
+      transactionTimestamp: number;
+      description: string;
+      amount: number;
+    },
+    {
+      session = undefined,
+      runRecalculate = true,
+    }: {
+      session?: ClientSession;
+      runRecalculate?: boolean;
+    } = {},
+  ): Promise<ITransaction> {
+    transactionHelpers.validate.transactionTimestamp(transactionTimestamp);
+    transactionHelpers.validate.description(description);
+    description = transactionHelpers.sanitize.description(description);
+    transactionHelpers.validate.amount(amount);
+
+    const NEW_TRANSACTION = await transaction.add(
+      {
+        userId: userId,
+        transactionTimestamp: transactionTimestamp,
+        description: description,
+        from: {
+          datatype: 'LOAN',
+          addressId: loanId,
+        },
+        to: {
+          datatype: 'OUTSIDE',
+          addressId: '000000000000000000000000',
+        },
+        amount: amount,
+        entryTimestamp: transactionHelpers.validate.entryTimestamp(new Date().getTime()),
+      } as Pick<
+        ITransaction,
+        'userId' | 'transactionTimestamp' | 'description' | 'from' | 'to' | 'amount' | 'entryTimestamp'
+      >,
+      { session: session },
+    );
+
+    if (runRecalculate) {
+      await this.recalculateCalculatedValues(loanId);
+    }
+    return NEW_TRANSACTION;
+  },
+  addLoanRefund: async function addLoanRefund(
+    {
+      userId,
+      loanId,
+      budgetId,
+      transactionTimestamp,
+      description,
+      amount,
+    }: {
+      userId: string;
+      loanId: string;
+      budgetId: string;
+      transactionTimestamp: number;
+      description: string;
+      amount: number;
+    },
+    {
+      session = undefined,
+      runRecalculate = true,
+    }: {
+      session?: ClientSession;
+      runRecalculate?: boolean;
+    } = {},
+  ): Promise<ITransaction> {
+    transactionHelpers.validate.transactionTimestamp(transactionTimestamp);
+    transactionHelpers.validate.description(description);
+    description = transactionHelpers.sanitize.description(description);
+    transactionHelpers.validate.amount(amount);
+
+    const NEW_TRANSACTION = await transaction.add(
+      {
+        userId: userId,
+        transactionTimestamp: transactionTimestamp,
+        description: description,
+        from: {
+          datatype: 'BUDGET',
+          addressId: budgetId,
+        },
+        to: {
+          datatype: 'LOAN',
+          addressId: loanId,
+        },
+        refund: true,
         amount: amount,
         entryTimestamp: transactionHelpers.validate.entryTimestamp(new Date().getTime()),
       } as Pick<
@@ -598,7 +708,7 @@ const Loan = {
     // recalculate values just in case
     await this.recalculateCalculatedValues(MONGO_LOAN);
     if (MONGO_LOAN.status !== 'PAID') throw new Error('Only PAID loans can be COMPLETED!');
-    const CALCULATED_VALES = await this.getCalculatedValuesAtTimestamp({
+    const CALCULATED_VALUES = await this.getCalculatedValuesAtTimestamp({
       loanId: MONGO_LOAN._id.toString(),
       interestRate: MONGO_LOAN.interestRate,
       timestampLimit: MONGO_LOAN.calculatedLastTransactionTimestamp,
@@ -606,18 +716,19 @@ const Loan = {
 
     // Just in case recheck if loan is actualy paid at the time of last transaction
     if (
-      _.round(CALCULATED_VALES.calculatedInvestedAmount, 2) !==
-      _.round(CALCULATED_VALES.calculatedTotalPaidPrincipal, 2)
+      _.round(CALCULATED_VALUES.calculatedInvestedAmount, 2) !==
+      _.round(CALCULATED_VALUES.calculatedTotalPaidPrincipal, 2)
     )
       throw new Error('Loan can not be closed if it is not balanced.');
 
     MONGO_LOAN.status = 'COMPLETED';
-    MONGO_LOAN.calculatedInvestedAmount = CALCULATED_VALES.calculatedInvestedAmount;
-    MONGO_LOAN.calculatedLastTransactionTimestamp = CALCULATED_VALES.calculatedLastTransactionTimestamp;
-    MONGO_LOAN.calculatedOutstandingInterest = CALCULATED_VALES.calculatedOutstandingInterest;
-    MONGO_LOAN.calculatedPaidInterest = CALCULATED_VALES.calculatedPaidInterest;
-    MONGO_LOAN.calculatedRelatedBudgets = CALCULATED_VALES.calculatedRelatedBudgets;
-    MONGO_LOAN.calculatedTotalPaidPrincipal = CALCULATED_VALES.calculatedTotalPaidPrincipal;
+    MONGO_LOAN.calculatedInvestedAmount = CALCULATED_VALUES.calculatedInvestedAmount;
+    MONGO_LOAN.calculatedLastTransactionTimestamp = CALCULATED_VALUES.calculatedLastTransactionTimestamp;
+    MONGO_LOAN.calculatedOutstandingInterest = CALCULATED_VALUES.calculatedOutstandingInterest;
+    MONGO_LOAN.calculatedPaidInterest = CALCULATED_VALUES.calculatedPaidInterest;
+    MONGO_LOAN.calculatedRelatedBudgets = CALCULATED_VALUES.calculatedRelatedBudgets;
+    MONGO_LOAN.calculatedTotalPaidPrincipal = CALCULATED_VALUES.calculatedTotalPaidPrincipal;
+    MONGO_LOAN.transactionList = CALCULATED_VALUES.transactionList;
 
     loanHelpers.runtimeCast({
       ...MONGO_LOAN.toObject(),
@@ -651,6 +762,7 @@ const Loan = {
       MONGO_LOAN.calculatedPaidInterest = RECALCULATED_LOAN.calculatedPaidInterest;
       MONGO_LOAN.calculatedRelatedBudgets = RECALCULATED_LOAN.calculatedRelatedBudgets;
       MONGO_LOAN.calculatedTotalPaidPrincipal = RECALCULATED_LOAN.calculatedTotalPaidPrincipal;
+      MONGO_LOAN.transactionList = RECALCULATED_LOAN.transactionList;
 
       loanHelpers.runtimeCast({
         ...MONGO_LOAN.toObject(),

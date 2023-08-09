@@ -35,6 +35,9 @@ export default {
       calculatedTotalWithdrawnAmount: 0,
       calculatedTotalInvestedAmount: inititalTransactionAmount,
       calculatedTotalAvailableAmount: inititalTransactionAmount,
+      calculatedTotalLendedPrincipalToActiveLoansAmount: 0,
+      calculatedTotalLostPrincipalToCompletedAndDefaultedLoansAmount: 0,
+      calculatedTotalProfitAmount: 0,
       isArchived: false,
     });
 
@@ -413,7 +416,7 @@ export default {
       await applyTransactionToTotalLendedToActiveLoansAmount(TRANSACTION);
     }
 
-    Object.keys(tmpAmountsLendedToLoans).forEach(async (key) => {
+    await Object.keys(tmpAmountsLendedToLoans).forEach(async (key) => {
       const loanStatus = (await loan.getOneFromUser({ userId: budgetTransactions[0].userId, loanId: key })).status;
       if (loanStatus === 'ACTIVE' || loanStatus === 'PAUSED' || loanStatus === 'PAID') {
         if (tmpAmountsLendedToLoans[key] > 0) {

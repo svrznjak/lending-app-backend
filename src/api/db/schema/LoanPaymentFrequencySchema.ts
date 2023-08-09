@@ -1,5 +1,4 @@
 import mongoose from 'mongoose';
-import Loan from '../../loan.js';
 
 const LoanPaymentFrequency = new mongoose.Schema({
   occurrence: {

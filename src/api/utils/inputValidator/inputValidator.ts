@@ -61,7 +61,7 @@ export const isValidAmountOfMoney = function isValidAmountOfMoney(
 ): boolean {
   if (!Number.isFinite(amount)) return false;
   if (amount > 900719925474) return false;
-  if (amount < 0) return false;
+  if (amount < -900719925474) return false;
 
   if (extend === undefined) return true;
   if (

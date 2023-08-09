@@ -59,6 +59,8 @@ export const transactionHelpers = {
     if (!Number.isFinite(transaction.transactionTimestamp))
       throw new Error('Type of transaction.transactionTimestamp must be a number!');
     if (!_.isString(transaction.description)) throw new Error('Type of transaction.description must be a string!');
+    if (transaction.refund !== undefined && !_.isBoolean(transaction.refund))
+      throw new Error('Type of transaction.refund must be a boolean!');
     if (!Number.isFinite(transaction.amount)) throw new Error('Type of transaction.amount must be a number!');
     if (!Number.isFinite(transaction.entryTimestamp))
       throw new Error('Type of transaction.entryTimestamp must be a number!');
@@ -75,6 +77,7 @@ export const transactionHelpers = {
       description: transaction.description,
       from: transaction.from,
       to: transaction.to,
+      refund: transaction.refund,
       amount: transaction.amount,
       entryTimestamp: transaction.entryTimestamp,
       revisions: transaction.revisions,

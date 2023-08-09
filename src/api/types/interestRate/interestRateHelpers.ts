@@ -41,7 +41,8 @@ export const interestRateHelpers = {
       return amount;
     },
     entryTimestamp: function validateEntryTimestamp(entryTimestamp: number): number {
-      if (!isValidTimestamp({ timestamp: entryTimestamp })) throw new Error('(validation) entryTimestamp is invalid!');
+      if (!isValidTimestamp({ timestamp: entryTimestamp }) && entryTimestamp !== undefined)
+        throw new Error('(validation) entryTimestamp is invalid!');
       return entryTimestamp;
     },
   },
@@ -54,7 +55,7 @@ export const interestRateHelpers = {
     if (!Number.isFinite(interestRate.amount)) throw new Error('Type of interestRate.amount must be a number!');
     if (!_.isBoolean(interestRate.isCompounding))
       throw new Error('Type of interestRate.isCompounding must be a boolean!');
-    if (!Number.isFinite(interestRate.entryTimestamp))
+    if (!Number.isFinite(interestRate.entryTimestamp) && interestRate.entryTimestamp !== undefined)
       throw new Error('Type of interestRate.entryTimestamp must be a number!');
     if (!_.isPlainObject(interestRate.revisions) && interestRate.revisions !== undefined)
       throw new Error('Type of interestRate.revisions must be an object or undefined!');

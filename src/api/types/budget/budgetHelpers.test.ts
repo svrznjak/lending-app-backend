@@ -4,7 +4,10 @@ import { IBudget } from './budgetInterface.js';
 
 describe('budgetHelpers', () => {
   describe('validate', () => {
-    const correctValidationInputs: Pick<IBudget, 'name' | 'description' | 'defaultInterestRate'>[] = [
+    const correctValidationInputs: Pick<
+      IBudget,
+      'name' | 'description' | 'defaultInterestRate' | 'defaultPaymentFrequency'
+    >[] = [
       {
         name: 'Budget 1',
         description: 'Budget for risky loans.',
@@ -15,6 +18,12 @@ describe('budgetHelpers', () => {
           entryTimestamp: 1663012853,
           revisions: undefined,
           isCompounding: false,
+        },
+        defaultPaymentFrequency: {
+          occurrence: 'MONTHLY',
+          isStrict: true,
+          strictValue: '31',
+          entryTimestamp: 1663024156,
         },
       },
       {
@@ -28,6 +37,12 @@ describe('budgetHelpers', () => {
           revisions: undefined,
           isCompounding: false,
         },
+        defaultPaymentFrequency: {
+          occurrence: 'YEARLY',
+          isStrict: true,
+          strictValue: '12',
+          entryTimestamp: 1663024156,
+        },
       },
       {
         name: 'Other',
@@ -40,6 +55,11 @@ describe('budgetHelpers', () => {
           revisions: undefined,
           isCompounding: false,
         },
+        defaultPaymentFrequency: {
+          occurrence: 'ONE_TIME',
+          isStrict: false,
+          entryTimestamp: 1663024156,
+        },
       },
     ];
     test.each(correctValidationInputs)('It works with correct input', (input) => {
@@ -47,7 +67,10 @@ describe('budgetHelpers', () => {
       expect(result).toEqual(input);
     });
 
-    const invalidValidationInputs: Pick<IBudget, 'name' | 'description' | 'defaultInterestRate'>[] = [
+    const invalidValidationInputs: Pick<
+      IBudget,
+      'name' | 'description' | 'defaultInterestRate' | 'defaultPaymentFrequency'
+    >[] = [
       {
         // To short name
         name: '',
@@ -59,6 +82,11 @@ describe('budgetHelpers', () => {
           entryTimestamp: 1663012853,
           revisions: undefined,
           isCompounding: false,
+        },
+        defaultPaymentFrequency: {
+          occurrence: 'ONE_TIME',
+          isStrict: false,
+          entryTimestamp: 1663024156,
         },
       },
       {
@@ -72,6 +100,11 @@ describe('budgetHelpers', () => {
           entryTimestamp: 1663012853,
           revisions: undefined,
           isCompounding: false,
+        },
+        defaultPaymentFrequency: {
+          occurrence: 'ONE_TIME',
+          isStrict: false,
+          entryTimestamp: 1663024156,
         },
       },
       {
@@ -87,6 +120,11 @@ describe('budgetHelpers', () => {
           revisions: undefined,
           isCompounding: false,
         },
+        defaultPaymentFrequency: {
+          occurrence: 'ONE_TIME',
+          isStrict: false,
+          entryTimestamp: 1663024156,
+        },
       },
       {
         // To long description (+1000 chars)
@@ -101,6 +139,11 @@ describe('budgetHelpers', () => {
           revisions: undefined,
           isCompounding: false,
         },
+        defaultPaymentFrequency: {
+          occurrence: 'ONE_TIME',
+          isStrict: false,
+          entryTimestamp: 1663024156,
+        },
       },
       {
         // defaultInterestRate.amount is negative
@@ -113,6 +156,11 @@ describe('budgetHelpers', () => {
           entryTimestamp: 1663024156,
           revisions: undefined,
           isCompounding: false,
+        },
+        defaultPaymentFrequency: {
+          occurrence: 'ONE_TIME',
+          isStrict: false,
+          entryTimestamp: 1663024156,
         },
       },
       {
@@ -127,6 +175,11 @@ describe('budgetHelpers', () => {
           revisions: undefined,
           isCompounding: false,
         },
+        defaultPaymentFrequency: {
+          occurrence: 'ONE_TIME',
+          isStrict: false,
+          entryTimestamp: 1663024156,
+        },
       },
       {
         // defaultInterestRate.amount is infinty
@@ -139,6 +192,11 @@ describe('budgetHelpers', () => {
           entryTimestamp: 1663024156,
           revisions: undefined,
           isCompounding: false,
+        },
+        defaultPaymentFrequency: {
+          occurrence: 'ONE_TIME',
+          isStrict: false,
+          entryTimestamp: 1663024156,
         },
       },
       {
@@ -153,6 +211,11 @@ describe('budgetHelpers', () => {
           revisions: undefined,
           isCompounding: false,
         },
+        defaultPaymentFrequency: {
+          occurrence: 'ONE_TIME',
+          isStrict: false,
+          entryTimestamp: 1663024156,
+        },
       },
       {
         // defaultInterestRate.entryTimestamp is Infinity
@@ -166,6 +229,11 @@ describe('budgetHelpers', () => {
           revisions: undefined,
           isCompounding: false,
         },
+        defaultPaymentFrequency: {
+          occurrence: 'ONE_TIME',
+          isStrict: false,
+          entryTimestamp: 1663024156,
+        },
       },
       {
         // defaultInterestRate.entryTimestamp is null
@@ -178,6 +246,11 @@ describe('budgetHelpers', () => {
           entryTimestamp: null,
           revisions: undefined,
           isCompounding: false,
+        },
+        defaultPaymentFrequency: {
+          occurrence: 'ONE_TIME',
+          isStrict: false,
+          entryTimestamp: 1663024156,
         },
       },
     ];

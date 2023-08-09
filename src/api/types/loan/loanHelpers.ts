@@ -1,5 +1,5 @@
 import { isValidTimestamp, isValidAmountOfMoney, isValidOption } from './../../utils/inputValidator/inputValidator.js';
-import { IExpectedPayment, ILoan } from './loanInterface.js';
+import { ILoan } from './loanInterface.js';
 
 import { sanitizeText } from './../../utils/inputSanitizer/inputSanitizer.js';
 import { interestRateHelpers } from '../interestRate/interestRateHelpers.js';
