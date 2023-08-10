@@ -31,6 +31,38 @@ export default {
 
     return result1;
   },
+  multiply: function multiply(n1: number, n2: number): number {
+    // Runtime check numbers
+    preCheck(n1, n2);
+
+    // Calculate twice and check results
+    const result1 = parseFloat((n1 * n2).toPrecision(15));
+    const result2 = parseFloat((n1 * n2).toPrecision(15));
+
+    if (result1 !== result2)
+      throw new Error(`Multiply Paranoid computation failed! This should not happen. n1: ${n1} , n2: ${n2}`);
+
+    // check if result is okay
+    afterCheck(result1);
+
+    return result1;
+  },
+  divide: function divide(n1: number, n2: number): number {
+    // Runtime check numbers
+    preCheck(n1, n2);
+
+    // Calculate twice and check results
+    const result1 = parseFloat((n1 / n2).toPrecision(15));
+    const result2 = parseFloat((n1 / n2).toPrecision(15));
+
+    if (result1 !== result2)
+      throw new Error(`Divide Paranoid computation failed! This should not happen. n1: ${n1} , n2: ${n2}`);
+
+    // check if result is okay
+    afterCheck(result1);
+
+    return result1;
+  },
 };
 
 const INTERNAL_MAX_SAFE_NUMBER = 900719925474;
