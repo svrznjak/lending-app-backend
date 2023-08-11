@@ -68,6 +68,49 @@ export const LoanSchema = new mongoose.Schema(
       ],
       default: [],
     },
+    transactionList: {
+      type: [
+        {
+          _id: false,
+          id: { type: String },
+          timestamp: { type: Number },
+          description: { type: String },
+          totalInvested: { type: Number },
+          totalPaidPrincipal: { type: Number },
+          totalPaidInterest: { type: Number },
+          from: {
+            type: {
+              datatype: {
+                type: String,
+                enum: ['BUDGET', 'LOAN', 'INTEREST', 'OUTSIDE'],
+              },
+              addressId: {
+                type: String,
+              },
+            },
+          },
+          to: {
+            type: {
+              datatype: {
+                type: String,
+                enum: ['BUDGET', 'LOAN', 'INTEREST', 'OUTSIDE'],
+              },
+              addressId: {
+                type: String,
+              },
+            },
+          },
+          invested: { type: Number },
+          feeCharged: { type: Number },
+          interestCharged: { type: Number },
+          principalPaid: { type: Number },
+          interestPaid: { type: Number },
+          outstandingPrincipal: { type: Number },
+          outstandingInterest: { type: Number },
+        },
+      ],
+      default: [],
+    },
   },
   {
     statics: {

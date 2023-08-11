@@ -11,8 +11,14 @@ export interface IBudget {
   calculatedTotalInvestedAmount: number;
   calculatedTotalWithdrawnAmount: number;
   calculatedTotalAvailableAmount: number;
-  calculatedTotalLendedPrincipalToActiveLoansAmount: number;
+  calculatedCurrentlyLendedPrincipalToLiveLoansAmount: number;
+  calculatedCurrentlyEarnedInterestAmount: number;
   calculatedTotalLostPrincipalToCompletedAndDefaultedLoansAmount: number;
-  calculatedTotalProfitAmount: number;
+  calculatedTotalGains: number;
+  calculatedTotalLentAmount: number;
+  calculatedTotalAssociatedLoans: number;
+  calculatedTotalAssociatedLiveLoans: number;
+  calculatedAvarageAssociatedLoanDuration: number | null;
+  calculatedAvarageAssociatedLoanAmount: number | null;
   isArchived: boolean;
 }

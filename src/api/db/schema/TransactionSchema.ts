@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 import existsOneWithId from '../plugins/existsOneWithId.js';
 
-const TransactionAddressSchema = new mongoose.Schema({
+export const TransactionAddressSchema = new mongoose.Schema({
   datatype: {
     type: String,
     enum: ['BUDGET', 'LOAN', 'INTEREST', 'OUTSIDE'],

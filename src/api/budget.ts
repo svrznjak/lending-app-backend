@@ -35,9 +35,14 @@ export default {
       calculatedTotalWithdrawnAmount: 0,
       calculatedTotalInvestedAmount: inititalTransactionAmount,
       calculatedTotalAvailableAmount: inititalTransactionAmount,
-      calculatedTotalLendedPrincipalToActiveLoansAmount: 0,
+      calculatedCurrentlyLendedPrincipalToLiveLoansAmount: 0,
       calculatedTotalLostPrincipalToCompletedAndDefaultedLoansAmount: 0,
-      calculatedTotalProfitAmount: 0,
+      calculatedTotalGains: 0,
+      calculatedTotalLentAmount: 0,
+      calculatedTotalAssociatedLoans: 0,
+      calculatedTotalAssociatedLiveLoans: 0,
+      calculatedAvarageAssociatedLoanDuration: null,
+      calculatedAvarageAssociatedLoanAmount: null,
       isArchived: false,
     });
 
@@ -375,9 +380,9 @@ export default {
       | 'calculatedTotalInvestedAmount'
       | 'calculatedTotalWithdrawnAmount'
       | 'calculatedTotalAvailableAmount'
-      | 'calculatedTotalLendedPrincipalToActiveLoansAmount'
+      | 'calculatedCurrentlyLendedPrincipalToLiveLoansAmount'
       | 'calculatedTotalLostPrincipalToCompletedAndDefaultedLoansAmount'
-      | 'calculatedTotalProfitAmount'
+      | 'calculatedTotalGains'
     >
   > {
     // get all transactions
@@ -393,16 +398,28 @@ export default {
       | 'calculatedTotalInvestedAmount'
       | 'calculatedTotalWithdrawnAmount'
       | 'calculatedTotalAvailableAmount'
-      | 'calculatedTotalLendedPrincipalToActiveLoansAmount'
+      | 'calculatedCurrentlyLendedPrincipalToLiveLoansAmount'
+      | 'calculatedCurrentlyEarnedInterestAmount'
       | 'calculatedTotalLostPrincipalToCompletedAndDefaultedLoansAmount'
-      | 'calculatedTotalProfitAmount'
+      | 'calculatedTotalGains'
+      | 'calculatedTotalLentAmount'
+      | 'calculatedTotalAssociatedLoans'
+      | 'calculatedTotalAssociatedLiveLoans'
+      | 'calculatedAvarageAssociatedLoanDuration'
+      | 'calculatedAvarageAssociatedLoanAmount'
     > = {
       calculatedTotalInvestedAmount: 0,
       calculatedTotalWithdrawnAmount: 0,
       calculatedTotalAvailableAmount: 0,
-      calculatedTotalLendedPrincipalToActiveLoansAmount: 0,
+      calculatedCurrentlyLendedPrincipalToLiveLoansAmount: 0,
+      calculatedCurrentlyEarnedInterestAmount: 0,
       calculatedTotalLostPrincipalToCompletedAndDefaultedLoansAmount: 0,
-      calculatedTotalProfitAmount: 0,
+      calculatedTotalGains: 0,
+      calculatedTotalLentAmount: 0,
+      calculatedTotalAssociatedLoans: 0,
+      calculatedTotalAssociatedLiveLoans: 0,
+      calculatedAvarageAssociatedLoanDuration: null,
+      calculatedAvarageAssociatedLoanAmount: null,
     };
     let tmpCalculatedAvaiableAmount = 0;
     const tmpAmountsLendedToLoans = {};
@@ -417,28 +434,90 @@ export default {
     }
 
     await Object.keys(tmpAmountsLendedToLoans).forEach(async (key) => {
-      const loanStatus = (await loan.getOneFromUser({ userId: budgetTransactions[0].userId, loanId: key })).status;
+      const currentLoan = await loan.getOneFromUser({ userId: budgetTransactions[0].userId, loanId: key });
+      const loanStatus = currentLoan.status;
+
+      // add to total lent amount
+      calculatedValues.calculatedTotalLentAmount = paranoidCalculator.add(
+        calculatedValues.calculatedTotalLentAmount,
+        tmpAmountsLendedToLoans[key],
+      );
+      // increase total associated loans count
+      calculatedValues.calculatedTotalAssociatedLoans = paranoidCalculator.add(
+        calculatedValues.calculatedTotalAssociatedLoans,
+        1,
+      );
+
+      // calculate avarage associated loan duration
+      const loanDuration = currentLoan.closesTimestamp - currentLoan.openedTimestamp;
+      if (calculatedValues.calculatedAvarageAssociatedLoanDuration === null)
+        calculatedValues.calculatedAvarageAssociatedLoanDuration = loanDuration;
+      else
+        calculatedValues.calculatedAvarageAssociatedLoanDuration = paranoidCalculator.divide(
+          paranoidCalculator.add(calculatedValues.calculatedAvarageAssociatedLoanDuration, loanDuration),
+          2,
+        );
+
+      // calculate avarage associated loan amount
+      const loanAmount = currentLoan.calculatedInvestedAmount;
+      if (calculatedValues.calculatedAvarageAssociatedLoanAmount === null)
+        calculatedValues.calculatedAvarageAssociatedLoanAmount = loanAmount;
+      else
+        calculatedValues.calculatedAvarageAssociatedLoanAmount = paranoidCalculator.divide(
+          paranoidCalculator.add(calculatedValues.calculatedAvarageAssociatedLoanAmount, loanAmount),
+          2,
+        );
+
       if (loanStatus === 'ACTIVE' || loanStatus === 'PAUSED' || loanStatus === 'PAID') {
+        // how much principal is lended to active loans
         if (tmpAmountsLendedToLoans[key] > 0) {
-          calculatedValues.calculatedTotalLendedPrincipalToActiveLoansAmount = paranoidCalculator.add(
-            calculatedValues.calculatedTotalLendedPrincipalToActiveLoansAmount,
-            tmpAmountsLendedToLoans[key],
+          let totalLendedToLoan = tmpAmountsLendedToLoans[key];
+          currentLoan.transactionList.forEach((transaction) => {
+            if (transaction.to.datatype === 'BUDGET' && transaction.to.addressId === budgetId) {
+              totalLendedToLoan = paranoidCalculator.subtract(totalLendedToLoan, transaction.principalPaid);
+            }
+          });
+          calculatedValues.calculatedCurrentlyLendedPrincipalToLiveLoansAmount = paranoidCalculator.add(
+            calculatedValues.calculatedCurrentlyLendedPrincipalToLiveLoansAmount,
+            totalLendedToLoan,
           );
         }
+        // increase live loans count
+        calculatedValues.calculatedTotalAssociatedLiveLoans = paranoidCalculator.add(
+          calculatedValues.calculatedTotalAssociatedLiveLoans,
+          1,
+        );
       } else {
+        // how much principal was lost to completed and defaulted loans
         if (tmpAmountsLendedToLoans[key] > 0) {
+          let totalLendedToLoan = tmpAmountsLendedToLoans[key];
+          currentLoan.transactionList.forEach((transaction) => {
+            if (transaction.to.datatype === 'BUDGET' && transaction.to.addressId === budgetId) {
+              totalLendedToLoan = paranoidCalculator.subtract(totalLendedToLoan, transaction.principalPaid);
+            }
+          });
           calculatedValues.calculatedTotalLostPrincipalToCompletedAndDefaultedLoansAmount = paranoidCalculator.add(
             calculatedValues.calculatedTotalLostPrincipalToCompletedAndDefaultedLoansAmount,
-            tmpAmountsLendedToLoans[key],
+            totalLendedToLoan,
+          );
+        }
+        // how much profit has been made from completed and defaulted loans
+        else if (tmpAmountsLendedToLoans[key] < 0) {
+          calculatedValues.calculatedTotalGains = paranoidCalculator.add(
+            calculatedValues.calculatedTotalGains,
+            -tmpAmountsLendedToLoans[key],
           );
         }
       }
-      if (tmpAmountsLendedToLoans[key] < 0) {
-        calculatedValues.calculatedTotalProfitAmount = paranoidCalculator.add(
-          calculatedValues.calculatedTotalProfitAmount,
-          tmpAmountsLendedToLoans[key],
-        );
-      }
+      // how much interest was earned from loans
+      currentLoan.transactionList.forEach((transaction) => {
+        if (transaction.to.datatype === 'BUDGET' && transaction.to.addressId === budgetId) {
+          calculatedValues.calculatedCurrentlyEarnedInterestAmount = paranoidCalculator.add(
+            calculatedValues.calculatedCurrentlyEarnedInterestAmount,
+            transaction.interestPaid,
+          );
+        }
+      });
     });
 
     return calculatedValues;
@@ -513,11 +592,17 @@ export default {
     MONGO_BUDGET.calculatedTotalInvestedAmount = CALCULATED_VALUES.calculatedTotalInvestedAmount;
     MONGO_BUDGET.calculatedTotalWithdrawnAmount = CALCULATED_VALUES.calculatedTotalWithdrawnAmount;
     MONGO_BUDGET.calculatedTotalAvailableAmount = CALCULATED_VALUES.calculatedTotalAvailableAmount;
-    MONGO_BUDGET.calculatedTotalLendedPrincipalToActiveLoansAmount =
-      CALCULATED_VALUES.calculatedTotalLendedPrincipalToActiveLoansAmount;
+    MONGO_BUDGET.calculatedCurrentlyLendedPrincipalToLiveLoansAmount =
+      CALCULATED_VALUES.calculatedCurrentlyLendedPrincipalToLiveLoansAmount;
+    MONGO_BUDGET.calculatedCurrentlyEarnedInterestAmount = CALCULATED_VALUES.calculatedCurrentlyEarnedInterestAmount;
     MONGO_BUDGET.calculatedTotalLostPrincipalToCompletedAndDefaultedLoansAmount =
       CALCULATED_VALUES.calculatedTotalLostPrincipalToCompletedAndDefaultedLoansAmount;
-    MONGO_BUDGET.calculatedTotalProfitAmount = CALCULATED_VALUES.calculatedTotalProfitAmount;
+    MONGO_BUDGET.calculatedTotalGains = CALCULATED_VALUES.calculatedTotalGains;
+    MONGO_BUDGET.calculatedTotalLentAmount = CALCULATED_VALUES.calculatedTotalLentAmount;
+    MONGO_BUDGET.calculatedTotalAssociatedLoans = CALCULATED_VALUES.calculatedTotalAssociatedLoans;
+    MONGO_BUDGET.calculatedTotalAssociatedLiveLoans = CALCULATED_VALUES.calculatedTotalAssociatedLiveLoans;
+    MONGO_BUDGET.calculatedAvarageAssociatedLoanDuration = CALCULATED_VALUES.calculatedAvarageAssociatedLoanDuration;
+    MONGO_BUDGET.calculatedAvarageAssociatedLoanAmount = CALCULATED_VALUES.calculatedAvarageAssociatedLoanAmount;
 
     await MONGO_BUDGET.save();
     return budgetHelpers.runtimeCast({

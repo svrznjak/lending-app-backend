@@ -65,14 +65,32 @@ export const budgetHelpers = {
       throw new Error('Type of budget.calculatedTotalWithdrawnAmount must be a number!');
     if (!Number.isFinite(budget.calculatedTotalAvailableAmount))
       throw new Error('Type of budget.calculatedTotalAvailableAmount must be a number!');
-    if (!Number.isFinite(budget.calculatedTotalLendedPrincipalToActiveLoansAmount))
-      throw new Error('Type of budget.calculatedTotalLendedPrincipalToActiveLoansAmount must be a number!');
+    if (!Number.isFinite(budget.calculatedCurrentlyLendedPrincipalToLiveLoansAmount))
+      throw new Error('Type of budget.calculatedCurrentlyLendedPrincipalToLiveLoansAmount must be a number!');
+    if (!Number.isFinite(budget.calculatedCurrentlyEarnedInterestAmount))
+      throw new Error('Type of budget.calculatedCurrentlyEarnedInterestAmount must be a number!');
     if (!Number.isFinite(budget.calculatedTotalLostPrincipalToCompletedAndDefaultedLoansAmount))
       throw new Error(
         'Type of budget.calculatedTotalLostPrincipalToCompletedAndDefaultedLoansAmount must be a number!',
       );
-    if (!Number.isFinite(budget.calculatedTotalProfitAmount))
-      throw new Error('Type of budget.calculatedTotalProfitAmount must be a number!');
+    if (!Number.isFinite(budget.calculatedTotalGains))
+      throw new Error('Type of budget.calculatedTotalGains must be a number!');
+    if (!Number.isFinite(budget.calculatedTotalLentAmount))
+      throw new Error('Type of budget.calculatedTotalLentAmount must be a number!');
+    if (!Number.isFinite(budget.calculatedTotalAssociatedLoans))
+      throw new Error('Type of budget.calculatedTotalAssociatedLoans must be a number!');
+    if (!Number.isFinite(budget.calculatedTotalAssociatedLiveLoans))
+      throw new Error('Type of budget.calculatedTotalAssociatedLiveLoans must be a number!');
+    if (
+      !Number.isFinite(budget.calculatedAvarageAssociatedLoanDuration) &&
+      budget.calculatedAvarageAssociatedLoanDuration !== null
+    )
+      throw new Error('Type of budget.calculatedAvarageAssociatedLoanDuration must be a number!');
+    if (
+      !Number.isFinite(budget.calculatedAvarageAssociatedLoanAmount) &&
+      budget.calculatedAvarageAssociatedLoanAmount !== null
+    )
+      throw new Error('Type of budget.calculatedAvarageAssociatedLoanAmount must be a number!');
     if (!_.isBoolean(budget.isArchived)) throw new Error('Type of budget.isArchived must be a boolean!');
 
     interestRateHelpers.runtimeCast(budget.defaultInterestRate);
@@ -88,10 +106,16 @@ export const budgetHelpers = {
       calculatedTotalInvestedAmount: budget.calculatedTotalInvestedAmount,
       calculatedTotalWithdrawnAmount: budget.calculatedTotalWithdrawnAmount,
       calculatedTotalAvailableAmount: budget.calculatedTotalAvailableAmount,
-      calculatedTotalLendedPrincipalToActiveLoansAmount: budget.calculatedTotalLendedPrincipalToActiveLoansAmount,
+      calculatedCurrentlyLendedPrincipalToLiveLoansAmount: budget.calculatedCurrentlyLendedPrincipalToLiveLoansAmount,
+      calculatedCurrentlyEarnedInterestAmount: budget.calculatedCurrentlyEarnedInterestAmount,
       calculatedTotalLostPrincipalToCompletedAndDefaultedLoansAmount:
         budget.calculatedTotalLostPrincipalToCompletedAndDefaultedLoansAmount,
-      calculatedTotalProfitAmount: budget.calculatedTotalProfitAmount,
+      calculatedTotalGains: budget.calculatedTotalGains,
+      calculatedTotalLentAmount: budget.calculatedTotalLentAmount,
+      calculatedTotalAssociatedLoans: budget.calculatedTotalAssociatedLoans,
+      calculatedTotalAssociatedLiveLoans: budget.calculatedTotalAssociatedLiveLoans,
+      calculatedAvarageAssociatedLoanDuration: budget.calculatedAvarageAssociatedLoanDuration,
+      calculatedAvarageAssociatedLoanAmount: budget.calculatedAvarageAssociatedLoanAmount,
       isArchived: budget.isArchived,
     };
   },
