@@ -36,6 +36,7 @@ export default {
       calculatedTotalInvestedAmount: inititalTransactionAmount,
       calculatedTotalAvailableAmount: inititalTransactionAmount,
       calculatedCurrentlyLendedPrincipalToLiveLoansAmount: 0,
+      calculatedCurrentlyEarnedInterestAmount: 0,
       calculatedTotalLostPrincipalToCompletedAndDefaultedLoansAmount: 0,
       calculatedTotalGains: 0,
       calculatedTotalLentAmount: 0,
@@ -44,7 +45,7 @@ export default {
       calculatedAvarageAssociatedLoanDuration: null,
       calculatedAvarageAssociatedLoanAmount: null,
       isArchived: false,
-    });
+    } as IBudget);
 
     const session: ClientSession = await mongoose.connection.startSession();
     try {

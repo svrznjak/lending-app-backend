@@ -474,7 +474,7 @@ const Loan = {
     }
     return NEW_TRANSACTION;
   },
-  addLoanForgivness: async function addLoanForgivness(
+  addLoanForgiveness: async function addLoanForgiveness(
     {
       userId,
       loanId,
