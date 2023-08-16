@@ -474,7 +474,61 @@ const Loan = {
     }
     return NEW_TRANSACTION;
   },
-  addLoanForgiveness: async function addLoanForgiveness(
+  addForgiveness: async function addLoanForgiveness(
+    {
+      userId,
+      loanId,
+      transactionTimestamp,
+      description,
+      amount,
+    }: {
+      userId: string;
+      loanId: string;
+      transactionTimestamp: number;
+      description: string;
+      amount: number;
+    },
+    {
+      session = undefined,
+      runRecalculate = true,
+    }: {
+      session?: ClientSession;
+      runRecalculate?: boolean;
+    } = {},
+  ): Promise<ITransaction> {
+    transactionHelpers.validate.transactionTimestamp(transactionTimestamp);
+    transactionHelpers.validate.description(description);
+    description = transactionHelpers.sanitize.description(description);
+    transactionHelpers.validate.amount(amount);
+
+    const NEW_TRANSACTION = await transaction.add(
+      {
+        userId: userId,
+        transactionTimestamp: transactionTimestamp,
+        description: description,
+        from: {
+          datatype: 'LOAN',
+          addressId: loanId,
+        },
+        to: {
+          datatype: 'FORGIVENESS',
+          addressId: '000000000000000000000000',
+        },
+        amount: amount,
+        entryTimestamp: transactionHelpers.validate.entryTimestamp(new Date().getTime()),
+      } as Pick<
+        ITransaction,
+        'userId' | 'transactionTimestamp' | 'description' | 'from' | 'to' | 'amount' | 'entryTimestamp'
+      >,
+      { session: session },
+    );
+
+    if (runRecalculate) {
+      await this.recalculateCalculatedValues(loanId);
+    }
+    return NEW_TRANSACTION;
+  },
+  addRefund: async function addLoanRefund(
     {
       userId,
       loanId,
@@ -514,62 +568,6 @@ const Loan = {
           datatype: 'OUTSIDE',
           addressId: '000000000000000000000000',
         },
-        amount: amount,
-        entryTimestamp: transactionHelpers.validate.entryTimestamp(new Date().getTime()),
-      } as Pick<
-        ITransaction,
-        'userId' | 'transactionTimestamp' | 'description' | 'from' | 'to' | 'amount' | 'entryTimestamp'
-      >,
-      { session: session },
-    );
-
-    if (runRecalculate) {
-      await this.recalculateCalculatedValues(loanId);
-    }
-    return NEW_TRANSACTION;
-  },
-  addLoanRefund: async function addLoanRefund(
-    {
-      userId,
-      loanId,
-      budgetId,
-      transactionTimestamp,
-      description,
-      amount,
-    }: {
-      userId: string;
-      loanId: string;
-      budgetId: string;
-      transactionTimestamp: number;
-      description: string;
-      amount: number;
-    },
-    {
-      session = undefined,
-      runRecalculate = true,
-    }: {
-      session?: ClientSession;
-      runRecalculate?: boolean;
-    } = {},
-  ): Promise<ITransaction> {
-    transactionHelpers.validate.transactionTimestamp(transactionTimestamp);
-    transactionHelpers.validate.description(description);
-    description = transactionHelpers.sanitize.description(description);
-    transactionHelpers.validate.amount(amount);
-
-    const NEW_TRANSACTION = await transaction.add(
-      {
-        userId: userId,
-        transactionTimestamp: transactionTimestamp,
-        description: description,
-        from: {
-          datatype: 'BUDGET',
-          addressId: budgetId,
-        },
-        to: {
-          datatype: 'LOAN',
-          addressId: loanId,
-        },
         refund: true,
         amount: amount,
         entryTimestamp: transactionHelpers.validate.entryTimestamp(new Date().getTime()),
@@ -581,7 +579,10 @@ const Loan = {
     );
 
     if (runRecalculate) {
-      await this.recalculateCalculatedValues(loanId);
+      const LOAN: ILoan = await this.recalculateCalculatedValues(loanId);
+      LOAN.calculatedRelatedBudgets.forEach(async (budget) => {
+        await Budget.recalculateCalculatedValues(budget.budgetId);
+      });
     }
     return NEW_TRANSACTION;
   },
