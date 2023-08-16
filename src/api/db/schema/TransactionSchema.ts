@@ -4,7 +4,7 @@ import existsOneWithId from '../plugins/existsOneWithId.js';
 export const TransactionAddressSchema = new mongoose.Schema({
   datatype: {
     type: String,
-    enum: ['BUDGET', 'LOAN', 'INTEREST', 'OUTSIDE'],
+    enum: ['BUDGET', 'LOAN', 'INTEREST', 'OUTSIDE', 'FORGIVENESS'],
     required: true,
   },
   addressId: {
