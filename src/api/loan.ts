@@ -650,6 +650,31 @@ const Loan = {
     return await this.recalculateCalculatedValues(MONGO_LOAN);
   },
 
+  // Get loan status at a given timestamp
+  getStatusAtTimestamp: function getLoanStatusAtTimestamp(loan: ILoan, timestamp: number): ILoanStatus['current'] {
+    const STATUS: ILoanStatus = loan.status;
+    const arrayOfStatuses = unWrapStatuses(STATUS);
+
+    // get status that of which the timestamp is closest greater than the given timestamp
+    let closestStatus: ILoanStatus = arrayOfStatuses[0];
+    for (let i = 1; i < arrayOfStatuses.length; i++) {
+      if (arrayOfStatuses[i].timestamp <= timestamp && arrayOfStatuses[i].timestamp > closestStatus.timestamp) {
+        closestStatus = arrayOfStatuses[i];
+      }
+    }
+    return closestStatus.current;
+
+    function unWrapStatuses(statuses: ILoanStatus): ILoanStatus[] {
+      const statusesArray: ILoanStatus[] = [];
+      let unWrappedStatus: ILoanStatus = statuses;
+      do {
+        statusesArray.push({ current: unWrappedStatus.current, timestamp: unWrappedStatus.timestamp });
+        unWrappedStatus = unWrappedStatus.previous;
+      } while (unWrappedStatus !== undefined);
+      return statusesArray;
+    }
+  },
+
   // As a lender, I want to change the status of the loan, so that status reflects the real world.
   changeStatus: async function changeLoanStatus(
     input: string | ILoanDocument,
