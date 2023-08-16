@@ -11,6 +11,17 @@ const NoteSchema = new mongoose.Schema({
 
 NoteSchema.add({ revisions: [NoteSchema] });
 
+const LoanStatusSchema = new mongoose.Schema({
+  status: {
+    type: String,
+    enum: ['ACTIVE', 'PAUSED', 'PAID', 'COMPLETED', 'DEFAULTED'],
+    required: true,
+  },
+  timestamp: { type: Number, required: true },
+});
+
+LoanStatusSchema.add({ revisions: [LoanStatusSchema] });
+
 const ExpectedPaymentSchema = new mongoose.Schema({
   timestamp: { type: Number, required: true },
   principalPayment: { type: Number, required: true },
@@ -47,11 +58,7 @@ export const LoanSchema = new mongoose.Schema(
       type: [ExpectedPaymentSchema],
       default: [],
     },
-    status: {
-      type: String,
-      enum: ['ACTIVE', 'PAUSED', 'PAID', 'COMPLETED', 'DEFAULTED'],
-      required: true,
-    },
+    status: LoanStatusSchema,
     calculatedInvestedAmount: { type: Number },
     calculatedTotalPaidPrincipal: { type: Number },
     calculatedOutstandingInterest: { type: Number },
@@ -82,7 +89,7 @@ export const LoanSchema = new mongoose.Schema(
             type: {
               datatype: {
                 type: String,
-                enum: ['BUDGET', 'LOAN', 'INTEREST', 'OUTSIDE'],
+                enum: ['BUDGET', 'LOAN', 'INTEREST', 'OUTSIDE', 'FORGIVENESS'],
               },
               addressId: {
                 type: String,
@@ -93,7 +100,7 @@ export const LoanSchema = new mongoose.Schema(
             type: {
               datatype: {
                 type: String,
-                enum: ['BUDGET', 'LOAN', 'INTEREST', 'OUTSIDE'],
+                enum: ['BUDGET', 'LOAN', 'INTEREST', 'OUTSIDE', 'FORGIVENESS'],
               },
               addressId: {
                 type: String,

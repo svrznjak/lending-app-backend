@@ -11,7 +11,7 @@ import {
 import * as User from './user.js';
 import transaction from './transaction.js';
 import { loanHelpers } from './types/loan/loanHelpers.js';
-import { ILoan, IRelatedBudget, ITransactionInterval } from './types/loan/loanInterface.js';
+import { ILoan, ILoanStatus, IRelatedBudget, ITransactionInterval } from './types/loan/loanInterface.js';
 import { IPaymentFrequency } from './types/paymentFrequency/paymentFrequencyInterface.js';
 import { ITransaction } from './types/transaction/transactionInterface.js';
 import Budget from './budget.js';
@@ -217,7 +217,7 @@ const Loan = {
           userId: MONGO_LOAN.userId.toString(),
         });
         // Do not recalculate if loan is completed or defaulted, because no change to data will ever be made
-      } else if (MONGO_LOAN.status === 'COMPLETED' || MONGO_LOAN.status === 'DEFAULTED') {
+      } else if (MONGO_LOAN.status.current === 'COMPLETED' || MONGO_LOAN.status.current === 'DEFAULTED') {
         const LOAN = loanHelpers.runtimeCast({
           ...MONGO_LOAN.toObject(),
           _id: MONGO_LOAN._id.toString(),
@@ -262,7 +262,7 @@ const Loan = {
             }),
           );
           // Do not recalculate if loan is completed or defaulted, because no change to data will ever be made
-        } else if (LOANS[i].status === 'COMPLETED' || LOANS[i].status === 'DEFAULTED') {
+        } else if (LOANS[i].status.current === 'COMPLETED' || LOANS[i].status.current === 'DEFAULTED') {
           const LOAN = loanHelpers.runtimeCast({
             ...LOANS[i].toObject(),
             _id: LOANS[i]._id.toString(),
@@ -304,14 +304,12 @@ const Loan = {
     {
       userId,
       loanId,
-      budgetId,
       transactionTimestamp,
       description,
       amount,
     }: {
       userId: string;
       loanId: string;
-      budgetId: string;
       transactionTimestamp: number;
       description: string;
       amount: number;
@@ -330,23 +328,18 @@ const Loan = {
     transactionHelpers.validate.amount(amount);
     transactionHelpers.validate.transactionTimestamp(transactionTimestamp);
 
-    // TODO FIX / HANDLE SOMEWHERE ELSE
-    /*if (transactionTimestamp < MONGO_LOAN.openedTimestamp)
-      throw new Error('Transaction should not happen before loan start');
-    if (transactionTimestamp > new Date().getTime()) throw new Error('Transaction should not happen in the future');
-*/
     const NEW_TRANSACTION = await transaction.add(
       {
         userId,
         transactionTimestamp,
         description,
         from: {
-          datatype: 'LOAN',
-          addressId: loanId,
+          datatype: 'OUTSIDE',
+          addressId: '000000000000000000000000',
         },
         to: {
-          datatype: 'BUDGET',
-          addressId: budgetId,
+          datatype: 'LOAN',
+          addressId: loanId,
         },
         amount,
         entryTimestamp: transactionHelpers.validate.entryTimestamp(new Date().getTime()),
@@ -358,8 +351,10 @@ const Loan = {
     );
 
     if (runRecalculate) {
-      await Budget.recalculateCalculatedValues(budgetId);
-      await this.recalculateCalculatedValues(loanId);
+      const LOAN: ILoan = await this.recalculateCalculatedValues(loanId);
+      LOAN.calculatedRelatedBudgets.forEach(async (budget) => {
+        await Budget.recalculateCalculatedValues(budget.budgetId);
+      });
     }
     return NEW_TRANSACTION;
   },
@@ -657,50 +652,41 @@ const Loan = {
 
   // As a lender, I want to change the status of the loan, so that status reflects the real world.
   changeStatus: async function changeLoanStatus(
-    userId: string,
-    loanId: string,
-    newStatus: ILoan['status'],
-  ): Promise<ILoan> {
+    input: string | ILoanDocument,
+    newStatus: ILoanStatus['current'],
+    timestamp: number,
+  ): Promise<ILoanDocument> {
     // Validate function inputs
-    loanHelpers.validate.status(newStatus);
-
-    // Check if user exists
-    await User.checkIfExists(userId);
-
-    // Check if loan exists
-    await this.checkIfExists(loanId);
+    loanHelpers.validate.status({ current: newStatus, timestamp: timestamp });
 
     // Get loan
-    const loan: ILoanDocument = await LoanModel.findOne({ _id: loanId });
+    const MONGO_LOAN = typeof input === 'string' ? await LoanModel.findOne({ _id: input }) : input;
 
-    // TODO : dirty fix is used to cast into loan.status
-    loan.status = newStatus;
+    MONGO_LOAN.status.previous = MONGO_LOAN.status;
+    MONGO_LOAN.status.current = newStatus;
+    MONGO_LOAN.status.timestamp = timestamp;
+
     loanHelpers.runtimeCast({
-      ...loan.toObject(),
-      _id: loan._id.toString(),
-      userId: loan.userId.toString(),
+      ...MONGO_LOAN.toObject(),
+      _id: MONGO_LOAN._id.toString(),
+      userId: MONGO_LOAN.userId.toString(),
     });
-    await loan.save();
-    return await this.recalculateCalculatedValues(loan);
+    return MONGO_LOAN;
   },
   pause: async function pauseLoan(input: string | ILoanDocument): Promise<ILoan> {
     const MONGO_LOAN = typeof input === 'string' ? await LoanModel.findOne({ _id: input }) : input;
 
-    if (MONGO_LOAN.status !== 'ACTIVE') throw new Error('Only ACTIVE loans can be paused!');
+    if (MONGO_LOAN.status.current !== 'ACTIVE') throw new Error('Only ACTIVE loans can be paused!');
 
-    MONGO_LOAN.status = 'PAUSED';
-
-    await MONGO_LOAN.save();
+    await this.changeStatus(MONGO_LOAN, 'PAUSED', Date.now());
     return await this.recalculateCalculatedValues(MONGO_LOAN);
   },
   unpause: async function pauseLoan(input: string | ILoanDocument): Promise<ILoan> {
     const MONGO_LOAN = typeof input === 'string' ? await LoanModel.findOne({ _id: input }) : input;
 
-    if (MONGO_LOAN.status !== 'PAUSED') throw new Error('Only PAUSED loans can be unpaused!');
+    if (MONGO_LOAN.status.current !== 'PAUSED') throw new Error('Only PAUSED loans can be unpaused!');
 
-    MONGO_LOAN.status = 'ACTIVE';
-
-    await MONGO_LOAN.save();
+    await this.changeStatus(MONGO_LOAN, 'ACTIVE', Date.now());
     return await this.recalculateCalculatedValues(MONGO_LOAN);
   },
   complete: async function completeLoan(input: string | ILoanDocument): Promise<ILoan> {
@@ -708,7 +694,7 @@ const Loan = {
 
     // recalculate values just in case
     await this.recalculateCalculatedValues(MONGO_LOAN);
-    if (MONGO_LOAN.status !== 'PAID') throw new Error('Only PAID loans can be COMPLETED!');
+    if (MONGO_LOAN.status.current !== 'PAID') throw new Error('Only PAID loans can be COMPLETED!');
     const CALCULATED_VALUES = await this.getCalculatedValuesAtTimestamp({
       loanId: MONGO_LOAN._id.toString(),
       interestRate: MONGO_LOAN.interestRate,
@@ -722,7 +708,7 @@ const Loan = {
     )
       throw new Error('Loan can not be closed if it is not balanced.');
 
-    MONGO_LOAN.status = 'COMPLETED';
+    await this.changeStatus(MONGO_LOAN, 'COMPLETED', Date.now());
     MONGO_LOAN.calculatedInvestedAmount = CALCULATED_VALUES.calculatedInvestedAmount;
     MONGO_LOAN.calculatedLastTransactionTimestamp = CALCULATED_VALUES.calculatedLastTransactionTimestamp;
     MONGO_LOAN.calculatedOutstandingInterest = CALCULATED_VALUES.calculatedOutstandingInterest;
@@ -750,13 +736,17 @@ const Loan = {
 
     // recalculate values just in case
     const RECALCULATED_LOAN = await this.recalculateCalculatedValues(MONGO_LOAN);
-    if (MONGO_LOAN.status === 'PAID' || MONGO_LOAN.status === 'COMPLETED' || MONGO_LOAN.status === 'DEFAULTED')
+    if (
+      MONGO_LOAN.status.current === 'PAID' ||
+      MONGO_LOAN.status.current === 'COMPLETED' ||
+      MONGO_LOAN.status.current === 'DEFAULTED'
+    )
       throw new Error('Only active and paused loans can be DEFAULTED!');
 
     transactionHelpers.validate.description(defaultTransactionDescription);
     defaultTransactionDescription = transactionHelpers.sanitize.description(defaultTransactionDescription);
     try {
-      MONGO_LOAN.status = 'DEFAULTED';
+      await this.changeStatus(MONGO_LOAN, 'DEFAULTED', Date.now());
       MONGO_LOAN.calculatedInvestedAmount = RECALCULATED_LOAN.calculatedInvestedAmount;
       MONGO_LOAN.calculatedLastTransactionTimestamp = RECALCULATED_LOAN.calculatedLastTransactionTimestamp;
       MONGO_LOAN.calculatedOutstandingInterest = RECALCULATED_LOAN.calculatedOutstandingInterest;
@@ -891,9 +881,9 @@ const Loan = {
       _.round(CALCULATED_VALUES_UNTIL_NOW.calculatedTotalPaidPrincipal, 2) >=
         _.round(CALCULATED_VALUES_UNTIL_NOW.calculatedInvestedAmount, 2) &&
       _.round(CALCULATED_VALUES_UNTIL_NOW.calculatedOutstandingInterest, 2) === 0 &&
-      MONGO_LOAN.status === 'ACTIVE'
+      MONGO_LOAN.status.current === 'ACTIVE'
     ) {
-      MONGO_LOAN.status = 'PAID';
+      await this.changeStatus(MONGO_LOAN, 'PAID', Date.now());
       MONGO_LOAN.calculatedInvestedAmount = CALCULATED_VALUES_UNTIL_NOW.calculatedInvestedAmount;
       MONGO_LOAN.calculatedLastTransactionTimestamp = CALCULATED_VALUES_UNTIL_NOW.calculatedLastTransactionTimestamp;
       MONGO_LOAN.calculatedOutstandingInterest = CALCULATED_VALUES_UNTIL_NOW.calculatedOutstandingInterest;
@@ -907,8 +897,8 @@ const Loan = {
         _.round(CALCULATED_VALUES_UNTIL_NOW.calculatedInvestedAmount, 2) ||
       _.round(CALCULATED_VALUES_UNTIL_NOW.calculatedOutstandingInterest, 2) > 0
     ) {
-      if (MONGO_LOAN.status === 'PAID') {
-        MONGO_LOAN.status = 'ACTIVE';
+      if (MONGO_LOAN.status.current === 'PAID') {
+        await this.changeStatus(MONGO_LOAN, 'ACTIVE', Date.now());
         await MONGO_LOAN.save();
       }
     }

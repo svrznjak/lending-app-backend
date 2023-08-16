@@ -15,7 +15,7 @@ export interface ILoan {
   interestRate: IInterestRate;
   paymentFrequency: IPaymentFrequency;
   expectedPayments: IExpectedPayment[];
-  status: 'ACTIVE' | 'PAUSED' | 'PAID' | 'COMPLETED' | 'DEFAULTED';
+  status: ILoanStatus;
   calculatedInvestedAmount: number;
   calculatedTotalPaidPrincipal: number;
   calculatedOutstandingInterest: number;
@@ -23,6 +23,12 @@ export interface ILoan {
   calculatedLastTransactionTimestamp: number;
   calculatedRelatedBudgets: IRelatedBudget[];
   transactionList: ITransactionInterval[];
+}
+
+export interface ILoanStatus {
+  current: 'ACTIVE' | 'PAUSED' | 'PAID' | 'COMPLETED' | 'DEFAULTED';
+  timestamp: number;
+  previous?: ILoanStatus;
 }
 
 export interface ITransactionInterval {

@@ -75,12 +75,19 @@ export const loanHelpers = {
     status: function validateStatus(status: ILoan['status']): ILoan['status'] {
       if (
         !isValidOption({
-          option: status.toString(),
+          option: status.current.toString(),
           validOptions: ['ACTIVE', 'PAUSED', 'PAID', 'COMPLETED', 'DEFAULTED'],
           caseSensitive: true,
         })
       )
-        throw new Error('(validation) status is invalid!');
+        throw new Error('(validation) loan current status is invalid!');
+      if (
+        !isValidTimestamp({
+          timestamp: status.timestamp,
+        })
+      )
+        throw new Error('(validation) loan status timestamp is invalid!');
+
       return status;
     },
   },
@@ -106,7 +113,11 @@ export const loanHelpers = {
     if (!Array.isArray(loan.notes)) throw new Error('Type of loan.notes must be an Array!');
     if (!Number.isFinite(loan.openedTimestamp)) throw new Error('Type of loan.openedTimestamp must be a number!');
     if (!Number.isFinite(loan.closesTimestamp)) throw new Error('Type of loan.closesTimestamp must be a number!');
-    if (!_.isString(loan.status)) throw new Error('Type of loan.status must be a string!');
+
+    // typecheck status
+    if (typeof loan.status !== 'object' || loan.status === null)
+      if (!_.isString(loan.status.current)) throw new Error('Type of loan.status must be a string!');
+
     if (!Number.isFinite(loan.calculatedInvestedAmount))
       throw new Error('Type of loan.calculatedTotalPaidPrincipal must be a number!');
     if (!Number.isFinite(loan.calculatedTotalPaidPrincipal))

@@ -67,8 +67,8 @@ export const loanExpectedPaymentInput = new GraphQLInputObjectType({
     interestPayment: { type: new GraphQLNonNull(GraphQLFloat) },
   }),
 });
-export const loanStatus = new GraphQLEnumType({
-  name: 'loanStatusType',
+export const loanStatusValues = new GraphQLEnumType({
+  name: 'loanStatusValueType',
   values: {
     ACTIVE: { value: 'ACTIVE' },
     PAUSED: { value: 'PAUSED' },
@@ -76,6 +76,15 @@ export const loanStatus = new GraphQLEnumType({
     COMPLETED: { value: 'COMPLETED' },
     DEFAULTED: { value: 'DEFAULTED' },
   },
+});
+
+export const loanStatus = new GraphQLObjectType({
+  name: 'loanStatusType',
+  fields: (): any => ({
+    current: { type: new GraphQLNonNull(loanStatusValues) },
+    timestamp: { type: new GraphQLNonNull(GraphQLFloat) },
+    previous: { type: loanStatus },
+  }),
 });
 
 export const loanRelatedBudget = new GraphQLObjectType({
