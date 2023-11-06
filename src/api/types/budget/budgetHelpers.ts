@@ -59,43 +59,27 @@ export const budgetHelpers = {
     if (!_.isString(budget.userId)) throw new Error('Type of budget.userId must be a string!');
     if (!_.isString(budget.name)) throw new Error('Type of budget.name must be a string!');
     if (!_.isString(budget.description)) throw new Error('Type of budget.description must be a string!');
-    if (!Number.isFinite(budget.calculatedTotalInvestedAmount))
-      throw new Error('Type of budget.calculatedTotalInvestedAmount must be a number!');
-    if (!Number.isFinite(budget.calculatedTotalWithdrawnAmount))
-      throw new Error('Type of budget.calculatedTotalWithdrawnAmount must be a number!');
-    if (!Number.isFinite(budget.calculatedTotalAvailableAmount))
-      throw new Error('Type of budget.calculatedTotalAvailableAmount must be a number!');
-    if (!Number.isFinite(budget.calculatedCurrentlyLendedPrincipalToLiveLoansAmount))
-      throw new Error('Type of budget.calculatedCurrentlyLendedPrincipalToLiveLoansAmount must be a number!');
-    if (!Number.isFinite(budget.calculatedCurrentlyEarnedInterestAmount))
-      throw new Error('Type of budget.calculatedCurrentlyEarnedInterestAmount must be a number!');
-    if (!Number.isFinite(budget.calculatedTotalLostPrincipalToCompletedAndDefaultedLoansAmount))
-      throw new Error(
-        'Type of budget.calculatedTotalLostPrincipalToCompletedAndDefaultedLoansAmount must be a number!',
-      );
-    if (!Number.isFinite(budget.calculatedTotalGains))
-      throw new Error('Type of budget.calculatedTotalGains must be a number!');
-    if (!Number.isFinite(budget.calculatedTotalLentAmount))
-      throw new Error('Type of budget.calculatedTotalLentAmount must be a number!');
-    if (!Number.isFinite(budget.calculatedTotalAssociatedLoans))
-      throw new Error('Type of budget.calculatedTotalAssociatedLoans must be a number!');
-    if (!Number.isFinite(budget.calculatedTotalAssociatedLiveLoans))
-      throw new Error('Type of budget.calculatedTotalAssociatedLiveLoans must be a number!');
-    if (
-      !Number.isFinite(budget.calculatedAvarageAssociatedLoanDuration) &&
-      budget.calculatedAvarageAssociatedLoanDuration !== null
-    )
-      throw new Error('Type of budget.calculatedAvarageAssociatedLoanDuration must be a number!');
-    if (
-      !Number.isFinite(budget.calculatedAvarageAssociatedLoanAmount) &&
-      budget.calculatedAvarageAssociatedLoanAmount !== null
-    )
-      throw new Error('Type of budget.calculatedAvarageAssociatedLoanAmount must be a number!');
     if (!_.isBoolean(budget.isArchived)) throw new Error('Type of budget.isArchived must be a boolean!');
 
     interestRateHelpers.runtimeCast(budget.defaultInterestRate);
     paymentFrequencyHelpers.runtimeCast(budget.defaultPaymentFrequency);
 
+    checkBudgetStats(budget.currentStats);
+
+    if (budget.transactionList !== undefined && !_.isArray(budget.transactionList))
+      throw new Error('Type of budget.transactionList must be an array!');
+    if (_.isArray(budget.transactionList))
+      budget.transactionList.forEach((transaction: any) => {
+        if (transaction._id === undefined) throw new Error('Type of budget.transactionList._id must be defined!');
+        if (!Number.isFinite(transaction.amount))
+          throw new Error('Type of budget.transactionList.amount must be a number!');
+        if (!_.isString(transaction.description))
+          throw new Error('Type of budget.transactionList.description must be a string!');
+        if (!Number.isFinite(transaction.timestamp))
+          throw new Error('Type of budget.transactionList.timestamp must be a number!');
+
+        checkBudgetStats(transaction.budgetStats);
+      });
     return {
       _id: budget._id,
       userId: budget.userId,
@@ -103,20 +87,46 @@ export const budgetHelpers = {
       description: budget.description,
       defaultInterestRate: budget.defaultInterestRate,
       defaultPaymentFrequency: budget.defaultPaymentFrequency,
-      calculatedTotalInvestedAmount: budget.calculatedTotalInvestedAmount,
-      calculatedTotalWithdrawnAmount: budget.calculatedTotalWithdrawnAmount,
-      calculatedTotalAvailableAmount: budget.calculatedTotalAvailableAmount,
-      calculatedCurrentlyLendedPrincipalToLiveLoansAmount: budget.calculatedCurrentlyLendedPrincipalToLiveLoansAmount,
-      calculatedCurrentlyEarnedInterestAmount: budget.calculatedCurrentlyEarnedInterestAmount,
-      calculatedTotalLostPrincipalToCompletedAndDefaultedLoansAmount:
-        budget.calculatedTotalLostPrincipalToCompletedAndDefaultedLoansAmount,
-      calculatedTotalGains: budget.calculatedTotalGains,
-      calculatedTotalLentAmount: budget.calculatedTotalLentAmount,
-      calculatedTotalAssociatedLoans: budget.calculatedTotalAssociatedLoans,
-      calculatedTotalAssociatedLiveLoans: budget.calculatedTotalAssociatedLiveLoans,
-      calculatedAvarageAssociatedLoanDuration: budget.calculatedAvarageAssociatedLoanDuration,
-      calculatedAvarageAssociatedLoanAmount: budget.calculatedAvarageAssociatedLoanAmount,
       isArchived: budget.isArchived,
+      currentStats: budget.currentStats,
+      transactionList: budget.transactionList,
     };
   },
 };
+
+function checkBudgetStats(budgetStats: any): void {
+  if (!Number.isFinite(budgetStats.totalInvestedAmount))
+    throw new Error('Type of budget.calculatedTotalInvestedAmount must be a number!');
+  if (!Number.isFinite(budgetStats.totalWithdrawnAmount))
+    throw new Error('Type of budget.calculatedTotalWithdrawnAmount must be a number!');
+  if (!Number.isFinite(budgetStats.totalAvailableAmount))
+    throw new Error('Type of budget.calculatedTotalAvailableAmount must be a number!');
+  if (!Number.isFinite(budgetStats.currentlyEarnedInterestAmount))
+    throw new Error('Type of budget.calculatedCurrentlyEarnedInterestAmount must be a number!');
+  if (!Number.isFinite(budgetStats.currentlyLendedPrincipalToLiveLoansAmount))
+    throw new Error('Type of budget.calculatedCurrentlyLendedPrincipalToLiveLoansAmount must be a number!');
+  if (!Number.isFinite(budgetStats.totalLostPrincipalToCompletedAndDefaultedLoansAmount))
+    throw new Error('Type of budget.calculatedTotalLostPrincipalToCompletedAndDefaultedLoansAmount must be a number!');
+  if (!Number.isFinite(budgetStats.totalGains))
+    throw new Error('Type of budget.calculatedTotalGains must be a number!');
+  if (!Number.isFinite(budgetStats.totalForgivenAmount))
+    throw new Error('Type of budget.calculatedTotalForgivenAmount must be a number!');
+  if (!Number.isFinite(budgetStats.totalLentAmount))
+    throw new Error('Type of budget.calculatedTotalLentAmount must be a number!');
+  if (!Number.isFinite(budgetStats.totalAssociatedLoans))
+    throw new Error('Type of budget.calculatedTotalAssociatedLoans must be a number!');
+  if (!Number.isFinite(budgetStats.totalAssociatedLiveLoans))
+    throw new Error('Type of budget.calculatedTotalAssociatedLiveLoans must be a number!');
+  if (
+    !Number.isFinite(budgetStats.avarageAssociatedLoanDuration) &&
+    budgetStats.avarageAssociatedLoanDuration !== undefined &&
+    budgetStats.avarageAssociatedLoanDuration !== null
+  )
+    throw new Error('Type of budget.calculatedAvarageAssociatedLoanDuration must be a number or undefined!');
+  if (
+    !Number.isFinite(budgetStats.avarageAssociatedLoanAmount) &&
+    budgetStats.avarageAssociatedLoanAmount !== undefined &&
+    budgetStats.avarageAssociatedLoanAmount !== null
+  )
+    throw new Error('Type of budget.calculatedAvarageAssociatedLoanAmount must be a number or undefined!');
+}

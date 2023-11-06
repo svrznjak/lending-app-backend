@@ -276,9 +276,6 @@ describe('budgetHelpers', () => {
             entryTimestamp: 1663012853,
             revisions: undefined,
           },
-          calculatedTotalInvestedAmount: 0,
-          calculatedTotalWithdrawnAmount: 0,
-          calculatedTotalAvailableAmount: 0,
         } as IBudget;
         budgetHelpers.sanitize.all(input);
         expect(input.name).toBe('Budget 1');

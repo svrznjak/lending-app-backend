@@ -12,7 +12,7 @@ export const transactionType = new GraphQLObjectType({
   fields: (): any => ({
     _id: { type: new GraphQLNonNull(GraphQLID) },
     transactionTimestamp: { type: new GraphQLNonNull(GraphQLFloat) },
-    description: { type: new GraphQLNonNull(GraphQLString) },
+    description: { type: GraphQLString },
     from: { type: new GraphQLNonNull(transactionAddressType) },
     to: { type: new GraphQLNonNull(transactionAddressType) },
     amount: { type: new GraphQLNonNull(GraphQLFloat) },

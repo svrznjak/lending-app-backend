@@ -1,5 +1,6 @@
 import { IInterestRate } from '../interestRate/interestRateInterface.js';
 import { IPaymentFrequency } from '../paymentFrequency/paymentFrequencyInterface.js';
+import { ITransactionAddress } from '../transactionAddress/transactionAddressInterface.js';
 
 export interface IBudget {
   _id: string;
@@ -8,17 +9,33 @@ export interface IBudget {
   description: string;
   defaultInterestRate: IInterestRate;
   defaultPaymentFrequency: IPaymentFrequency;
-  calculatedTotalInvestedAmount: number;
-  calculatedTotalWithdrawnAmount: number;
-  calculatedTotalAvailableAmount: number;
-  calculatedCurrentlyLendedPrincipalToLiveLoansAmount: number;
-  calculatedCurrentlyEarnedInterestAmount: number;
-  calculatedTotalLostPrincipalToCompletedAndDefaultedLoansAmount: number;
-  calculatedTotalGains: number;
-  calculatedTotalLentAmount: number;
-  calculatedTotalAssociatedLoans: number;
-  calculatedTotalAssociatedLiveLoans: number;
-  calculatedAvarageAssociatedLoanDuration: number | null;
-  calculatedAvarageAssociatedLoanAmount: number | null;
   isArchived: boolean;
+  currentStats: IBudgetStats;
+  transactionList: IBudgetTransaction[];
+}
+
+export interface IBudgetTransaction {
+  _id: string;
+  timestamp: number;
+  description: string;
+  from: ITransactionAddress;
+  to: ITransactionAddress;
+  amount: number;
+  budgetStats: IBudgetStats;
+}
+
+export interface IBudgetStats {
+  totalInvestedAmount: number;
+  totalWithdrawnAmount: number;
+  totalAvailableAmount: number;
+  currentlyEarnedInterestAmount: number;
+  currentlyLendedPrincipalToLiveLoansAmount: number;
+  totalLostPrincipalToCompletedAndDefaultedLoansAmount: number;
+  totalGains: number;
+  totalForgivenAmount: number;
+  totalLentAmount: number;
+  totalAssociatedLoans: number;
+  totalAssociatedLiveLoans: number;
+  avarageAssociatedLoanDuration: number | null;
+  avarageAssociatedLoanAmount: number | null;
 }

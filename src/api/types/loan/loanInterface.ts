@@ -20,6 +20,7 @@ export interface ILoan {
   calculatedTotalPaidPrincipal: number;
   calculatedOutstandingInterest: number;
   calculatedPaidInterest: number;
+  calculatedTotalForgiven: number;
   calculatedLastTransactionTimestamp: number;
   calculatedRelatedBudgets: IRelatedBudget[];
   transactionList: ITransactionInterval[];
@@ -32,12 +33,14 @@ export interface ILoanStatus {
 }
 
 export interface ITransactionInterval {
-  id: string;
+  _id: string;
   timestamp: number;
   description: string;
   totalInvested: number;
   totalPaidPrincipal: number;
   totalPaidInterest: number;
+  totalRefunded: number;
+  totalForgiven: number;
   from: ITransactionAddress;
   to: ITransactionAddress;
   invested: number;
@@ -45,6 +48,8 @@ export interface ITransactionInterval {
   interestCharged: number;
   principalPaid: number;
   interestPaid: number;
+  refundedAmount: number;
+  forgivenAmount: number;
   outstandingPrincipal: number;
   outstandingInterest: number;
 }

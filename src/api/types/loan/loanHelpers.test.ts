@@ -443,11 +443,10 @@ describe('loanHelpers', () => {
             revisions: undefined,
             isCompounding: false,
           },
-          status: 'ACTIVE',
-          calculatedInvestedAmount: 100,
-          calculatedTotalPaidPrincipal: 100,
-          calculatedOutstandingInterest: 50,
-          calculatedPaidInterest: 50,
+          status: {
+            current: 'ACTIVE',
+            timestamp: 1663012853,
+          },
         } as ILoan;
         loanHelpers.sanitize.all(input);
         expect(input.name).toBe('Loan 1');

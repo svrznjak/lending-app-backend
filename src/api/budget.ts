@@ -3,12 +3,15 @@ import { budgetHelpers } from './types/budget/budgetHelpers.js';
 import { ITransaction } from './types/transaction/transactionInterface.js';
 import transaction from './transaction.js';
 import * as User from './user.js';
-import { IBudget } from './types/budget/budgetInterface.js';
+import { IBudget, IBudgetStats, IBudgetTransaction } from './types/budget/budgetInterface.js';
 import { interestRateHelpers } from './types/interestRate/interestRateHelpers.js';
 import paranoidCalculator from './utils/paranoidCalculator/paranoidCalculator.js';
 import BudgetModel, { IBudgetDocument } from './db/model/BudgetModel.js';
 import { paymentFrequencyHelpers } from './types/paymentFrequency/paymentFrequencyHelpers.js';
-import loan from './loan.js';
+import TransactionModel from './db/model/TransactionModel.js';
+import LoanModel from './db/model/LoanModel.js';
+import Loan from './loan.js';
+import { ILoan } from './types/loan/loanInterface.js';
 
 export default {
   // As a lender, I want to create a budget, so that I can categorize my investments.
@@ -32,19 +35,21 @@ export default {
       description: input.description,
       defaultInterestRate: input.defaultInterestRate,
       defaultPaymentFrequency: input.defaultPaymentFrequency,
-      calculatedTotalWithdrawnAmount: 0,
-      calculatedTotalInvestedAmount: inititalTransactionAmount,
-      calculatedTotalAvailableAmount: inititalTransactionAmount,
-      calculatedCurrentlyLendedPrincipalToLiveLoansAmount: 0,
-      calculatedCurrentlyEarnedInterestAmount: 0,
-      calculatedTotalLostPrincipalToCompletedAndDefaultedLoansAmount: 0,
-      calculatedTotalGains: 0,
-      calculatedTotalLentAmount: 0,
-      calculatedTotalAssociatedLoans: 0,
-      calculatedTotalAssociatedLiveLoans: 0,
-      calculatedAvarageAssociatedLoanDuration: null,
-      calculatedAvarageAssociatedLoanAmount: null,
       isArchived: false,
+      currentStats: {
+        totalInvestedAmount: 0,
+        totalWithdrawnAmount: 0,
+        totalAvailableAmount: 0,
+        currentlyLendedPrincipalToLiveLoansAmount: 0,
+        currentlyEarnedInterestAmount: 0,
+        totalLostPrincipalToCompletedAndDefaultedLoansAmount: 0,
+        totalGains: 0,
+        totalForgivenAmount: 0,
+        totalLentAmount: 0,
+        totalAssociatedLoans: 0,
+        totalAssociatedLiveLoans: 0,
+      },
+      transactionList: [],
     } as IBudget);
 
     const session: ClientSession = await mongoose.connection.startSession();
@@ -66,6 +71,7 @@ export default {
           },
           { session: session, runRecalculate: false },
         );
+        await this.updateTransactionList(newBudget, session);
       }
 
       await session.commitTransaction();
@@ -98,8 +104,22 @@ export default {
     },
     { session = undefined }: { session?: ClientSession } = {},
   ): Promise<IBudget> {
-    const Mongo_budget: any = await BudgetModel.findOne({ _id: budgetId, userId: userId }).session(session).lean();
+    const Mongo_budget: any = await BudgetModel.findOne(
+      { _id: budgetId, userId: userId },
+      {
+        userId: 1,
+        name: 1,
+        description: 1,
+        defaultInterestRate: 1,
+        defaultPaymentFrequency: 1,
+        isArchived: 1,
+        currentStats: 1,
+      },
+    )
+      .session(session)
+      .lean();
     if (Mongo_budget === null) throw new Error('Budget could not be found');
+
     return budgetHelpers.runtimeCast({
       ...Mongo_budget,
       _id: Mongo_budget._id.toString(),
@@ -111,6 +131,47 @@ export default {
     { userId }: { userId: string },
     { session = undefined }: { session?: ClientSession } = {},
   ): Promise<IBudget[]> {
+    const Mongo_budgets: any = await BudgetModel.find(
+      { userId: userId },
+      {
+        userId: 1,
+        name: 1,
+        description: 1,
+        defaultInterestRate: 1,
+        defaultPaymentFrequency: 1,
+        isArchived: 1,
+        currentStats: 1,
+      },
+    )
+      .session(session)
+      .lean();
+
+    return Mongo_budgets.map((Mongo_budget) => {
+      return budgetHelpers.runtimeCast({
+        ...Mongo_budget,
+        _id: Mongo_budget._id.toString(),
+        userId: Mongo_budget.userId.toString(),
+      });
+    });
+  },
+  getOneFromUserWithTransactionList: async function getOneBudgetFromUserWithTransactionList(
+    { userId, budgetId }: { userId: string; budgetId: string },
+    { session = undefined }: { session?: ClientSession } = {},
+  ): Promise<IBudget> {
+    const Mongo_budget: any = await BudgetModel.findOne({ userId: userId, _id: budgetId }).session(session).lean();
+    if (Mongo_budget === null) throw new Error('Budget could not be found');
+
+    return budgetHelpers.runtimeCast({
+      ...Mongo_budget,
+      _id: Mongo_budget._id.toString(),
+      userId: Mongo_budget.userId.toString(),
+    });
+  },
+
+  getAllFromUserWithTransactionList: async function getAllBudgetsFromUserWithTransactionList(
+    { userId }: { userId: string },
+    { session = undefined }: { session?: ClientSession } = {},
+  ): Promise<IBudget[]> {
     const Mongo_budgets: any = await BudgetModel.find({ userId: userId }).session(session).lean();
 
     return Mongo_budgets.map((Mongo_budget) => {
@@ -118,6 +179,50 @@ export default {
         ...Mongo_budget,
         _id: Mongo_budget._id.toString(),
         userId: Mongo_budget.userId.toString(),
+      });
+    });
+  },
+  getBudgetsAtTimestamp: async function getBudgetAtTimestamp(
+    { userId, budgetIds, timestampLimit }: { userId: string; budgetIds: string[]; timestampLimit: number },
+    { session = undefined }: { session?: ClientSession } = {},
+  ): Promise<IBudget[]> {
+    const MONGO_BUDGETS: any = await BudgetModel.find(
+      { userId: userId, budgetId: { $in: budgetIds } },
+      {
+        userId: 1,
+        name: 1,
+        description: 1,
+        defaultInterestRate: 1,
+        defaultPaymentFrequency: 1,
+        isArchived: 1,
+        transactionList: 1,
+      },
+    )
+      .session(session)
+      .lean();
+
+    // Each MONGO_BUDGET needs currentStats at timestampLimit extracted from transactionList and appended to it
+    MONGO_BUDGETS.forEach((MONGO_BUDGET) => {
+      const transactions = MONGO_BUDGET.transactionList;
+      if (timestampLimit === undefined) {
+        MONGO_BUDGET.currentStats = transactions[0].budgetStats;
+      } else {
+        // Find the first transaction that is older than timestampLimit
+        const firstTransactionOlderThanTimestampLimit = transactions.find((transaction) => {
+          return transaction.timestamp <= timestampLimit;
+        });
+        MONGO_BUDGET.currentStats = firstTransactionOlderThanTimestampLimit.budgetStats;
+      }
+
+      // cut out transactionList
+      delete MONGO_BUDGET.transactionList;
+    });
+
+    return MONGO_BUDGETS.map((MONGO_BUDGET) => {
+      return budgetHelpers.runtimeCast({
+        ...MONGO_BUDGET,
+        _id: MONGO_BUDGET._id.toString(),
+        userId: MONGO_BUDGET.userId.toString(),
       });
     });
   },
@@ -164,7 +269,7 @@ export default {
     };
     const createdTransaction = await transaction.add(newTransaction, { session: session });
     if (runRecalculate) {
-      await this.recalculateCalculatedValues(await BudgetModel.findOne({ _id: budgetId, userId: userId }));
+      await this.updateTransactionList(budgetId);
     }
     return createdTransaction;
   },
@@ -212,7 +317,7 @@ export default {
     };
     const createdTransaction = await transaction.add(newTransaction, { session: session });
     if (runRecalculate) {
-      await this.recalculateCalculatedValues(await BudgetModel.findOne({ _id: budgetId, userId: userId }));
+      await this.updateTransactionList(budgetId);
     }
     return createdTransaction;
   },
@@ -220,14 +325,14 @@ export default {
   getTransactions: async function getBudgetTransactions(
     budgetId: string,
     paginate: { pageNumber: number; pageSize: number },
-  ): Promise<ITransaction[]> {
-    return await transaction.findTranasactionsFromAndTo(
-      {
-        addressId: budgetId,
-        datatype: 'BUDGET',
-      },
-      paginate,
-    );
+  ): Promise<IBudgetTransaction[]> {
+    const Mongo_budget: any = await BudgetModel.findOne(
+      { _id: budgetId },
+      { transactionList: { $slice: [paginate.pageNumber * paginate.pageSize, paginate.pageSize] }, _id: 0 },
+    ).lean();
+    if (Mongo_budget === null) throw new Error('Budget could not be found');
+
+    return Mongo_budget.transactionList;
   },
   // As a lender, I want to export budget data and transactions, so that I can archive them or import them to other software.
   export: function joinBudetTransactionsIntoAccountingTable(): void {
@@ -366,231 +471,484 @@ export default {
   /**
    * @param  {string} budgetId - _id of budget
    * @param  {number} timestampLimit - DateTime (timestamp) of resulting calculated values. This value is used to retrieve
-   * calculated values at any point in past.
-   * @returns {Promise} Pick<IBudget, 'calculatedTotalInvestedAmount' | 'calculatedTotalWithdrawnAmount' | 'calculatedTotalAvailableAmount'>
    */
-  getCalculatedValuesAtTimestamp: async function getBudgetCalculatedValuesAtTimestamp({
+  getStatsAtTimestamp: async function getBudgetStatsAtTimestamp({
     budgetId,
     timestampLimit,
   }: {
     budgetId: string;
     timestampLimit?: number;
-  }): Promise<
-    Pick<
-      IBudget,
-      | 'calculatedTotalInvestedAmount'
-      | 'calculatedTotalWithdrawnAmount'
-      | 'calculatedTotalAvailableAmount'
-      | 'calculatedCurrentlyLendedPrincipalToLiveLoansAmount'
-      | 'calculatedTotalLostPrincipalToCompletedAndDefaultedLoansAmount'
-      | 'calculatedTotalGains'
-    >
-  > {
-    // get all transactions
-    // NOTE TO SELF: Transactions should maybe be passed as argument.
-    const budgetTransactions: ITransaction[] = await this.getTransactions(budgetId, {
-      pageNumber: 0,
-      pageSize: Infinity,
+  }): Promise<IBudgetStats> {
+    const MONGO_BUDGET = await BudgetModel.findOne({ _id: budgetId });
+
+    const transactions = MONGO_BUDGET.transactionList;
+
+    if (timestampLimit === undefined) return transactions[0].budgetStats;
+
+    // Find the first transaction that is older than timestampLimit
+    const firstTransactionOlderThanTimestampLimit = transactions.find((transaction) => {
+      return transaction.timestamp <= timestampLimit;
+    });
+    return firstTransactionOlderThanTimestampLimit.budgetStats;
+  },
+
+  updateTransactionList: async function generateTransactionList(
+    input: string | IBudgetDocument,
+    session: ClientSession = undefined,
+  ): Promise<IBudgetTransaction[]> {
+    const MONGO_BUDGET = typeof input === 'string' ? await BudgetModel.findOne({ _id: input }).session(session) : input;
+
+    const budgetId = MONGO_BUDGET._id.toString();
+    const relatedLoansIds = await LoanModel.find({
+      'calculatedRelatedBudgets.budgetId': budgetId,
+    })
+      .session(session)
+      .select('_id')
+      .lean();
+
+    const transactions = await TransactionModel.find({
+      $or: [
+        {
+          'from.datatype': 'BUDGET',
+          'from.addressId': budgetId,
+        },
+        {
+          'to.datatype': 'BUDGET',
+          'to.addressId': budgetId,
+        },
+        {
+          'from.datatype': 'OUTSIDE',
+          'to.datatype': 'LOAN',
+          'to.addressId': {
+            $in: relatedLoansIds, // This will fetch all the loan IDs associated with the budget
+          },
+        },
+        {
+          'from.datatype': 'LOAN',
+          'to.datatype': 'OUTSIDE',
+          'from.addressId': {
+            $in: relatedLoansIds, // Same as above
+          },
+        },
+        /*{
+          'from.datatype': 'LOAN',
+          'to.datatype': 'FORGIVENESS',
+          'from.addressId': {
+            $in: relatedLoansIds, // Same as above
+          },
+        },*/
+      ],
+    })
+      .session(session)
+      .sort({ transactionTimestamp: 1 })
+      .lean()
+      .exec();
+
+    if (transactions.length === 0) return [];
+
+    const relatedLoans: ILoan[] = await Promise.all(
+      relatedLoansIds.map(async (loan) => {
+        return await Loan.getOneFromUser({ userId: MONGO_BUDGET.userId, loanId: loan._id.toString() }, { session });
+      }),
+    );
+
+    const currentLoanStats = {};
+    relatedLoans.forEach((loan) => {
+      currentLoanStats[loan._id.toString()] = {
+        amountLent: 0,
+        amountPaidBack: 0,
+        amountForgiven: 0,
+        status: undefined,
+      };
     });
 
-    // initialize variables
-    const calculatedValues: Pick<
-      IBudget,
-      | 'calculatedTotalInvestedAmount'
-      | 'calculatedTotalWithdrawnAmount'
-      | 'calculatedTotalAvailableAmount'
-      | 'calculatedCurrentlyLendedPrincipalToLiveLoansAmount'
-      | 'calculatedCurrentlyEarnedInterestAmount'
-      | 'calculatedTotalLostPrincipalToCompletedAndDefaultedLoansAmount'
-      | 'calculatedTotalGains'
-      | 'calculatedTotalLentAmount'
-      | 'calculatedTotalAssociatedLoans'
-      | 'calculatedTotalAssociatedLiveLoans'
-      | 'calculatedAvarageAssociatedLoanDuration'
-      | 'calculatedAvarageAssociatedLoanAmount'
-    > = {
-      calculatedTotalInvestedAmount: 0,
-      calculatedTotalWithdrawnAmount: 0,
-      calculatedTotalAvailableAmount: 0,
-      calculatedCurrentlyLendedPrincipalToLiveLoansAmount: 0,
-      calculatedCurrentlyEarnedInterestAmount: 0,
-      calculatedTotalLostPrincipalToCompletedAndDefaultedLoansAmount: 0,
-      calculatedTotalGains: 0,
-      calculatedTotalLentAmount: 0,
-      calculatedTotalAssociatedLoans: 0,
-      calculatedTotalAssociatedLiveLoans: 0,
-      calculatedAvarageAssociatedLoanDuration: null,
-      calculatedAvarageAssociatedLoanAmount: null,
-    };
-    let tmpCalculatedAvaiableAmount = 0;
-    const tmpAmountsLendedToLoans = {};
+    const TRANSACTION_LIST: IBudgetTransaction[] = [];
 
-    // Loop and affect calculatedValues
-    for (let i = budgetTransactions.length - 1; i >= 0; i--) {
-      const TRANSACTION = budgetTransactions[i];
-      applyTransactionToTotalInvestedAmount(TRANSACTION);
-      applyTransactionToTotalWithdrawnAmount(TRANSACTION);
-      applyTransactionToTotalAvaiableAmount(TRANSACTION);
-      await applyTransactionToTotalLendedToActiveLoansAmount(TRANSACTION);
-    }
-
-    await Object.keys(tmpAmountsLendedToLoans).forEach(async (key) => {
-      const currentLoan = await loan.getOneFromUser({ userId: budgetTransactions[0].userId, loanId: key });
-      const loanStatus = currentLoan.status;
-
-      // add to total lent amount
-      calculatedValues.calculatedTotalLentAmount = paranoidCalculator.add(
-        calculatedValues.calculatedTotalLentAmount,
-        tmpAmountsLendedToLoans[key],
-      );
-      // increase total associated loans count
-      calculatedValues.calculatedTotalAssociatedLoans = paranoidCalculator.add(
-        calculatedValues.calculatedTotalAssociatedLoans,
-        1,
-      );
-
-      // calculate avarage associated loan duration
-      const loanDuration = currentLoan.closesTimestamp - currentLoan.openedTimestamp;
-      if (calculatedValues.calculatedAvarageAssociatedLoanDuration === null)
-        calculatedValues.calculatedAvarageAssociatedLoanDuration = loanDuration;
-      else
-        calculatedValues.calculatedAvarageAssociatedLoanDuration = paranoidCalculator.divide(
-          paranoidCalculator.add(calculatedValues.calculatedAvarageAssociatedLoanDuration, loanDuration),
-          2,
-        );
-
-      // calculate avarage associated loan amount
-      const loanAmount = currentLoan.calculatedInvestedAmount;
-      if (calculatedValues.calculatedAvarageAssociatedLoanAmount === null)
-        calculatedValues.calculatedAvarageAssociatedLoanAmount = loanAmount;
-      else
-        calculatedValues.calculatedAvarageAssociatedLoanAmount = paranoidCalculator.divide(
-          paranoidCalculator.add(calculatedValues.calculatedAvarageAssociatedLoanAmount, loanAmount),
-          2,
-        );
-
-      if (loanStatus === 'ACTIVE' || loanStatus === 'PAUSED' || loanStatus === 'PAID') {
-        // how much principal is lended to active loans
-        if (tmpAmountsLendedToLoans[key] > 0) {
-          let totalLendedToLoan = tmpAmountsLendedToLoans[key];
-          currentLoan.transactionList.forEach((transaction) => {
-            if (transaction.to.datatype === 'BUDGET' && transaction.to.addressId === budgetId) {
-              totalLendedToLoan = paranoidCalculator.subtract(totalLendedToLoan, transaction.principalPaid);
-            }
-          });
-          calculatedValues.calculatedCurrentlyLendedPrincipalToLiveLoansAmount = paranoidCalculator.add(
-            calculatedValues.calculatedCurrentlyLendedPrincipalToLiveLoansAmount,
-            totalLendedToLoan,
+    for (let i = 0; i < transactions.length; i++) {
+      const transaction = transactions[i];
+      updateRelatedLoansStatuses(transaction.transactionTimestamp);
+      if (i == 0) {
+        // Assuming that first transaction is always a deposit to budget
+        if (!(transaction.to.datatype === 'BUDGET' && transaction.from.datatype === 'OUTSIDE'))
+          throw new Error(
+            'First transaction is not a deposit to budget. This should not happen. Budget with ID is broken: ' +
+              budgetId,
           );
-        }
-        // increase live loans count
-        calculatedValues.calculatedTotalAssociatedLiveLoans = paranoidCalculator.add(
-          calculatedValues.calculatedTotalAssociatedLiveLoans,
-          1,
+        TRANSACTION_LIST.push({
+          _id: transaction._id.toString(),
+          timestamp: transaction.transactionTimestamp,
+          description: transaction.description,
+          from: transaction.from,
+          to: transaction.to,
+          amount: transaction.amount,
+          budgetStats: {
+            totalInvestedAmount: transaction.amount,
+            totalWithdrawnAmount: 0,
+            totalAvailableAmount: transaction.amount,
+            currentlyLendedPrincipalToLiveLoansAmount: 0,
+            currentlyEarnedInterestAmount: 0,
+            totalLostPrincipalToCompletedAndDefaultedLoansAmount: 0,
+            totalGains: 0,
+            totalForgivenAmount: 0,
+            totalLentAmount: 0,
+            totalAssociatedLoans: 0,
+            totalAssociatedLiveLoans: 0,
+            avarageAssociatedLoanDuration: null,
+            avarageAssociatedLoanAmount: null,
+          },
+        });
+      } else if (transaction.from.datatype === 'OUTSIDE' && transaction.to.datatype === 'BUDGET') {
+        TRANSACTION_LIST.push({
+          _id: transaction._id.toString(),
+          timestamp: transaction.transactionTimestamp,
+          description: transaction.description,
+          from: transaction.from,
+          to: transaction.to,
+          amount: transaction.amount,
+          budgetStats: {
+            ...TRANSACTION_LIST[i - 1].budgetStats,
+            ...calculatedFields(transaction),
+            totalInvestedAmount: paranoidCalculator.add(
+              TRANSACTION_LIST[i - 1].budgetStats.totalInvestedAmount,
+              transaction.amount,
+            ),
+            totalAvailableAmount: paranoidCalculator.add(
+              TRANSACTION_LIST[i - 1].budgetStats.totalAvailableAmount,
+              transaction.amount,
+            ),
+          },
+        });
+      } else if (transaction.from.datatype === 'BUDGET' && transaction.to.datatype === 'OUTSIDE') {
+        TRANSACTION_LIST.push({
+          _id: transaction._id.toString(),
+          timestamp: transaction.transactionTimestamp,
+          description: transaction.description,
+          from: transaction.from,
+          to: transaction.to,
+          amount: transaction.amount,
+          budgetStats: {
+            ...TRANSACTION_LIST[i - 1].budgetStats,
+            ...calculatedFields(transaction),
+            totalWithdrawnAmount: paranoidCalculator.add(
+              TRANSACTION_LIST[i - 1].budgetStats.totalWithdrawnAmount,
+              transaction.amount,
+            ),
+            totalAvailableAmount: paranoidCalculator.subtract(
+              TRANSACTION_LIST[i - 1].budgetStats.totalAvailableAmount,
+              transaction.amount,
+            ),
+          },
+        });
+      } else if (transaction.from.datatype === 'BUDGET' && transaction.to.datatype === 'LOAN') {
+        currentLoanStats[transaction.to.addressId].amountLent = paranoidCalculator.add(
+          currentLoanStats[transaction.to.addressId].amountLent,
+          transaction.amount,
         );
+
+        TRANSACTION_LIST.push({
+          _id: transaction._id.toString(),
+          timestamp: transaction.transactionTimestamp,
+          description: transaction.description,
+          from: transaction.from,
+          to: transaction.to,
+          amount: transaction.amount,
+          budgetStats: {
+            ...TRANSACTION_LIST[i - 1].budgetStats,
+            ...calculatedFields(transaction),
+            totalWithdrawnAmount: paranoidCalculator.add(
+              TRANSACTION_LIST[i - 1].budgetStats.totalWithdrawnAmount,
+              transaction.amount,
+            ),
+            totalAvailableAmount: paranoidCalculator.subtract(
+              TRANSACTION_LIST[i - 1].budgetStats.totalAvailableAmount,
+              transaction.amount,
+            ),
+          },
+        });
+      } else if (transaction.from.datatype === 'OUTSIDE' && transaction.to.datatype === 'LOAN') {
+        // payment
+        /**
+         * To pomeni, da se mora generirati transakcija, ki gre from "LOAN" v "BUDGET".
+         * Timestamp in description se kopirata.
+         * From je "LOAN", to je "BUDGET".
+         * Amount je odvisen od tega, koliko je budget investiral v loan. Če ima loan investicije iz več budgetov, se razdeli, glede na to, koliko je investiral vsak budget.
+         * BudgetStats se kopirajo iz prejšnje transakcije, razen:
+         * - totalAvailableAmount se poveča za amount
+         */
+
+        const relatedLoan = relatedLoans.find((loan) => loan._id.toString() === transaction.to.addressId.toString());
+        const transactionInLoan = relatedLoan.transactionList.find(
+          (loanTransaction) => loanTransaction._id.toString() === transaction._id.toString(),
+        );
+        const percentageInvestedByBudget = Loan.getBudgetInvestmentPercentageAtTimestamp(
+          relatedLoan,
+          budgetId,
+          transaction.transactionTimestamp,
+        );
+        currentLoanStats[transaction.to.addressId].amountPaidBack = paranoidCalculator.add(
+          currentLoanStats[transaction.to.addressId].amountPaidBack,
+          paranoidCalculator.multiply(transaction.amount, percentageInvestedByBudget),
+        );
+
+        TRANSACTION_LIST.push({
+          _id: transaction._id.toString(),
+          timestamp: transaction.transactionTimestamp,
+          description: transaction.description,
+          from: transaction.to, // LOAN
+          to: {
+            datatype: 'BUDGET',
+            addressId: budgetId,
+          },
+          amount: paranoidCalculator.multiply(transaction.amount, percentageInvestedByBudget),
+          budgetStats: {
+            ...TRANSACTION_LIST[i - 1].budgetStats,
+            ...calculatedFields(transaction),
+            totalAvailableAmount: paranoidCalculator.add(
+              TRANSACTION_LIST[i - 1].budgetStats.totalAvailableAmount,
+              paranoidCalculator.multiply(transaction.amount, percentageInvestedByBudget),
+            ),
+            currentlyEarnedInterestAmount: paranoidCalculator.add(
+              TRANSACTION_LIST[i - 1].budgetStats.currentlyEarnedInterestAmount,
+              paranoidCalculator.multiply(transactionInLoan.interestPaid, percentageInvestedByBudget),
+            ),
+          },
+        });
+      } else if (transaction.from.datatype === 'LOAN' && transaction.to.datatype === 'OUTSIDE') {
+        // refund payment
+        const relatedLoan = relatedLoans.find((loan) => loan._id.toString() === transaction.from.addressId.toString());
+        /*const transactionInLoan = relatedLoan.transactionList.find(
+          (loanTransaction) => loanTransaction._id.toString() === transaction._id.toString(),
+        );
+        const percentagePaidBackToBudget = paranoidCalculator.divide(
+          currentLoanStats[transaction.from.addressId.toString()].amountPaidBack,
+          transactionInLoan.refundedAmount,
+        );
+        
+        if (percentagePaidBackToBudget > 0) {
+          currentLoanStats[transaction.from.addressId.toString()].amountPaidBack = paranoidCalculator.subtract(
+            currentLoanStats[transaction.from.addressId.toString()].amountPaidBack,
+            paranoidCalculator.multiply(transaction.amount, percentagePaidBackToBudget),
+          );
+        */
+        const percentageInvestedByBudget = Loan.getBudgetInvestmentPercentageAtTimestamp(
+          relatedLoan,
+          budgetId,
+          transaction.transactionTimestamp,
+        );
+        if (percentageInvestedByBudget > 0) {
+          currentLoanStats[transaction.from.addressId.toString()].amountPaidBack = paranoidCalculator.subtract(
+            currentLoanStats[transaction.from.addressId.toString()].amountPaidBack,
+            paranoidCalculator.multiply(transaction.amount, percentageInvestedByBudget),
+          );
+
+          TRANSACTION_LIST.push({
+            _id: transaction._id.toString(),
+            timestamp: transaction.transactionTimestamp,
+            description: transaction.description,
+            from: {
+              datatype: 'BUDGET',
+              addressId: budgetId,
+            },
+            to: transaction.to, // LOAN
+            amount: paranoidCalculator.multiply(transaction.amount, percentageInvestedByBudget),
+            budgetStats: {
+              ...TRANSACTION_LIST[i - 1].budgetStats,
+              ...calculatedFields(transaction),
+              totalAvailableAmount: paranoidCalculator.subtract(
+                TRANSACTION_LIST[i - 1].budgetStats.totalAvailableAmount,
+                paranoidCalculator.multiply(transaction.amount, percentageInvestedByBudget),
+              ),
+            },
+          });
+        }
+      } else if (transaction.from.datatype === 'LOAN' && transaction.to.datatype === 'FORGIVENESS') {
+        // forgiveness of loan
+        /* Actually there is nothing to do there, because forgiveness is not a transaction, but a change in loan principal.
+        
+        const relatedLoan = relatedLoans.find((loan) => loan._id.toString() === transaction.from.addressId.toString());
+        const percentageInvestedByBudget = Loan.getBudgetInvestmentPercentageAtTimestamp(
+          relatedLoan,
+          budgetId,
+          transaction.transactionTimestamp,
+        );
+
+        TRANSACTION_LIST.push({
+          _id: transaction._id.toString(),
+          timestamp: transaction.transactionTimestamp,
+          description: transaction.description,
+          from: {
+            datatype: 'BUDGET',
+            addressId: budgetId,
+          },
+          to: transaction.to, // FORGIVENESS
+          amount: paranoidCalculator.multiply(transaction.amount, percentageInvestedByBudget),
+          budgetStats: {
+            ...TRANSACTION_LIST[i - 1].budgetStats,
+            ...calculatedFields(transaction),
+            totalForgivenAmount: paranoidCalculator.add(
+              TRANSACTION_LIST[i - 1].budgetStats.totalForgivenAmount,
+              paranoidCalculator.multiply(transaction.amount, percentageInvestedByBudget),
+            ),
+          },
+        });
+        */
+      } else if (transaction.from.datatype === 'INTEREST' && transaction.to.datatype === 'LOAN') {
+        // manual interest / fee
+        // Not sure if there is anything to do here
+        console.log('x');
       } else {
-        // how much principal was lost to completed and defaulted loans
-        if (tmpAmountsLendedToLoans[key] > 0) {
-          let totalLendedToLoan = tmpAmountsLendedToLoans[key];
-          currentLoan.transactionList.forEach((transaction) => {
-            if (transaction.to.datatype === 'BUDGET' && transaction.to.addressId === budgetId) {
-              totalLendedToLoan = paranoidCalculator.subtract(totalLendedToLoan, transaction.principalPaid);
-            }
-          });
-          calculatedValues.calculatedTotalLostPrincipalToCompletedAndDefaultedLoansAmount = paranoidCalculator.add(
-            calculatedValues.calculatedTotalLostPrincipalToCompletedAndDefaultedLoansAmount,
-            totalLendedToLoan,
-          );
-        }
-        // how much profit has been made from completed and defaulted loans
-        else if (tmpAmountsLendedToLoans[key] < 0) {
-          calculatedValues.calculatedTotalGains = paranoidCalculator.add(
-            calculatedValues.calculatedTotalGains,
-            -tmpAmountsLendedToLoans[key],
-          );
-        }
+        throw new Error('Should not happen');
       }
-      // how much interest was earned from loans
-      currentLoan.transactionList.forEach((transaction) => {
-        if (transaction.to.datatype === 'BUDGET' && transaction.to.addressId === budgetId) {
-          calculatedValues.calculatedCurrentlyEarnedInterestAmount = paranoidCalculator.add(
-            calculatedValues.calculatedCurrentlyEarnedInterestAmount,
-            transaction.interestPaid,
-          );
-        }
+    }
+    TRANSACTION_LIST.reverse();
+    MONGO_BUDGET.transactionList = TRANSACTION_LIST;
+    MONGO_BUDGET.currentStats = TRANSACTION_LIST[0].budgetStats;
+    await MONGO_BUDGET.save({ session });
+    return TRANSACTION_LIST;
+
+    function updateRelatedLoansStatuses(timestamp: number): void {
+      Object.keys(currentLoanStats).forEach((loanId) => {
+        currentLoanStats[loanId].status = Loan.getStatusAtTimestamp(
+          relatedLoans.find((loan) => loan._id.toString() === loanId),
+          timestamp,
+        );
       });
-    });
+    }
 
-    return calculatedValues;
+    function calculatedFields(
+      transaction,
+    ): Pick<
+      IBudgetStats,
+      | 'currentlyLendedPrincipalToLiveLoansAmount'
+      | 'totalGains'
+      | 'totalLostPrincipalToCompletedAndDefaultedLoansAmount'
+      | 'totalLentAmount'
+      | 'totalAssociatedLoans'
+      | 'totalAssociatedLiveLoans'
+      | 'avarageAssociatedLoanDuration'
+      | 'avarageAssociatedLoanAmount'
+    > {
+      return {
+        currentlyLendedPrincipalToLiveLoansAmount: currentlyLendedPrincipalToLiveLoansAmount(),
+        totalGains: totalGains(),
+        totalLostPrincipalToCompletedAndDefaultedLoansAmount: totalLostOnCompletedAndDefaultedLoans(),
+        totalLentAmount: totalLentAmount(),
+        totalAssociatedLoans: totalAssociatedLoans(),
+        totalAssociatedLiveLoans: totalAssociatedLiveLoans(),
+        avarageAssociatedLoanDuration: avarageLoanDuration(),
+        avarageAssociatedLoanAmount: avarageLoanAmount(transaction),
+      };
+    }
+    function currentlyLendedPrincipalToLiveLoansAmount(): number {
+      return Object.keys(currentLoanStats).reduce((acc, loanId) => {
+        if (
+          currentLoanStats[loanId].status === 'ACTIVE' ||
+          currentLoanStats[loanId].status === 'PAUSED' ||
+          currentLoanStats[loanId].status === 'PAID'
+        ) {
+          return paranoidCalculator.add(acc, currentLoanStats[loanId].amountLent);
+        }
+        return acc;
+      }, 0);
+    }
+    function totalGains(): number {
+      // Total gains are defined as sum of all currentLoanStats.amountPaidBack - currentLoanStats.amountLent on all completed or defaulted loans.
 
-    // Abstractions
-    function applyTransactionToTotalInvestedAmount(transaction: ITransaction): void {
-      // totalInvestedAmount is only affected until timestampLimit (or get all transactions if timestampLimit is undefined)
-      if (transaction.transactionTimestamp <= timestampLimit || timestampLimit === undefined)
-        if (transaction.to.datatype === 'BUDGET' && transaction.from.datatype === 'OUTSIDE') {
-          calculatedValues.calculatedTotalInvestedAmount = paranoidCalculator.add(
-            calculatedValues.calculatedTotalInvestedAmount,
-            transaction.amount,
+      return Object.keys(currentLoanStats).reduce((acc, loanId) => {
+        if (currentLoanStats[loanId].status === 'COMPLETED' || currentLoanStats[loanId].status === 'DEFAULTED') {
+          const gainOnLoan = paranoidCalculator.subtract(
+            currentLoanStats[loanId].amountPaidBack,
+            currentLoanStats[loanId].amountLent,
           );
-        }
+          if (gainOnLoan > 0) {
+            return paranoidCalculator.add(gainOnLoan, acc);
+          } else {
+            return acc;
+          }
+        } else return acc;
+      }, 0);
     }
-    function applyTransactionToTotalWithdrawnAmount(transaction: ITransaction): void {
-      // totalWithdrawnAmount is only affected until timestampLimit (or get all transactions if timestampLimit is undefined)
-      if (transaction.transactionTimestamp <= timestampLimit || timestampLimit === undefined)
-        if (transaction.to.datatype === 'OUTSIDE' && transaction.from.datatype === 'BUDGET') {
-          calculatedValues.calculatedTotalWithdrawnAmount = paranoidCalculator.add(
-            calculatedValues.calculatedTotalWithdrawnAmount,
-            transaction.amount,
+    function totalLostOnCompletedAndDefaultedLoans(): number {
+      return Object.keys(currentLoanStats).reduce((acc, loanId) => {
+        if (currentLoanStats[loanId].status === 'COMPLETED' || currentLoanStats[loanId].status === 'DEFAULTED') {
+          const lossOnLoan = paranoidCalculator.subtract(
+            currentLoanStats[loanId].amountLent,
+            currentLoanStats[loanId].amountPaidBack,
           );
-        }
+          if (lossOnLoan > 0) {
+            return lossOnLoan + acc;
+          } else {
+            return acc;
+          }
+        } else return acc;
+      }, 0);
     }
-    function applyTransactionToTotalAvaiableAmount(transaction: ITransaction): void {
-      if (transaction.to.datatype === 'BUDGET') {
-        tmpCalculatedAvaiableAmount = paranoidCalculator.add(tmpCalculatedAvaiableAmount, transaction.amount);
-      } else if (transaction.from.datatype === 'BUDGET') {
-        tmpCalculatedAvaiableAmount = paranoidCalculator.subtract(tmpCalculatedAvaiableAmount, transaction.amount);
-      }
-      /**
-       * Apply every new tmpCalculatedAvaiableAmount until timestampLimit,
-       * after that only apply tmpCalculatedAvaiableAmount if it reaches new low value.
-       */
-      if (transaction.transactionTimestamp <= timestampLimit || timestampLimit === undefined) {
-        calculatedValues.calculatedTotalAvailableAmount = tmpCalculatedAvaiableAmount;
-      } else {
-        if (tmpCalculatedAvaiableAmount < calculatedValues.calculatedTotalAvailableAmount)
-          calculatedValues.calculatedTotalAvailableAmount = tmpCalculatedAvaiableAmount;
-      }
+    function totalLentAmount(): number {
+      return Object.keys(currentLoanStats).reduce((acc, loanId) => {
+        if (currentLoanStats[loanId].status !== undefined)
+          return paranoidCalculator.add(acc, currentLoanStats[loanId].amountLent);
+        else return acc;
+      }, 0);
     }
-    async function applyTransactionToTotalLendedToActiveLoansAmount(transaction: ITransaction): Promise<void> {
-      if (transaction.to.datatype === 'LOAN') {
-        if (tmpAmountsLendedToLoans[transaction.to.addressId] === undefined)
-          tmpAmountsLendedToLoans[transaction.to.addressId] = 0;
-        tmpAmountsLendedToLoans[transaction.to.addressId] = paranoidCalculator.add(
-          tmpAmountsLendedToLoans[transaction.to.addressId],
-          transaction.amount,
+    function totalAssociatedLoans(): number {
+      return Object.keys(currentLoanStats).filter((loanId) => {
+        return currentLoanStats[loanId].status !== undefined;
+      }).length;
+    }
+    function totalAssociatedLiveLoans(): number {
+      return Object.keys(currentLoanStats).filter((loanId) => {
+        return (
+          currentLoanStats[loanId].status === 'ACTIVE' ||
+          currentLoanStats[loanId].status === 'PAUSED' ||
+          currentLoanStats[loanId].status === 'PAID'
         );
-      } else if (transaction.from.datatype === 'LOAN') {
-        if (tmpAmountsLendedToLoans[transaction.from.addressId] === undefined)
-          tmpAmountsLendedToLoans[transaction.from.addressId] = 0;
-        tmpAmountsLendedToLoans[transaction.from.addressId] = paranoidCalculator.subtract(
-          tmpAmountsLendedToLoans[transaction.from.addressId],
-          transaction.amount,
-        );
-      }
+      }).length;
+    }
+    function avarageLoanAmount(transaction): number {
+      return relatedLoans.reduce((acc, loan) => {
+        if (currentLoanStats[loan._id.toString()].status === undefined) return acc;
+        if (
+          loan.transactionList.find((loanTransaction) => loanTransaction._id === transaction._id.toString()) ===
+          undefined
+        )
+          return acc;
+
+        if (acc === 0)
+          return loan.transactionList.find((loanTransaction) => loanTransaction._id === transaction._id.toString())
+            .totalInvested;
+        else
+          return paranoidCalculator.divide(
+            paranoidCalculator.add(
+              loan.transactionList.find((loanTransaction) => loanTransaction._id === transaction._id.toString())
+                .totalInvested,
+              acc,
+            ),
+            2,
+          );
+      }, 0);
+    }
+    function avarageLoanDuration(): number {
+      return relatedLoans.reduce((acc, loan) => {
+        if (currentLoanStats[loan._id.toString()].status === undefined) return acc;
+
+        if (acc === 0) return loan.closesTimestamp - loan.openedTimestamp;
+        else return (loan.closesTimestamp - loan.openedTimestamp + acc) / 2;
+      }, 0);
     }
   },
+
   recalculateCalculatedValues: async function recalculateCalculatedBudgetValues(
     input: string | IBudgetDocument,
   ): Promise<IBudget> {
     const MONGO_BUDGET = typeof input === 'string' ? await BudgetModel.findOne({ _id: input }) : input;
 
-    const CALCULATED_VALUES = await this.getCalculatedValuesAtTimestamp({
+    /*const CALCULATED_VALUES = await this.getCalculatedValuesAtTimestamp({
       budgetId: MONGO_BUDGET._id.toString(),
       timestampLimit: undefined, // get all transactions
-    });
+    });*/
 
     // save calculations to DB
-    MONGO_BUDGET.calculatedTotalInvestedAmount = CALCULATED_VALUES.calculatedTotalInvestedAmount;
+    /*MONGO_BUDGET.calculatedTotalInvestedAmount = CALCULATED_VALUES.calculatedTotalInvestedAmount;
     MONGO_BUDGET.calculatedTotalWithdrawnAmount = CALCULATED_VALUES.calculatedTotalWithdrawnAmount;
     MONGO_BUDGET.calculatedTotalAvailableAmount = CALCULATED_VALUES.calculatedTotalAvailableAmount;
     MONGO_BUDGET.calculatedCurrentlyLendedPrincipalToLiveLoansAmount =
@@ -603,7 +961,7 @@ export default {
     MONGO_BUDGET.calculatedTotalAssociatedLoans = CALCULATED_VALUES.calculatedTotalAssociatedLoans;
     MONGO_BUDGET.calculatedTotalAssociatedLiveLoans = CALCULATED_VALUES.calculatedTotalAssociatedLiveLoans;
     MONGO_BUDGET.calculatedAvarageAssociatedLoanDuration = CALCULATED_VALUES.calculatedAvarageAssociatedLoanDuration;
-    MONGO_BUDGET.calculatedAvarageAssociatedLoanAmount = CALCULATED_VALUES.calculatedAvarageAssociatedLoanAmount;
+    MONGO_BUDGET.calculatedAvarageAssociatedLoanAmount = CALCULATED_VALUES.calculatedAvarageAssociatedLoanAmount;*/
 
     await MONGO_BUDGET.save();
     return budgetHelpers.runtimeCast({

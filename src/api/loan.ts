@@ -65,7 +65,7 @@ const Loan = {
 
       // TODO: This is incorrect + real test happens on transaction level
       /*
-      const recalculatedBudget = await Budget.recalculateCalculatedValues(MONGO_LOAN.{
+      const recalculatedBudget = await Budget.updateTransactionList(MONGO_LOAN.{
       if (recalculatedBudget.calculatedTotalAvailableAmount < funds[i].amount)
         throw new Error(`Budget (id: ${funds[i].budgetId}) has insufficient funds.`);
         */
@@ -81,7 +81,10 @@ const Loan = {
           userId: userId,
           ...input,
           notes: [],
-          status: 'ACTIVE',
+          status: {
+            current: 'ACTIVE',
+            timestamp: input.openedTimestamp,
+          },
           calculatedInvestedAmount: 0,
           calculatedOutstandingInterest: 0,
           calculatedPaidInterest: 0,
@@ -112,15 +115,16 @@ const Loan = {
           { session: session },
         );
       }
-
-      await session.commitTransaction();
+      const recalculatedLoan: ILoan = await this.recalculateCalculatedValues(Mongo_Loan, session);
 
       // recalculate affected budgets
+      /* should recaltulate in loan.recalculateCalculatedValues
+      
       for (const fund of funds) {
-        await Budget.recalculateCalculatedValues(fund.budgetId);
-      }
+        await Budget.updateTransactionList(fund.budgetId, session);
+      }*/
 
-      const recalculatedLoan: ILoan = await this.recalculateCalculatedValues(Mongo_Loan);
+      await session.commitTransaction();
 
       return recalculatedLoan;
     } catch (err) {
@@ -241,7 +245,7 @@ const Loan = {
     if (userId === undefined) throw new Error('userId is required!');
     const query: any = {
       userId: userId,
-      status: { $in: status || ['ACTIVE', 'PAID', 'PAUSED', 'COMPLETED', 'DEFAULTED'] },
+      'status.current': { $in: status || ['ACTIVE', 'PAID', 'PAUSED', 'COMPLETED', 'DEFAULTED'] },
     };
     if (loanId !== undefined) query._id = loanId;
 
@@ -291,6 +295,7 @@ const Loan = {
   getTransactions: async function getLoanTransactions(
     loanId: string,
     paginate: { pageNumber: number; pageSize: number },
+    { session = undefined }: { session?: ClientSession } = {},
   ): Promise<ITransaction[]> {
     return await transaction.findTranasactionsFromAndTo(
       {
@@ -298,7 +303,28 @@ const Loan = {
         datatype: 'LOAN',
       },
       paginate,
+      { session },
     );
+  },
+  getBudgetInvestmentPercentageAtTimestamp: function getBudgetInvestmentPercentageAtTimestamp(
+    loan: ILoan,
+    budgetId,
+    timestamp,
+  ): number {
+    // reverse transaction list without mutating original list
+    //const LOAN_TRANSACTION_LIST = loan.transactionList.
+    let totalInvested = 0;
+    let totalInvestedByBudget = 0;
+    for (let i = loan.transactionList.length - 1; i >= 0 && loan.transactionList[i].timestamp <= timestamp; i--) {
+      const TRANSACTION = loan.transactionList[i];
+      if (TRANSACTION.invested !== 0) {
+        totalInvested = TRANSACTION.totalInvested;
+        if (TRANSACTION.from.addressId === budgetId) {
+          totalInvestedByBudget += TRANSACTION.invested;
+        }
+      }
+    }
+    return totalInvestedByBudget / totalInvested;
   },
   addPayment: async function addLoanPayment(
     {
@@ -351,10 +377,7 @@ const Loan = {
     );
 
     if (runRecalculate) {
-      const LOAN: ILoan = await this.recalculateCalculatedValues(loanId);
-      LOAN.calculatedRelatedBudgets.forEach(async (budget) => {
-        await Budget.recalculateCalculatedValues(budget.budgetId);
-      });
+      await this.recalculateCalculatedValues(loanId);
     }
     return NEW_TRANSACTION;
   },
@@ -410,7 +433,6 @@ const Loan = {
     );
 
     if (runRecalculate) {
-      await Budget.recalculateCalculatedValues(budgetId);
       await this.recalculateCalculatedValues(loanId);
     }
     return NEW_TRANSACTION;
@@ -574,10 +596,7 @@ const Loan = {
     );
 
     if (runRecalculate) {
-      const LOAN: ILoan = await this.recalculateCalculatedValues(loanId);
-      LOAN.calculatedRelatedBudgets.forEach(async (budget) => {
-        await Budget.recalculateCalculatedValues(budget.budgetId);
-      });
+      await this.recalculateCalculatedValues(loanId);
     }
     return NEW_TRANSACTION;
   },
@@ -651,7 +670,11 @@ const Loan = {
   },
 
   // Get loan status at a given timestamp
-  getStatusAtTimestamp: function getLoanStatusAtTimestamp(loan: ILoan, timestamp: number): ILoanStatus['current'] {
+  getStatusAtTimestamp: function getLoanStatusAtTimestamp(
+    loan: ILoan,
+    timestamp: number,
+  ): ILoanStatus['current'] | undefined {
+    if (timestamp < loan.openedTimestamp) return undefined;
     const STATUS: ILoanStatus = loan.status;
     const arrayOfStatuses = unWrapStatuses(STATUS);
 
@@ -748,9 +771,6 @@ const Loan = {
       userId: MONGO_LOAN.userId.toString(),
     });
     await MONGO_LOAN.save();
-    MONGO_LOAN.calculatedRelatedBudgets.forEach(async (budget: IRelatedBudget) => {
-      await Budget.recalculateCalculatedValues(budget.budgetId);
-    });
     return await this.recalculateCalculatedValues(MONGO_LOAN);
   },
   default: async function defaultLoan(
@@ -787,9 +807,6 @@ const Loan = {
       });
       await MONGO_LOAN.save();
 
-      MONGO_LOAN.calculatedRelatedBudgets.forEach(async (budget: IRelatedBudget) => {
-        await Budget.recalculateCalculatedValues(budget.budgetId);
-      });
       return await this.recalculateCalculatedValues(MONGO_LOAN);
     } catch (err) {
       console.log(err);
@@ -814,21 +831,25 @@ const Loan = {
     await MONGO_LOAN.save();
     return UPDATED_LOAN;
   },
-  getCalculatedValuesAtTimestamp: async function getLoanCalculatedValuesAtTimestamp({
-    loanId,
-    interestRate,
-    timestampLimit,
-  }: {
-    loanId: string;
-    interestRate: IInterestRate;
-    timestampLimit: number;
-  }): Promise<
+  getCalculatedValuesAtTimestamp: async function getLoanCalculatedValuesAtTimestamp(
+    {
+      loanId,
+      interestRate,
+      timestampLimit,
+    }: {
+      loanId: string;
+      interestRate: IInterestRate;
+      timestampLimit: number;
+    },
+    { session = undefined }: { session?: ClientSession } = {},
+  ): Promise<
     Pick<
       ILoan,
       | 'calculatedInvestedAmount'
       | 'calculatedTotalPaidPrincipal'
       | 'calculatedOutstandingInterest'
       | 'calculatedPaidInterest'
+      | 'calculatedTotalForgiven'
       | 'calculatedLastTransactionTimestamp'
       | 'calculatedRelatedBudgets'
       | 'transactionList'
@@ -838,13 +859,18 @@ const Loan = {
     let calculatedTotalPaidPrincipal = 0;
     let calculatedOutstandingInterest = 0;
     let calculatedPaidInterest = 0;
+    let calculatedTotalForgiven = 0;
     let calculatedLastTransactionTimestamp = 0;
     const calculatedRelatedBudgets = {};
     // get all transactions
-    const loanTransactions: ITransaction[] = await this.getTransactions(loanId, {
-      pageNumber: 0,
-      pageSize: Infinity,
-    });
+    const loanTransactions: ITransaction[] = await this.getTransactions(
+      loanId,
+      {
+        pageNumber: 0,
+        pageSize: Infinity,
+      },
+      { session },
+    );
 
     if (loanTransactions.length > 0) calculatedLastTransactionTimestamp = loanTransactions[0].transactionTimestamp;
 
@@ -855,12 +881,13 @@ const Loan = {
         calculatedRelatedBudgets[transaction.from.addressId].invested =
           calculatedRelatedBudgets[transaction.from.addressId].invested + transaction.amount;
       }
+      /* deprecated 
       if (transaction.to.datatype === 'BUDGET') {
         if (calculatedRelatedBudgets[transaction.to.addressId] === undefined)
           calculatedRelatedBudgets[transaction.to.addressId] = { invested: 0, withdrawn: 0 };
         calculatedRelatedBudgets[transaction.to.addressId].withdrawn =
           calculatedRelatedBudgets[transaction.to.addressId].withdrawn + transaction.amount;
-      }
+      }*/
     });
 
     const TRANSACTIONS_LIST: ITransactionInterval[] = this.generateTransactionsList({
@@ -873,15 +900,18 @@ const Loan = {
       calculatedOutstandingInterest = TRANSACTIONS_LIST[TRANSACTIONS_LIST.length - 1].outstandingInterest;
       calculatedPaidInterest = TRANSACTIONS_LIST[TRANSACTIONS_LIST.length - 1].totalPaidInterest;
       calculatedTotalPaidPrincipal = TRANSACTIONS_LIST[TRANSACTIONS_LIST.length - 1].totalPaidPrincipal;
+      calculatedTotalForgiven = TRANSACTIONS_LIST[TRANSACTIONS_LIST.length - 1].totalForgiven;
     }
     return {
       calculatedInvestedAmount,
       calculatedOutstandingInterest,
       calculatedPaidInterest,
       calculatedTotalPaidPrincipal,
+      calculatedTotalForgiven,
       calculatedLastTransactionTimestamp,
       calculatedRelatedBudgets: Object.keys(calculatedRelatedBudgets).map((key) => {
         return {
+          _id: new mongoose.Types.ObjectId().toString(),
           budgetId: key,
           invested: parseInt(calculatedRelatedBudgets[key].invested),
           withdrawn: parseInt(calculatedRelatedBudgets[key].withdrawn),
@@ -892,15 +922,26 @@ const Loan = {
   },
   recalculateCalculatedValues: async function recalculateLoanCalculatedValues(
     input: string | ILoanDocument,
+    session?: ClientSession,
   ): Promise<ILoan> {
-    const MONGO_LOAN = typeof input === 'string' ? await LoanModel.findOne({ _id: input }) : input;
+    const MONGO_LOAN = typeof input === 'string' ? await LoanModel.findOne({ _id: input }).session(session) : input;
 
-    const CALCULATED_VALUES_UNTIL_NOW = await this.getCalculatedValuesAtTimestamp({
-      loanId: MONGO_LOAN._id.toString(),
-      interestRate: MONGO_LOAN.interestRate,
-      timestampLimit: MONGO_LOAN.calculatedLastTransactionTimestamp,
-    });
+    const CALCULATED_VALUES_UNTIL_NOW = await this.getCalculatedValuesAtTimestamp(
+      {
+        loanId: MONGO_LOAN._id.toString(),
+        interestRate: MONGO_LOAN.interestRate,
+        timestampLimit: MONGO_LOAN.calculatedLastTransactionTimestamp,
+      },
+      { session },
+    );
 
+    MONGO_LOAN.calculatedInvestedAmount = CALCULATED_VALUES_UNTIL_NOW.calculatedInvestedAmount;
+    MONGO_LOAN.calculatedLastTransactionTimestamp = CALCULATED_VALUES_UNTIL_NOW.calculatedLastTransactionTimestamp;
+    MONGO_LOAN.calculatedOutstandingInterest = CALCULATED_VALUES_UNTIL_NOW.calculatedOutstandingInterest;
+    MONGO_LOAN.calculatedPaidInterest = CALCULATED_VALUES_UNTIL_NOW.calculatedPaidInterest;
+    MONGO_LOAN.calculatedRelatedBudgets = CALCULATED_VALUES_UNTIL_NOW.calculatedRelatedBudgets;
+    MONGO_LOAN.calculatedTotalPaidPrincipal = CALCULATED_VALUES_UNTIL_NOW.calculatedTotalPaidPrincipal;
+    MONGO_LOAN.transactionList = CALCULATED_VALUES_UNTIL_NOW.transactionList;
     // Check if PAID
     if (
       _.round(CALCULATED_VALUES_UNTIL_NOW.calculatedTotalPaidPrincipal, 2) >=
@@ -909,14 +950,6 @@ const Loan = {
       MONGO_LOAN.status.current === 'ACTIVE'
     ) {
       await this.changeStatus(MONGO_LOAN, 'PAID', Date.now());
-      MONGO_LOAN.calculatedInvestedAmount = CALCULATED_VALUES_UNTIL_NOW.calculatedInvestedAmount;
-      MONGO_LOAN.calculatedLastTransactionTimestamp = CALCULATED_VALUES_UNTIL_NOW.calculatedLastTransactionTimestamp;
-      MONGO_LOAN.calculatedOutstandingInterest = CALCULATED_VALUES_UNTIL_NOW.calculatedOutstandingInterest;
-      MONGO_LOAN.calculatedPaidInterest = CALCULATED_VALUES_UNTIL_NOW.calculatedPaidInterest;
-      MONGO_LOAN.calculatedRelatedBudgets = CALCULATED_VALUES_UNTIL_NOW.calculatedRelatedBudgets;
-      MONGO_LOAN.calculatedTotalPaidPrincipal = CALCULATED_VALUES_UNTIL_NOW.calculatedTotalPaidPrincipal;
-      MONGO_LOAN.transactionList = CALCULATED_VALUES_UNTIL_NOW.transactionList;
-      await MONGO_LOAN.save();
     } else if (
       _.round(CALCULATED_VALUES_UNTIL_NOW.calculatedTotalPaidPrincipal, 2) <
         _.round(CALCULATED_VALUES_UNTIL_NOW.calculatedInvestedAmount, 2) ||
@@ -924,9 +957,9 @@ const Loan = {
     ) {
       if (MONGO_LOAN.status.current === 'PAID') {
         await this.changeStatus(MONGO_LOAN, 'ACTIVE', Date.now());
-        await MONGO_LOAN.save();
       }
     }
+    await MONGO_LOAN.save({ session });
 
     const CHANGED_LOAN = loanHelpers.runtimeCast({
       ...MONGO_LOAN.toObject(),
@@ -943,6 +976,9 @@ const Loan = {
       },
     });
 
+    for (const budget of MONGO_LOAN.calculatedRelatedBudgets) {
+      await Budget.updateTransactionList(budget.budgetId, session);
+    }
     // Saved in recalculateStatus  await MONGO_LOAN.save();
     return {
       ...CHANGED_LOAN,
@@ -1023,8 +1059,8 @@ const Loan = {
     // POSSIBLE SOURCE OF BUGS IS DATA STRUCTURE IS CHANGED
     if (loanTransactions[0].transactionTimestamp <= timestampLimit)
       loanTransactions.unshift({
-        _id: '',
-        userId: '',
+        _id: '000000000000000000000000',
+        userId: loanTransactions[0].userId,
         transactionTimestamp: timestampLimit,
         description: '',
         from: { datatype: 'OUTSIDE', addressId: '' },
@@ -1038,6 +1074,8 @@ const Loan = {
     let totalInvested = 0;
     let totalPaidPrincipal = 0;
     let totalPaidInterest = 0;
+    let totalRefunded = 0;
+    let totalForgiven = 0;
     let outstandingPrincipal = 0;
     let outstandingInterest = 0;
     for (let i = loanTransactions.length - 1; i >= 0; i--) {
@@ -1045,7 +1083,7 @@ const Loan = {
 
       const transactionInformation: Pick<
         ITransactionInterval,
-        | 'id'
+        | '_id'
         | 'timestamp'
         | 'description'
         | 'from'
@@ -1055,8 +1093,10 @@ const Loan = {
         | 'feeCharged'
         | 'principalPaid'
         | 'interestPaid'
+        | 'refundedAmount'
+        | 'forgivenAmount'
       > = {
-        id: loanTransaction._id.toString(),
+        _id: loanTransaction._id.toString(),
         timestamp: loanTransaction.transactionTimestamp,
         description: loanTransaction.description,
         from: loanTransaction.from,
@@ -1066,6 +1106,8 @@ const Loan = {
         interestCharged: 0,
         principalPaid: 0,
         interestPaid: 0,
+        refundedAmount: 0,
+        forgivenAmount: 0,
       };
 
       //
@@ -1119,7 +1161,7 @@ const Loan = {
           transactionInformation.feeCharged = loanTransaction.amount;
           outstandingInterest += loanTransaction.amount;
         }
-      } else if (loanTransaction.from.datatype === 'LOAN') {
+      } else if (loanTransaction.from.datatype === 'OUTSIDE') {
         if (loanTransaction.amount <= outstandingInterest) {
           transactionInformation.interestPaid = loanTransaction.amount;
           outstandingInterest -= loanTransaction.amount;
@@ -1131,6 +1173,24 @@ const Loan = {
           totalPaidPrincipal += transactionInformation.principalPaid;
           outstandingInterest = 0;
           outstandingPrincipal -= transactionInformation.principalPaid;
+        }
+      } else if (loanTransaction.from.datatype === 'LOAN' && loanTransaction.to.datatype === 'OUTSIDE') {
+        // Refund
+        transactionInformation.refundedAmount = loanTransaction.amount;
+        totalRefunded += loanTransaction.amount;
+        outstandingPrincipal += loanTransaction.amount;
+        totalPaidPrincipal -= loanTransaction.amount;
+      } else if (loanTransaction.from.datatype === 'LOAN' && loanTransaction.to.datatype === 'FORGIVENESS') {
+        //  Forgiveness
+        if (loanTransaction.amount <= outstandingInterest) {
+          transactionInformation.forgivenAmount = loanTransaction.amount;
+          outstandingInterest -= loanTransaction.amount;
+          totalForgiven += loanTransaction.amount;
+        } else {
+          transactionInformation.forgivenAmount = loanTransaction.amount;
+          totalForgiven += loanTransaction.amount;
+          outstandingPrincipal -= loanTransaction.amount - outstandingInterest;
+          outstandingInterest = 0;
         }
       }
 
@@ -1149,6 +1209,8 @@ const Loan = {
         totalInvested: totalInvested,
         totalPaidPrincipal: totalPaidPrincipal,
         totalPaidInterest: totalPaidInterest,
+        totalRefunded: totalRefunded,
+        totalForgiven: totalForgiven,
         outstandingPrincipal: outstandingPrincipal,
         outstandingInterest: outstandingInterest,
       });
@@ -1159,7 +1221,7 @@ const Loan = {
     // 1. get all loans with status 'ACTIVE' and expectedPayments that are older than now and have not been notified and get loan.userId notificationTokens
     type PopulatedLoan = ILoan & { userId: IUser };
     const loans = await LoanModel.find<PopulatedLoan>({
-      status: 'ACTIVE',
+      'status.current': 'ACTIVE',
       expectedPayments: {
         $elemMatch: {
           timestamp: {
@@ -1217,7 +1279,7 @@ const Loan = {
     // 3. update loans with notified: true
     await LoanModel.updateMany(
       {
-        status: 'ACTIVE',
+        'status.current': 'ACTIVE',
         expectedPayments: {
           $elemMatch: {
             timestamp: {

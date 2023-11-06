@@ -7,7 +7,6 @@ import mongoose, { ClientSession } from 'mongoose';
 import * as User from './user.js';
 import Budget from './budget.js';
 import Loan from './loan.js';
-import paranoidCalculator from './utils/paranoidCalculator/paranoidCalculator.js';
 import { ILoan } from './types/loan/loanInterface.js';
 
 export default {
@@ -58,15 +57,10 @@ export default {
       revisions: undefined,
     } as ITransaction;
     transactionHelpers.runtimeCast(validatedTransaction);
-    if (runChecks) {
-      try {
-        await this.checkIfTransactionCanExist({ transaction: validatedTransaction }, { session: session });
-      } catch (err) {
-        console.log(err);
-        throw new Error(err.message);
-      }
-    }
     try {
+      if (runChecks) {
+        await this.checkIfTransactionCanExist({ transaction: validatedTransaction }, { session: session });
+      }
       const newTransactionInDB: any = await new TransactionModel(validatedTransaction).save({ session });
       const newTransaction: ITransaction = {
         _id: newTransactionInDB._id.toString(),
@@ -111,7 +105,7 @@ export default {
         loanId: transaction.from.addressId,
       });
 
-      if (AFFECTED_LOAN.status === 'COMPLETED' || AFFECTED_LOAN.status === 'DEFAULTED')
+      if (AFFECTED_LOAN.status.current === 'COMPLETED' || AFFECTED_LOAN.status.current === 'DEFAULTED')
         throw new Error('Transaction from loan with status "COMPLETED" or "DEFAULTED" can not be deleted');
     } else if (transaction.to.datatype === 'LOAN') {
       const AFFECTED_LOAN: ILoan = await Loan.getOneFromUser({
@@ -119,7 +113,7 @@ export default {
         loanId: transaction.to.addressId,
       });
 
-      if (AFFECTED_LOAN.status === 'COMPLETED' || AFFECTED_LOAN.status === 'DEFAULTED')
+      if (AFFECTED_LOAN.status.current === 'COMPLETED' || AFFECTED_LOAN.status.current === 'DEFAULTED')
         throw new Error('Transaction from loan with status "COMPLETED" or "DEFAULTED" can not be deleted');
     }
     transaction.revisions = transactionHelpers.runtimeCast({
@@ -166,7 +160,6 @@ export default {
           entryTimestamp: transaction.entryTimestamp,
           revisions: transaction.revisions !== undefined ? transaction.revisions.toObject() : undefined,
         }),
-        originalTransactionId: transactionId,
       });
     } catch (err) {
       console.log(err);
@@ -204,10 +197,10 @@ export default {
       revisions: Mongo_editedTransaction.revisions,
     });
     if (editedTransaction.from.datatype === 'BUDGET') {
-      await Budget.recalculateCalculatedValues(editedTransaction.from.addressId);
+      await Budget.updateTransactionList(editedTransaction.from.addressId);
     }
     if (editedTransaction.to.datatype === 'BUDGET') {
-      await Budget.recalculateCalculatedValues(editedTransaction.to.addressId);
+      await Budget.updateTransactionList(editedTransaction.to.addressId);
     }
     if (editedTransaction.from.datatype === 'LOAN') {
       await Loan.recalculateCalculatedValues(editedTransaction.from.addressId);
@@ -230,7 +223,7 @@ export default {
           loanId: TRANSACTION.from.addressId,
         });
 
-        if (AFFECTED_LOAN.status === 'COMPLETED' || AFFECTED_LOAN.status === 'DEFAULTED')
+        if (AFFECTED_LOAN.status.current === 'COMPLETED' || AFFECTED_LOAN.status.current === 'DEFAULTED')
           throw new Error('Transaction from loan with status "COMPLETED" or "DEFAULTED" can not be deleted');
       } else if (TRANSACTION.to.datatype === 'LOAN') {
         const AFFECTED_LOAN: ILoan = await Loan.getOneFromUser({
@@ -238,16 +231,16 @@ export default {
           loanId: TRANSACTION.to.addressId,
         });
 
-        if (AFFECTED_LOAN.status === 'COMPLETED' || AFFECTED_LOAN.status === 'DEFAULTED')
+        if (AFFECTED_LOAN.status.current === 'COMPLETED' || AFFECTED_LOAN.status.current === 'DEFAULTED')
           throw new Error('Transaction from loan with status "COMPLETED" or "DEFAULTED" can not be deleted');
       }
       const deletedTransaction: ITransaction = await TransactionModel.findByIdAndDelete(transactionId).lean();
       if (deletedTransaction === null) throw new Error('Transaction you wanted to delete was not found!');
       if (deletedTransaction.from.datatype === 'BUDGET') {
-        Budget.recalculateCalculatedValues(deletedTransaction.from.addressId.toString());
+        Budget.updateTransactionList(deletedTransaction.from.addressId.toString());
       }
       if (deletedTransaction.to.datatype === 'BUDGET') {
-        Budget.recalculateCalculatedValues(deletedTransaction.to.addressId.toString());
+        Budget.updateTransactionList(deletedTransaction.to.addressId.toString());
       }
       if (deletedTransaction.from.datatype === 'LOAN') {
         await Loan.recalculateCalculatedValues(deletedTransaction.from.addressId.toString());
@@ -264,6 +257,7 @@ export default {
   findTranasactionsFromAndTo: async function findTransactionsFromAndTo(
     transactionAddress: ITransactionAddress,
     { pageNumber = 0, pageSize = Infinity }: { pageNumber?: number; pageSize?: number },
+    { session = undefined }: { session?: ClientSession } = {},
   ): Promise<ITransaction[]> {
     let validatedTransactionAddress = transactionAddressHelpers.validate.all(transactionAddress);
     validatedTransactionAddress = transactionAddressHelpers.runtimeCast(transactionAddress);
@@ -280,6 +274,7 @@ export default {
         },
       ],
     })
+      .session(session)
       .sort({ transactionTimestamp: -1 })
       .skip(pageSize * pageNumber)
       .limit(pageSize)
@@ -310,7 +305,7 @@ export default {
   /**
    * Checks if transaction will break any of following rules:
    * - Rule 0: Referenced User, Budget and Loan must exist
-   * - Rule 1: Transaction involving the budget can not occur if the budget would reach negative value at any point in
+   * - (Deprecated) Rule 1: Transaction involving the budget can not occur if the budget would reach negative value at any point in
    *   time of existance of the budget
    * - Rule 2: Transaction involving the loan can not occur before the loan is created
    * - Rule 3: Transaction involving the loan can not occur if the loan has status of "closed"
@@ -321,10 +316,8 @@ export default {
   checkIfTransactionCanExist: async function checkIfTransactionCanExist(
     {
       transaction,
-      originalTransactionId,
     }: {
       transaction: ITransaction;
-      originalTransactionId: string | undefined;
     },
     { session = undefined }: { session?: ClientSession } = {},
   ): Promise<true> {
@@ -336,70 +329,29 @@ export default {
     if (transaction.to.datatype === 'LOAN') await Loan.checkIfExists(transaction.to.addressId, session);
 
     // Do check for Rule 1
+    /* Deprecated because there is currently no need to perform this check
     if (transaction.from.datatype === 'BUDGET') {
-      const AFFECTED_BUDGET_ID = transaction.from.addressId;
-      const AFFECTED_BUDGET_TRANSACTIONS: ITransaction[] = await Budget.getTransactions(AFFECTED_BUDGET_ID, {
-        pageNumber: 0,
-        pageSize: Infinity,
-      });
+      if (originalTransactionId !== undefined)
+        throw new Error('TODO: Editing transaction linked to budget in not implemented!');
+      const AFFECTED_BUDGET = await Budget.getOneFromUserWithTransactionList(
+        {
+          userId: transaction.userId,
+          budgetId: transaction.from.addressId,
+        },
+        { session: session },
+      );
 
-      // delete old transaction from Transactions if originalTransactionId is provided
-      if (originalTransactionId !== undefined) {
-        for (let i = 0; i < AFFECTED_BUDGET_TRANSACTIONS.length; i++) {
-          if (AFFECTED_BUDGET_TRANSACTIONS[i]._id === originalTransactionId) {
-            AFFECTED_BUDGET_TRANSACTIONS.splice(i, 1);
-            break;
-          }
-        }
+      let avaiableFunds = Infinity;
+      //for (let i = budget.transactionList.length - 1; i >= 0; i--) {
+      for (let i = 0; i < AFFECTED_BUDGET.transactionList.length; i++) {
+        const budgetTransaction = AFFECTED_BUDGET.transactionList[i];
+        if (avaiableFunds > budgetTransaction.budgetStats.totalAvailableAmount)
+          avaiableFunds = budgetTransaction.budgetStats.totalAvailableAmount;
+        if (budgetTransaction.timestamp < transaction.transactionTimestamp) break;
       }
-
-      // insert new transaction into Transactions at correct index (according to transactionTimestamp and entryTimestamp)
-      /*
-        Algo explained:
-        Loop existing transactions from newest to oldest. (newest transaction = o | oldest transaction = transactions.length-1)
-        If new transaction is newer than transactions[i] then insert new transaction after transactions[i] and break loop.
-        Else if new transaction is equal age as transactions[i] then check for entryTimestamp
-        - if entryTimestamp of new transaction is newer or equal then insert new transaction after transactions[i]
-        - else insert new transaction before transactions[i]
-        If new transaction is not inserted while looping throught transactions 
-        (aka. new transaction is older than oldest transaction)
-        then insert new transaction at end of transactions array (oldest transaction)
-      */
-      let isTransactionInserted = false;
-      for (let i = 0; i < AFFECTED_BUDGET_TRANSACTIONS.length; i++) {
-        if (AFFECTED_BUDGET_TRANSACTIONS[i].transactionTimestamp < transaction.transactionTimestamp) {
-          AFFECTED_BUDGET_TRANSACTIONS.splice(i, 0, transaction);
-          isTransactionInserted = true;
-          break;
-        } else if (AFFECTED_BUDGET_TRANSACTIONS[i].transactionTimestamp === transaction.transactionTimestamp) {
-          if (AFFECTED_BUDGET_TRANSACTIONS[i].entryTimestamp <= transaction.entryTimestamp) {
-            AFFECTED_BUDGET_TRANSACTIONS.splice(i, 0, transaction);
-          } else {
-            AFFECTED_BUDGET_TRANSACTIONS.splice(i + 1, 0, transaction);
-          }
-          isTransactionInserted = true;
-          break;
-        }
-      }
-      if (!isTransactionInserted) {
-        AFFECTED_BUDGET_TRANSACTIONS.splice(AFFECTED_BUDGET_TRANSACTIONS.length - 1, 0, transaction);
-      }
-
-      let budgetFunds = 0;
-      for (let i = AFFECTED_BUDGET_TRANSACTIONS.length - 1; i >= 0; i--) {
-        const TRANSACTION = AFFECTED_BUDGET_TRANSACTIONS[i];
-
-        if (TRANSACTION.from.datatype === 'BUDGET') {
-          budgetFunds = paranoidCalculator.subtract(budgetFunds, TRANSACTION.amount);
-        } else if (TRANSACTION.to.datatype === 'BUDGET') {
-          budgetFunds = paranoidCalculator.add(budgetFunds, TRANSACTION.amount);
-        }
-        if (budgetFunds < 0) {
-          throw new Error('transaction would make budget funds negative');
-        }
-      }
+      if (avaiableFunds < transaction.amount) throw new Error('transaction would make budget funds negative');
     }
-
+    */
     // Do check for Rule 2 and Rule 3
     if (transaction.from.datatype === 'LOAN') {
       const AFFECTED_LOAN: ILoan = await Loan.getOneFromUser(
@@ -412,7 +364,7 @@ export default {
       if (AFFECTED_LOAN.openedTimestamp > transaction.transactionTimestamp)
         throw new Error('Transaction can not occur before loan openedTimestamp');
 
-      if (AFFECTED_LOAN.status === 'COMPLETED')
+      if (AFFECTED_LOAN.status.current === 'COMPLETED')
         throw new Error('Transaction can not occur on loan with status "COMPLETED"');
     } else if (transaction.to.datatype === 'LOAN') {
       const AFFECTED_LOAN: ILoan = await Loan.getOneFromUser(
@@ -424,7 +376,7 @@ export default {
       );
       if (AFFECTED_LOAN.openedTimestamp > transaction.transactionTimestamp)
         throw new Error('Transaction can not occur before loan openedTimestamp');
-      if (AFFECTED_LOAN.status === 'COMPLETED')
+      if (AFFECTED_LOAN.status.current === 'COMPLETED')
         throw new Error('Transaction can not occur on loan with status "COMPLETED"');
     }
     return true;

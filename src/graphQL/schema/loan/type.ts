@@ -35,6 +35,7 @@ export const loanType = new GraphQLObjectType({
     calculatedTotalPaidPrincipal: { type: new GraphQLNonNull(GraphQLFloat) },
     calculatedOutstandingInterest: { type: new GraphQLNonNull(GraphQLFloat) },
     calculatedPaidInterest: { type: new GraphQLNonNull(GraphQLFloat) },
+    calculatedTotalForgiven: { type: new GraphQLNonNull(GraphQLFloat) },
     calculatedLastTransactionTimestamp: { type: new GraphQLNonNull(GraphQLFloat) },
     calculatedRelatedBudgets: { type: new GraphQLList(loanRelatedBudget) },
     transactionList: { type: new GraphQLList(loanTransactionList) },
@@ -87,6 +88,14 @@ export const loanStatus = new GraphQLObjectType({
   }),
 });
 
+export const loanStatusInput = new GraphQLInputObjectType({
+  name: 'loanStatusInputType',
+  fields: (): any => ({
+    current: { type: new GraphQLNonNull(loanStatusValues) },
+    timestamp: { type: new GraphQLNonNull(GraphQLFloat) },
+  }),
+});
+
 export const loanRelatedBudget = new GraphQLObjectType({
   name: 'LoanRelatedBudgetType',
   fields: (): any => ({
@@ -99,12 +108,14 @@ export const loanRelatedBudget = new GraphQLObjectType({
 export const loanTransactionList = new GraphQLObjectType({
   name: 'loanTransactionListType',
   fields: (): any => ({
-    id: { type: new GraphQLNonNull(GraphQLID) },
+    _id: { type: new GraphQLNonNull(GraphQLID) },
     timestamp: { type: new GraphQLNonNull(GraphQLFloat) },
     description: { type: new GraphQLNonNull(GraphQLString) },
     totalInvested: { type: new GraphQLNonNull(GraphQLFloat) },
     totalPaidPrincipal: { type: new GraphQLNonNull(GraphQLFloat) },
     totalPaidInterest: { type: new GraphQLNonNull(GraphQLFloat) },
+    totalRefunded: { type: new GraphQLNonNull(GraphQLFloat) },
+    totalForgiven: { type: new GraphQLNonNull(GraphQLFloat) },
     from: { type: new GraphQLNonNull(transactionAddressType) },
     to: { type: new GraphQLNonNull(transactionAddressType) },
     invested: { type: new GraphQLNonNull(GraphQLFloat) },
@@ -112,6 +123,8 @@ export const loanTransactionList = new GraphQLObjectType({
     interestCharged: { type: new GraphQLNonNull(GraphQLFloat) },
     principalPaid: { type: new GraphQLNonNull(GraphQLFloat) },
     interestPaid: { type: new GraphQLNonNull(GraphQLFloat) },
+    refundedAmount: { type: new GraphQLNonNull(GraphQLFloat) },
+    forgivenAmount: { type: new GraphQLNonNull(GraphQLFloat) },
     outstandingPrincipal: { type: new GraphQLNonNull(GraphQLFloat) },
     outstandingInterest: { type: new GraphQLNonNull(GraphQLFloat) },
   }),

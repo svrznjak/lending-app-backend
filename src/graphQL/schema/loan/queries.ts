@@ -1,11 +1,11 @@
 import { ITransaction } from './../../../api/types/transaction/transactionInterface.js';
 import { transactionType } from './../transaction/type.js';
-import { GraphQLFloat, GraphQLID, GraphQLList, GraphQLNonNull, GraphQLObjectType } from 'graphql';
+import { GraphQLFloat, GraphQLID, GraphQLList, GraphQLNonNull, GraphQLObjectType, GraphQLString } from 'graphql';
 import { getUserByAuthId } from '../../../api/user.js';
 import Loan from '../../../api/loan.js';
 import { paginationInputType } from '../commonTypes.js';
 import LoanModel from '../../../api/db/model/LoanModel.js';
-import { loanCalculatedValues, loanStatus, loanType } from './type.js';
+import { loanCalculatedValues, loanType } from './type.js';
 import { ILoan } from '../../../api/types/loan/loanInterface.js';
 import { interestRateInputType } from '../interestRate/type.js';
 
@@ -17,7 +17,7 @@ export default new GraphQLObjectType({
       args: {
         loanId: { type: GraphQLID },
         status: {
-          type: new GraphQLList(loanStatus),
+          type: new GraphQLList(GraphQLString),
         },
       },
       resolve: async (_parent: any, args: any, context: any): Promise<ILoan[]> => {

@@ -12,7 +12,7 @@ const NoteSchema = new mongoose.Schema({
 NoteSchema.add({ revisions: [NoteSchema] });
 
 const LoanStatusSchema = new mongoose.Schema({
-  status: {
+  current: {
     type: String,
     enum: ['ACTIVE', 'PAUSED', 'PAID', 'COMPLETED', 'DEFAULTED'],
     required: true,
@@ -20,7 +20,7 @@ const LoanStatusSchema = new mongoose.Schema({
   timestamp: { type: Number, required: true },
 });
 
-LoanStatusSchema.add({ revisions: [LoanStatusSchema] });
+LoanStatusSchema.add({ previous: LoanStatusSchema });
 
 const ExpectedPaymentSchema = new mongoose.Schema({
   timestamp: { type: Number, required: true },
@@ -58,16 +58,23 @@ export const LoanSchema = new mongoose.Schema(
       type: [ExpectedPaymentSchema],
       default: [],
     },
-    status: LoanStatusSchema,
+    status: {
+      type: LoanStatusSchema,
+      required: true,
+    },
     calculatedInvestedAmount: { type: Number },
     calculatedTotalPaidPrincipal: { type: Number },
     calculatedOutstandingInterest: { type: Number },
     calculatedPaidInterest: { type: Number },
+    calculatedTotalForgiven: { type: Number },
     calculatedLastTransactionTimestamp: { type: Number },
     calculatedRelatedBudgets: {
       type: [
         {
-          _id: false,
+          //_id: false,
+          _id: {
+            type: mongoose.Schema.Types.ObjectId,
+          },
           budgetId: { type: String, required: true },
           invested: { type: Number, default: 0 },
           withdrawn: { type: Number, default: 0 },
@@ -78,13 +85,18 @@ export const LoanSchema = new mongoose.Schema(
     transactionList: {
       type: [
         {
-          _id: false,
-          id: { type: String },
+          _id: {
+            type: mongoose.Schema.Types.ObjectId,
+            required: true,
+            ref: 'Transactions',
+          },
           timestamp: { type: Number },
           description: { type: String },
           totalInvested: { type: Number },
           totalPaidPrincipal: { type: Number },
           totalPaidInterest: { type: Number },
+          totalRefunded: { type: Number },
+          totalForgiven: { type: Number },
           from: {
             type: {
               datatype: {
@@ -112,6 +124,8 @@ export const LoanSchema = new mongoose.Schema(
           interestCharged: { type: Number },
           principalPaid: { type: Number },
           interestPaid: { type: Number },
+          refundedAmount: { type: Number },
+          forgivenAmount: { type: Number },
           outstandingPrincipal: { type: Number },
           outstandingInterest: { type: Number },
         },
