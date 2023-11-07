@@ -27,6 +27,7 @@ import { TokenMessage } from 'firebase-admin/messaging';
 import { sendNotifications } from './utils/cloudMessaging/cloudMessaging.js';
 import UserModel from './db/model/UserModel.js';
 import { paymentFrequencyHelpers } from './types/paymentFrequency/paymentFrequencyHelpers.js';
+import paranoidCalculator from './utils/paranoidCalculator/paranoidCalculator.js';
 
 interface fund {
   budgetId: string;
@@ -89,6 +90,7 @@ const Loan = {
           calculatedOutstandingInterest: 0,
           calculatedPaidInterest: 0,
           calculatedTotalPaidPrincipal: 0,
+          calculatedTotalForgiven: 0,
           calculatedLastTransactionTimestamp: input.openedTimestamp,
           calculatedRelatedBudgets: [],
         }),
@@ -752,7 +754,13 @@ const Loan = {
     // Just in case recheck if loan is actualy paid at the time of last transaction
     if (
       _.round(CALCULATED_VALUES.calculatedInvestedAmount, 2) !==
-      _.round(CALCULATED_VALUES.calculatedTotalPaidPrincipal, 2)
+      _.round(
+        paranoidCalculator.add(
+          CALCULATED_VALUES.calculatedTotalPaidPrincipal,
+          CALCULATED_VALUES.calculatedTotalForgiven,
+        ),
+        2,
+      )
     )
       throw new Error('Loan can not be closed if it is not balanced.');
 
@@ -941,18 +949,29 @@ const Loan = {
     MONGO_LOAN.calculatedPaidInterest = CALCULATED_VALUES_UNTIL_NOW.calculatedPaidInterest;
     MONGO_LOAN.calculatedRelatedBudgets = CALCULATED_VALUES_UNTIL_NOW.calculatedRelatedBudgets;
     MONGO_LOAN.calculatedTotalPaidPrincipal = CALCULATED_VALUES_UNTIL_NOW.calculatedTotalPaidPrincipal;
+    MONGO_LOAN.calculatedTotalForgiven = CALCULATED_VALUES_UNTIL_NOW.calculatedTotalForgiven;
     MONGO_LOAN.transactionList = CALCULATED_VALUES_UNTIL_NOW.transactionList;
     // Check if PAID
     if (
-      _.round(CALCULATED_VALUES_UNTIL_NOW.calculatedTotalPaidPrincipal, 2) >=
-        _.round(CALCULATED_VALUES_UNTIL_NOW.calculatedInvestedAmount, 2) &&
+      _.round(
+        paranoidCalculator.add(
+          CALCULATED_VALUES_UNTIL_NOW.calculatedTotalPaidPrincipal,
+          CALCULATED_VALUES_UNTIL_NOW.calculatedTotalForgiven,
+        ),
+        2,
+      ) >= _.round(CALCULATED_VALUES_UNTIL_NOW.calculatedInvestedAmount, 2) &&
       _.round(CALCULATED_VALUES_UNTIL_NOW.calculatedOutstandingInterest, 2) === 0 &&
       MONGO_LOAN.status.current === 'ACTIVE'
     ) {
       await this.changeStatus(MONGO_LOAN, 'PAID', Date.now());
     } else if (
-      _.round(CALCULATED_VALUES_UNTIL_NOW.calculatedTotalPaidPrincipal, 2) <
-        _.round(CALCULATED_VALUES_UNTIL_NOW.calculatedInvestedAmount, 2) ||
+      _.round(
+        paranoidCalculator.add(
+          CALCULATED_VALUES_UNTIL_NOW.calculatedTotalPaidPrincipal,
+          CALCULATED_VALUES_UNTIL_NOW.calculatedTotalForgiven,
+        ),
+        2,
+      ) < _.round(CALCULATED_VALUES_UNTIL_NOW.calculatedInvestedAmount, 2) ||
       _.round(CALCULATED_VALUES_UNTIL_NOW.calculatedOutstandingInterest, 2) > 0
     ) {
       if (MONGO_LOAN.status.current === 'PAID') {
