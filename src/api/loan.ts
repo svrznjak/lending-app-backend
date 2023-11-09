@@ -176,6 +176,7 @@ const Loan = {
     }
     if (closesTimestamp !== undefined) {
       newInfo.closesTimestamp = loanHelpers.validate.closesTimestamp(closesTimestamp);
+      if (loan.openedTimestamp >= newInfo.closesTimestamp) throw new Error('Loan can not be closed before it starts!');
     }
     if (paymentFrequency !== undefined) {
       newInfo.paymentFrequency.revisions = {
