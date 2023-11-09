@@ -203,10 +203,16 @@ export default {
       await Budget.updateTransactionList(editedTransaction.to.addressId);
     }
     if (editedTransaction.from.datatype === 'LOAN') {
-      await Loan.recalculateCalculatedValues(editedTransaction.from.addressId);
+      const recalculatedLoan = await this.recalculateCalculatedValues(editedTransaction.from.addressId);
+      for (const budget of recalculatedLoan.calculatedRelatedBudgets) {
+        await Budget.updateTransactionList(budget.budgetId);
+      }
     }
     if (editedTransaction.to.datatype === 'LOAN') {
-      await Loan.recalculateCalculatedValues(editedTransaction.to.addressId);
+      const recalculatedLoan = await this.recalculateCalculatedValues(editedTransaction.to.addressId);
+      for (const budget of recalculatedLoan.calculatedRelatedBudgets) {
+        await Budget.updateTransactionList(budget.budgetId);
+      }
     }
 
     // return edited transaction

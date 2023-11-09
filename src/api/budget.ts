@@ -12,6 +12,7 @@ import TransactionModel from './db/model/TransactionModel.js';
 import LoanModel from './db/model/LoanModel.js';
 import Loan from './loan.js';
 import { ILoan } from './types/loan/loanInterface.js';
+import BudgetCache from './cache/budgetCache.js';
 
 export default {
   // As a lender, I want to create a budget, so that I can categorize my investments.
@@ -76,11 +77,13 @@ export default {
 
       await session.commitTransaction();
 
+      const newBudgetWithTransactionList = await this.updateTransactionList(newBudget);
+
       // return casted budget
       return budgetHelpers.runtimeCast({
-        ...newBudget.toObject(),
-        _id: newBudget._id.toString(),
-        userId: newBudget.userId.toString(),
+        ...newBudgetWithTransactionList,
+        _id: newBudgetWithTransactionList._id.toString(),
+        userId: newBudgetWithTransactionList.userId.toString(),
       });
     } catch (err) {
       console.log(err);
@@ -104,6 +107,41 @@ export default {
     },
     { session = undefined }: { session?: ClientSession } = {},
   ): Promise<IBudget> {
+    if (userId === undefined) throw new Error('userId is required!');
+    if (budgetId === undefined) throw new Error('budgetId is required!');
+
+    const ALL_BUDGETS = await this.getAllFromUser({ userId }, { session });
+    const BUDGET = ALL_BUDGETS.find((budget) => budget._id === budgetId);
+    if (BUDGET === undefined) throw new Error('Budget could not be found');
+    return BUDGET;
+
+    /* const query = {
+      userId: 1,
+      name: 1,
+      description: 1,
+      defaultInterestRate: 1,
+      defaultPaymentFrequency: 1,
+      isArchived: 1,
+    };
+
+    if (session !== undefined) {
+      const Mongo_budget: any = await BudgetModel.findOne({ _id: budgetId, userId: userId }, query)
+        .session(session)
+        .lean();
+      if (Mongo_budget === null) throw new Error('Budget could not be found');
+
+      return budgetHelpers.runtimeCast({
+        ...Mongo_budget,
+        _id: Mongo_budget._id.toString(),
+        userId: Mongo_budget.userId.toString(),
+      });
+    }
+    if (BudgetCache.getCachedItem({ userId }) !== false) {
+      // try to find budget in cache and return it if found
+      const cachedBudget = BudgetCache.getCachedItem({ userId }) as IBudget[];
+      const foundBudget = cachedBudget.find((budget) => budget._id === budgetId);
+      if (foundBudget !== undefined) return foundBudget; 
+    }
     const Mongo_budget: any = await BudgetModel.findOne(
       { _id: budgetId, userId: userId },
       {
@@ -113,46 +151,59 @@ export default {
         defaultInterestRate: 1,
         defaultPaymentFrequency: 1,
         isArchived: 1,
-        currentStats: 1,
       },
     )
       .session(session)
       .lean();
     if (Mongo_budget === null) throw new Error('Budget could not be found');
 
-    return budgetHelpers.runtimeCast({
-      ...Mongo_budget,
-      _id: Mongo_budget._id.toString(),
-      userId: Mongo_budget.userId.toString(),
-    });
+    if (session !== undefined) {
+      return budgetHelpers.runtimeCast({
+        ...Mongo_budget,
+        _id: Mongo_budget._id.toString(),
+        userId: Mongo_budget.userId.toString(),
+      });
+    }*/
   },
   // As a lender, I want to view a list of budgets with basic information, so that I can have a general overview of my investments.
   getAllFromUser: async function getBudgets(
     { userId }: { userId: string },
     { session = undefined }: { session?: ClientSession } = {},
   ): Promise<IBudget[]> {
-    const Mongo_budgets: any = await BudgetModel.find(
-      { userId: userId },
-      {
-        userId: 1,
-        name: 1,
-        description: 1,
-        defaultInterestRate: 1,
-        defaultPaymentFrequency: 1,
-        isArchived: 1,
-        currentStats: 1,
-      },
-    )
-      .session(session)
-      .lean();
+    if (userId === undefined) throw new Error('userId is required!');
 
-    return Mongo_budgets.map((Mongo_budget) => {
-      return budgetHelpers.runtimeCast({
-        ...Mongo_budget,
-        _id: Mongo_budget._id.toString(),
-        userId: Mongo_budget.userId.toString(),
-      });
-    });
+    const query = {
+      userId: 1,
+      name: 1,
+      description: 1,
+      defaultInterestRate: 1,
+      defaultPaymentFrequency: 1,
+      isArchived: 1,
+    };
+
+    if (session !== undefined) {
+      const MONGO_BUDGETS = await BudgetModel.find({ userId: userId }, query).session(session).lean();
+      const budgetsWithTransactionList = [];
+      for (const budget of MONGO_BUDGETS) {
+        budgetsWithTransactionList.push(await this.updateTransactionList(budget, session));
+      }
+      return budgetsWithTransactionList;
+    }
+    const cachedBudgets = BudgetCache.getCachedItem({ userId });
+    if (cachedBudgets !== false) {
+      // just get number of budgets in mongodb
+      const dbBudgetsCount = await BudgetModel.countDocuments({ userId: userId });
+      if (cachedBudgets.length === dbBudgetsCount) {
+        // try to find budget in cache and return it if found
+        return cachedBudgets;
+      }
+    }
+    const MONGO_BUDGETS: any = await BudgetModel.find({ userId: userId }, query).lean();
+    const budgetsWithTransactionList = [];
+    for (const budget of MONGO_BUDGETS) {
+      budgetsWithTransactionList.push(await this.updateTransactionList(budget));
+    }
+    return budgetsWithTransactionList;
   },
   getOneFromUserWithTransactionList: async function getOneBudgetFromUserWithTransactionList(
     { userId, budgetId }: { userId: string; budgetId: string },
@@ -323,16 +374,16 @@ export default {
   },
   // As a lender, I want to view transactions related to budget, so that I can make decisions.
   getTransactions: async function getBudgetTransactions(
+    userId: string,
     budgetId: string,
     paginate: { pageNumber: number; pageSize: number },
   ): Promise<IBudgetTransaction[]> {
-    const Mongo_budget: any = await BudgetModel.findOne(
-      { _id: budgetId },
-      { transactionList: { $slice: [paginate.pageNumber * paginate.pageSize, paginate.pageSize] }, _id: 0 },
-    ).lean();
-    if (Mongo_budget === null) throw new Error('Budget could not be found');
-
-    return Mongo_budget.transactionList;
+    // get budget from this.getOneFromUser
+    const budget = await this.getOneFromUser({ userId, budgetId });
+    // get transactions from budget.transactionList
+    const transactions = budget.transactionList;
+    // paginate transactions
+    return transactions.slice(paginate.pageNumber * paginate.pageSize, paginate.pageSize);
   },
   // As a lender, I want to export budget data and transactions, so that I can archive them or import them to other software.
   export: function joinBudetTransactionsIntoAccountingTable(): void {
@@ -495,7 +546,7 @@ export default {
   updateTransactionList: async function generateTransactionList(
     input: string | IBudgetDocument,
     session: ClientSession = undefined,
-  ): Promise<IBudgetTransaction[]> {
+  ): Promise<IBudget> {
     const MONGO_BUDGET = typeof input === 'string' ? await BudgetModel.findOne({ _id: input }).session(session) : input;
 
     const budgetId = MONGO_BUDGET._id.toString();
@@ -544,7 +595,35 @@ export default {
       .lean()
       .exec();
 
-    if (transactions.length === 0) return [];
+    if (transactions.length === 0) {
+      const budgetWithUpdatedTransactionList = budgetHelpers.runtimeCast({
+        ...MONGO_BUDGET,
+        _id: MONGO_BUDGET._id.toString(),
+        userId: MONGO_BUDGET.userId.toString(),
+        transactionList: [],
+        currentStats: {
+          totalInvestedAmount: 0,
+          totalWithdrawnAmount: 0,
+          totalAvailableAmount: 0,
+          currentlyLendedPrincipalToLiveLoansAmount: 0,
+          currentlyEarnedInterestAmount: 0,
+          totalLostPrincipalToCompletedAndDefaultedLoansAmount: 0,
+          totalGains: 0,
+          totalForgivenAmount: 0,
+          totalLentAmount: 0,
+          totalAssociatedLoans: 0,
+          totalAssociatedLiveLoans: 0,
+        },
+      });
+
+      if (session === undefined) {
+        BudgetCache.addBudgetToUsersCache({
+          userId: MONGO_BUDGET.userId.toString(),
+          budget: budgetWithUpdatedTransactionList,
+        });
+      }
+      return budgetWithUpdatedTransactionList;
+    }
 
     const relatedLoans: ILoan[] = await Promise.all(
       relatedLoansIds.map(async (loan) => {
@@ -801,10 +880,21 @@ export default {
       }
     }
     TRANSACTION_LIST.reverse();
-    MONGO_BUDGET.transactionList = TRANSACTION_LIST;
-    MONGO_BUDGET.currentStats = TRANSACTION_LIST[0].budgetStats;
-    await MONGO_BUDGET.save({ session });
-    return TRANSACTION_LIST;
+    const BUDGET = MONGO_BUDGET.toObject !== undefined ? MONGO_BUDGET.toObject() : MONGO_BUDGET;
+    const budgetWithUpdatedTransactionList = budgetHelpers.runtimeCast({
+      ...BUDGET,
+      _id: MONGO_BUDGET._id.toString(),
+      userId: MONGO_BUDGET.userId.toString(),
+      transactionList: TRANSACTION_LIST,
+      currentStats: TRANSACTION_LIST[0].budgetStats,
+    });
+    if (session === undefined) {
+      BudgetCache.addBudgetToUsersCache({
+        userId: MONGO_BUDGET.userId.toString(),
+        budget: budgetWithUpdatedTransactionList,
+      });
+    }
+    return budgetWithUpdatedTransactionList;
 
     function updateRelatedLoansStatuses(timestamp: number): void {
       Object.keys(currentLoanStats).forEach((loanId) => {

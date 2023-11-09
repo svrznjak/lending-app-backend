@@ -76,7 +76,7 @@ export default new GraphQLObjectType({
         if (Mongo_budget === null) throw new Error('Budget does not exist!');
         if (Mongo_budget.userId.toString() !== user._id) throw new Error('Unauthorized');
 
-        return await budget.getTransactions(args.budgetId, {
+        return await budget.getTransactions(user._id, args.budgetId, {
           pageSize: args.pagination?.pageSize,
           pageNumber: args.pagination?.pageNumber,
         });

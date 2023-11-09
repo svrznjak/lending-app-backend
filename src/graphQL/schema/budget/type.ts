@@ -22,6 +22,7 @@ export const budgetsType = new GraphQLObjectType({
     defaultPaymentFrequency: { type: new GraphQLNonNull(paymentFrequencyType) },
     isArchived: { type: new GraphQLNonNull(GraphQLBoolean) },
     currentStats: { type: new GraphQLNonNull(budgetStatsType) },
+    transactionList: { type: new GraphQLList(budgetTransaction) },
   }),
 });
 

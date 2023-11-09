@@ -28,6 +28,7 @@ import { sendNotifications } from './utils/cloudMessaging/cloudMessaging.js';
 import UserModel from './db/model/UserModel.js';
 import { paymentFrequencyHelpers } from './types/paymentFrequency/paymentFrequencyHelpers.js';
 import paranoidCalculator from './utils/paranoidCalculator/paranoidCalculator.js';
+import { IBudget } from './types/budget/budgetInterface.js';
 
 interface fund {
   budgetId: string;
@@ -118,7 +119,9 @@ const Loan = {
         );
       }
       const recalculatedLoan: ILoan = await this.recalculateCalculatedValues(Mongo_Loan, session);
-
+      for (const budget of recalculatedLoan.calculatedRelatedBudgets) {
+        await Budget.updateTransactionList(budget.budgetId, session);
+      }
       // recalculate affected budgets
       /* should recaltulate in loan.recalculateCalculatedValues
       
@@ -127,7 +130,9 @@ const Loan = {
       }*/
 
       await session.commitTransaction();
-
+      for (const budget of recalculatedLoan.calculatedRelatedBudgets) {
+        await Budget.updateTransactionList(budget.budgetId);
+      }
       return recalculatedLoan;
     } catch (err) {
       console.log(err);
@@ -196,7 +201,11 @@ const Loan = {
       userId: loan.userId.toString(),
     });
     await loan.save();
-    return await this.recalculateCalculatedValues(loan);
+    const recalculatedLoan = await this.recalculateCalculatedValues(loan);
+    for (const budget of recalculatedLoan.calculatedRelatedBudgets) {
+      await Budget.updateTransactionList(budget.budgetId);
+    }
+    return recalculatedLoan;
   },
   checkIfExists: async function checkIfLoanExists(loanId: string, session?: ClientSession): Promise<void> {
     if (!(await LoanModel.existsOneWithId(loanId, session))) throw new Error('Loan with prodived _id does not exist!');
@@ -211,20 +220,26 @@ const Loan = {
     },
     { session = undefined }: { session?: ClientSession } = {},
   ): Promise<ILoan> {
+    if (userId === undefined) throw new Error('userId is required!');
+    if (loanId === undefined) throw new Error('loanId is required!');
+    // if session is provided, do not use cache and don't recalculate, because such a call is a part of ongoing transaction. Changes to data will be made in the end of successful session.
+    if (session !== undefined) {
+      const MONGO_LOAN = await LoanModel.findOne({ _id: loanId, userId: userId }).session(session);
+      if (MONGO_LOAN === null) throw new Error('Loan could not be found');
+      return loanHelpers.runtimeCast({
+        ...MONGO_LOAN.toObject(),
+        _id: MONGO_LOAN._id.toString(),
+        userId: MONGO_LOAN.userId.toString(),
+      });
+    }
+
     if (LoanCache.getCachedItem({ itemId: loanId })) {
       return LoanCache.getCachedItem({ itemId: loanId }) as ILoan;
     } else {
-      const MONGO_LOAN = await LoanModel.findOne({ _id: loanId, userId: userId }).session(session);
+      const MONGO_LOAN = await LoanModel.findOne({ _id: loanId, userId: userId });
       if (MONGO_LOAN === null) throw new Error('Loan could not be found');
-      // Do not recalculate if session is provided, because changes to data will be made in the end of successful session
-      if (session !== undefined) {
-        return loanHelpers.runtimeCast({
-          ...MONGO_LOAN.toObject(),
-          _id: MONGO_LOAN._id.toString(),
-          userId: MONGO_LOAN.userId.toString(),
-        });
-        // Do not recalculate if loan is completed or defaulted, because no change to data will ever be made
-      } else if (MONGO_LOAN.status.current === 'COMPLETED' || MONGO_LOAN.status.current === 'DEFAULTED') {
+      // Do not recalculate if loan is completed or defaulted, because no change to data will ever be made
+      if (MONGO_LOAN.status.current === 'COMPLETED' || MONGO_LOAN.status.current === 'DEFAULTED') {
         const LOAN = loanHelpers.runtimeCast({
           ...MONGO_LOAN.toObject(),
           _id: MONGO_LOAN._id.toString(),
@@ -238,6 +253,9 @@ const Loan = {
       }
 
       const recalculatedLoan = await this.recalculateCalculatedValues(MONGO_LOAN);
+      for (const budget of recalculatedLoan.calculatedRelatedBudgets) {
+        await Budget.updateTransactionList(budget.budgetId);
+      }
       return recalculatedLoan;
     }
   },
@@ -254,6 +272,7 @@ const Loan = {
 
     const LOANS = await LoanModel.find(query).session(session).exec();
     const returnValue: ILoan[] = [];
+    const budgetsToUpdate: IBudget['_id'][] = [];
     for (let i = 0; i < LOANS.length; i++) {
       const LOAN_ID = LOANS[i]._id.toString();
       if (LoanCache.getCachedItem({ itemId: LOAN_ID })) {
@@ -283,8 +302,16 @@ const Loan = {
         } else {
           const recalculatedLoan = await this.recalculateCalculatedValues(LOANS[i]);
           returnValue.push(recalculatedLoan);
+
+          // add recalculatedLoan calculatedRelatedBudgets to budgetsToUpdate if not already there
+          for (const budget of recalculatedLoan.calculatedRelatedBudgets) {
+            if (!budgetsToUpdate.includes(budget.budgetId)) budgetsToUpdate.push(budget.budgetId);
+          }
         }
       }
+    }
+    for (const budgetId of budgetsToUpdate) {
+      await Budget.updateTransactionList(budgetId);
     }
     return returnValue;
   },
@@ -380,7 +407,10 @@ const Loan = {
     );
 
     if (runRecalculate) {
-      await this.recalculateCalculatedValues(loanId);
+      const recalculatedLoan = await this.recalculateCalculatedValues(loanId);
+      for (const budget of recalculatedLoan.calculatedRelatedBudgets) {
+        await Budget.updateTransactionList(budget.budgetId, session);
+      }
     }
     return NEW_TRANSACTION;
   },
@@ -436,7 +466,10 @@ const Loan = {
     );
 
     if (runRecalculate) {
-      await this.recalculateCalculatedValues(loanId);
+      const recalculatedLoan = await this.recalculateCalculatedValues(loanId);
+      for (const budget of recalculatedLoan.calculatedRelatedBudgets) {
+        await Budget.updateTransactionList(budget.budgetId, session);
+      }
     }
     return NEW_TRANSACTION;
   },
@@ -490,7 +523,10 @@ const Loan = {
     );
 
     if (runRecalculate) {
-      await this.recalculateCalculatedValues(loanId);
+      const recalculatedLoan = await this.recalculateCalculatedValues(loanId);
+      for (const budget of recalculatedLoan.calculatedRelatedBudgets) {
+        await Budget.updateTransactionList(budget.budgetId, session);
+      }
     }
     return NEW_TRANSACTION;
   },
@@ -544,7 +580,10 @@ const Loan = {
     );
 
     if (runRecalculate) {
-      await this.recalculateCalculatedValues(loanId);
+      const recalculatedLoan = await this.recalculateCalculatedValues(loanId);
+      for (const budget of recalculatedLoan.calculatedRelatedBudgets) {
+        await Budget.updateTransactionList(budget.budgetId, session);
+      }
     }
     return NEW_TRANSACTION;
   },
@@ -599,7 +638,10 @@ const Loan = {
     );
 
     if (runRecalculate) {
-      await this.recalculateCalculatedValues(loanId);
+      const recalculatedLoan = await this.recalculateCalculatedValues(loanId);
+      for (const budget of recalculatedLoan.calculatedRelatedBudgets) {
+        await Budget.updateTransactionList(budget.budgetId, session);
+      }
     }
     return NEW_TRANSACTION;
   },
@@ -619,7 +661,11 @@ const Loan = {
 
     MONGO_LOAN.markModified('notes');
     await MONGO_LOAN.save();
-    return await this.recalculateCalculatedValues(MONGO_LOAN);
+    const recalculatedLoan = await this.recalculateCalculatedValues(MONGO_LOAN);
+    for (const budget of recalculatedLoan.calculatedRelatedBudgets) {
+      await Budget.updateTransactionList(budget.budgetId);
+    }
+    return recalculatedLoan;
   },
   editNote: async function editNoteToLoan({
     loanId,
@@ -651,7 +697,11 @@ const Loan = {
 
     MONGO_LOAN.markModified('notes');
     await MONGO_LOAN.save();
-    return await this.recalculateCalculatedValues(MONGO_LOAN);
+    const recalculatedLoan = await this.recalculateCalculatedValues(MONGO_LOAN);
+    for (const budget of recalculatedLoan.calculatedRelatedBudgets) {
+      await Budget.updateTransactionList(budget.budgetId);
+    }
+    return recalculatedLoan;
   },
   deleteNote: async function deleteNoteFromLoan({
     loanId,
@@ -669,7 +719,11 @@ const Loan = {
     });
     MONGO_LOAN.markModified('notes');
     await MONGO_LOAN.save();
-    return await this.recalculateCalculatedValues(MONGO_LOAN);
+    const recalculatedLoan = await this.recalculateCalculatedValues(MONGO_LOAN);
+    for (const budget of recalculatedLoan.calculatedRelatedBudgets) {
+      await Budget.updateTransactionList(budget.budgetId);
+    }
+    return recalculatedLoan;
   },
 
   // Get loan status at a given timestamp
@@ -730,7 +784,11 @@ const Loan = {
     if (MONGO_LOAN.status.current !== 'ACTIVE') throw new Error('Only ACTIVE loans can be paused!');
 
     await this.changeStatus(MONGO_LOAN, 'PAUSED', Date.now());
-    return await this.recalculateCalculatedValues(MONGO_LOAN);
+    const recalculatedLoan = await this.recalculateCalculatedValues(MONGO_LOAN);
+    for (const budget of recalculatedLoan.calculatedRelatedBudgets) {
+      await Budget.updateTransactionList(budget.budgetId);
+    }
+    return recalculatedLoan;
   },
   unpause: async function pauseLoan(input: string | ILoanDocument): Promise<ILoan> {
     const MONGO_LOAN = typeof input === 'string' ? await LoanModel.findOne({ _id: input }) : input;
@@ -738,13 +796,20 @@ const Loan = {
     if (MONGO_LOAN.status.current !== 'PAUSED') throw new Error('Only PAUSED loans can be unpaused!');
 
     await this.changeStatus(MONGO_LOAN, 'ACTIVE', Date.now());
-    return await this.recalculateCalculatedValues(MONGO_LOAN);
+    const recalculatedLoan = await this.recalculateCalculatedValues(MONGO_LOAN);
+    for (const budget of recalculatedLoan.calculatedRelatedBudgets) {
+      await Budget.updateTransactionList(budget.budgetId);
+    }
+    return recalculatedLoan;
   },
   complete: async function completeLoan(input: string | ILoanDocument): Promise<ILoan> {
     const MONGO_LOAN = typeof input === 'string' ? await LoanModel.findOne({ _id: input }) : input;
 
     // recalculate values just in case
-    await this.recalculateCalculatedValues(MONGO_LOAN);
+    const recalculatedLoan = await this.recalculateCalculatedValues(MONGO_LOAN);
+    for (const budget of recalculatedLoan.calculatedRelatedBudgets) {
+      await Budget.updateTransactionList(budget.budgetId);
+    }
     if (MONGO_LOAN.status.current !== 'PAID') throw new Error('Only PAID loans can be COMPLETED!');
     const CALCULATED_VALUES = await this.getCalculatedValuesAtTimestamp({
       loanId: MONGO_LOAN._id.toString(),
@@ -780,7 +845,11 @@ const Loan = {
       userId: MONGO_LOAN.userId.toString(),
     });
     await MONGO_LOAN.save();
-    return await this.recalculateCalculatedValues(MONGO_LOAN);
+    const recalculatedLoan2 = await this.recalculateCalculatedValues(MONGO_LOAN);
+    for (const budget of recalculatedLoan2.calculatedRelatedBudgets) {
+      await Budget.updateTransactionList(budget.budgetId);
+    }
+    return recalculatedLoan2;
   },
   default: async function defaultLoan(
     input: string | ILoanDocument,
@@ -816,7 +885,11 @@ const Loan = {
       });
       await MONGO_LOAN.save();
 
-      return await this.recalculateCalculatedValues(MONGO_LOAN);
+      const recalculatedLoan = await this.recalculateCalculatedValues(MONGO_LOAN);
+      for (const budget of recalculatedLoan.calculatedRelatedBudgets) {
+        await Budget.updateTransactionList(budget.budgetId);
+      }
+      return recalculatedLoan;
     } catch (err) {
       console.log(err);
       throw new Error(err.message);
@@ -996,9 +1069,6 @@ const Loan = {
       },
     });
 
-    for (const budget of MONGO_LOAN.calculatedRelatedBudgets) {
-      await Budget.updateTransactionList(budget.budgetId, session);
-    }
     // Saved in recalculateStatus  await MONGO_LOAN.save();
     return {
       ...CHANGED_LOAN,

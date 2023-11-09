@@ -10,8 +10,8 @@ export interface IBudget {
   defaultInterestRate: IInterestRate;
   defaultPaymentFrequency: IPaymentFrequency;
   isArchived: boolean;
-  currentStats: IBudgetStats;
-  transactionList: IBudgetTransaction[];
+  currentStats?: IBudgetStats;
+  transactionList?: IBudgetTransaction[];
 }
 
 export interface IBudgetTransaction {
