@@ -65,8 +65,6 @@ export default new GraphQLObjectType({
         loanId: { type: new GraphQLNonNull(GraphQLID) },
         name: { type: GraphQLString },
         description: { type: GraphQLString },
-        closesTimestamp: { type: GraphQLFloat },
-        paymentFrequency: { type: paymentFrequencyInputType },
       },
       async resolve(_parent: any, args: any, context: any): Promise<ILoan> {
         const userAuthId = await context.getCurrentUserAuthIdOrThrowValidationError();
@@ -81,10 +79,37 @@ export default new GraphQLObjectType({
             loanId: args.loanId,
             name: args.name,
             description: args.description,
-            closesTimestamp: args.closesTimestamp,
-            paymentFrequency: args.paymentFrequency,
           });
           return updatedLoan;
+        } catch (err: any) {
+          console.log(err.message);
+          throw new Error(err.message);
+        }
+      },
+    },
+    updatePaymentSchedule: {
+      type: loanType,
+      args: {
+        loanId: { type: new GraphQLNonNull(GraphQLID) },
+        closesTimestamp: { type: new GraphQLNonNull(GraphQLFloat) },
+        paymentFrequency: { type: new GraphQLNonNull(paymentFrequencyInputType) },
+        expectedPayments: { type: new GraphQLList(loanExpectedPaymentInput) },
+      },
+      async resolve(_parent: any, args: any, context: any): Promise<ILoan> {
+        const userAuthId = await context.getCurrentUserAuthIdOrThrowValidationError();
+        const user = await getUserByAuthId(userAuthId);
+
+        // get loan to check if loan with loanId exists for specified user userId
+        await Loan.getOneFromUser({ userId: user._id, loanId: args.loanId });
+
+        try {
+          return await Loan.updatePaymentSchedule({
+            userId: user._id,
+            loanId: args.loanId,
+            closesTimestamp: args.closesTimestamp,
+            paymentFrequency: args.paymentFrequency,
+            expectedPayments: args.expectedPayments,
+          });
         } catch (err: any) {
           console.log(err.message);
           throw new Error(err.message);
@@ -322,27 +347,6 @@ export default new GraphQLObjectType({
 
         try {
           return await Loan.default(args.loanId, args.defaultTransactionDescription);
-        } catch (err: any) {
-          console.log(err.message);
-          throw new Error(err.message);
-        }
-      },
-    },
-    updateExpactedPayments: {
-      type: loanType,
-      args: {
-        loanId: { type: new GraphQLNonNull(GraphQLID) },
-        expectedPayments: { type: new GraphQLList(loanExpectedPaymentInput) },
-      },
-      async resolve(_parent: any, args: any, context: any): Promise<ILoan> {
-        const userAuthId = await context.getCurrentUserAuthIdOrThrowValidationError();
-        const user = await getUserByAuthId(userAuthId);
-
-        // get loan to check if loan with loanId exists for specified user userId
-        await Loan.getOneFromUser({ userId: user._id, loanId: args.loanId });
-
-        try {
-          return await Loan.updateExpectedPayments(args.loanId, args.expectedPayments);
         } catch (err: any) {
           console.log(err.message);
           throw new Error(err.message);

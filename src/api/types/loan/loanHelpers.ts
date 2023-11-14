@@ -11,16 +11,29 @@ export const loanHelpers = {
     all: function validateAll(
       loan: Pick<
         ILoan,
-        'name' | 'description' | 'openedTimestamp' | 'closesTimestamp' | 'interestRate' | 'paymentFrequency'
+        | 'name'
+        | 'description'
+        | 'openedTimestamp'
+        | 'closesTimestamp'
+        | 'interestRate'
+        | 'paymentFrequency'
+        | 'expectedPayments'
       >,
     ): Pick<
       ILoan,
-      'name' | 'description' | 'openedTimestamp' | 'closesTimestamp' | 'interestRate' | 'paymentFrequency'
+      | 'name'
+      | 'description'
+      | 'openedTimestamp'
+      | 'closesTimestamp'
+      | 'interestRate'
+      | 'paymentFrequency'
+      | 'expectedPayments'
     > {
       this.name(loan.name);
       this.description(loan.description);
       this.openedTimestamp(loan.openedTimestamp);
       this.closesTimestamp(loan.closesTimestamp);
+      this.expectedPayments(loan.expectedPayments);
 
       interestRateHelpers.validate.all(loan.interestRate);
       paymentFrequencyHelpers.validate.all(loan.paymentFrequency);
@@ -90,6 +103,32 @@ export const loanHelpers = {
 
       return status;
     },
+    expectedPayments: function validateExpectedPayments(
+      expectedPayments: ILoan['expectedPayments'],
+    ): ILoan['expectedPayments'] {
+      if (!Array.isArray(expectedPayments)) throw new Error('(validation) expectedPayments is invalid!');
+      expectedPayments.forEach((expectedPayment) => {
+        if (
+          !isValidAmountOfMoney({
+            amount: expectedPayment.principalPayment,
+          })
+        )
+          throw new Error('(validation) expectedPayment principalPayment is invalid!');
+        if (
+          !isValidAmountOfMoney({
+            amount: expectedPayment.interestPayment,
+          })
+        )
+          throw new Error('(validation) expectedPayment interestPayment is invalid!');
+        if (
+          !isValidTimestamp({
+            timestamp: expectedPayment.timestamp,
+          })
+        )
+          throw new Error('(validation) expectedPayment timestamp is invalid!');
+      });
+      return expectedPayments;
+    },
   },
 
   sanitize: {
@@ -142,6 +181,19 @@ export const loanHelpers = {
       if (!_.isString(loan.paymentFrequency.strictValue))
         throw new Error('Type of loan.paymentFrequency.strictValue must be a string!');
     }
+
+    // typecheck expectedPayments
+    if (!Array.isArray(loan.expectedPayments)) throw new Error('Type of loan.expectedPayments must be an Array!');
+    loan.expectedPayments.forEach((expectedPayment) => {
+      if (typeof expectedPayment !== 'object' || expectedPayment === null)
+        throw new Error('Type of loan.expectedPayments must be an object!');
+      if (!Number.isFinite(expectedPayment.principalPayment))
+        throw new Error('Type of loan.expectedPayments.principalPayment must be a number!');
+      if (!Number.isFinite(expectedPayment.interestPayment))
+        throw new Error('Type of loan.expectedPayments.interestPayment must be a number!');
+      if (!Number.isFinite(expectedPayment.timestamp))
+        throw new Error('Type of loan.expectedPayments.timestamp must be a number!');
+    });
 
     interestRateHelpers.runtimeCast(loan.interestRate);
     paymentFrequencyHelpers.runtimeCast(loan.paymentFrequency);

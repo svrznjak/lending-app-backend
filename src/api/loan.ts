@@ -151,15 +151,11 @@ const Loan = {
     loanId,
     name,
     description,
-    closesTimestamp,
-    paymentFrequency,
   }: {
     userId: string;
     loanId: string;
     name?: string;
     description?: string;
-    closesTimestamp?: number;
-    paymentFrequency?: IPaymentFrequency;
   }): Promise<ILoan> {
     // Check if user exists
     await User.checkIfExists(userId);
@@ -168,7 +164,7 @@ const Loan = {
     await this.checkIfExists(loanId);
 
     // Get loan
-    const loan: ILoanDocument = await LoanModel.findOne({ _id: loanId });
+    const loan: ILoanDocument = await LoanModel.findOne({ _id: loanId, userId: userId });
 
     const newInfo: Partial<Pick<ILoan, 'name' | 'description' | 'closesTimestamp' | 'paymentFrequency'>> = {};
     if (name !== undefined) {
@@ -178,20 +174,6 @@ const Loan = {
     if (description !== undefined) {
       newInfo.description = loanHelpers.validate.description(description);
       newInfo.description = loanHelpers.sanitize.description(newInfo.description);
-    }
-    if (closesTimestamp !== undefined) {
-      newInfo.closesTimestamp = loanHelpers.validate.closesTimestamp(closesTimestamp);
-      if (loan.openedTimestamp >= newInfo.closesTimestamp) throw new Error('Loan can not be closed before it starts!');
-    }
-    if (paymentFrequency !== undefined) {
-      newInfo.paymentFrequency.revisions = {
-        occurrence: loan.paymentFrequency.occurrence,
-        isStrict: loan.paymentFrequency.isStrict,
-        strictValue: loan.paymentFrequency.strictValue,
-        revisions: loan.paymentFrequency.revisions,
-        entryTimestamp: loan.paymentFrequency.entryTimestamp,
-      };
-      newInfo.paymentFrequency = paymentFrequencyHelpers.validate.all(paymentFrequency);
     }
     loan.set(newInfo);
 
@@ -898,20 +880,63 @@ const Loan = {
   /*
 
   */
-  updateExpectedPayments: async function updateExpactedLoanPayments(
-    input: string | ILoanDocument,
-    expectedPayments: ILoan['expectedPayments'],
-  ): Promise<ILoan> {
-    const MONGO_LOAN = typeof input === 'string' ? await LoanModel.findOne({ _id: input }) : input;
+  updatePaymentSchedule: async function updateLoanPaymentSchedule({
+    userId,
+    loanId,
+    closesTimestamp,
+    paymentFrequency,
+    expectedPayments,
+  }: {
+    userId: string;
+    loanId: string;
+    closesTimestamp: ILoan['closesTimestamp'];
+    paymentFrequency: IPaymentFrequency;
+    expectedPayments: ILoan['expectedPayments'];
+  }): Promise<ILoan> {
+    // Check if user exists
+    await User.checkIfExists(userId);
+
+    // Check if loan exists
+    await this.checkIfExists(loanId);
+
+    // sanitize and validate inputs
+    loanHelpers.validate.closesTimestamp(closesTimestamp);
+    paymentFrequencyHelpers.validate.all(paymentFrequency);
+    loanHelpers.validate.expectedPayments(expectedPayments);
+
+    // Get loan
+    const MONGO_LOAN: ILoanDocument = await LoanModel.findOne({ _id: loanId, userId: userId });
+
+    // set closesTimestamp
+    if (MONGO_LOAN.openedTimestamp >= closesTimestamp) throw new Error('Loan can not be closed before it starts!');
+    MONGO_LOAN.closesTimestamp = closesTimestamp;
+
+    // set paymentFrequency
+    const newPaymentFrequency: IPaymentFrequency = {
+      occurrence: paymentFrequency.occurrence,
+      isStrict: paymentFrequency.isStrict,
+      strictValue: paymentFrequency.strictValue,
+      revisions: MONGO_LOAN.paymentFrequency,
+      entryTimestamp: paymentFrequency.entryTimestamp,
+    };
+    paymentFrequencyHelpers.validate.all(paymentFrequency);
+    MONGO_LOAN.paymentFrequency = newPaymentFrequency;
+
+    // set expectedPayments
     MONGO_LOAN.expectedPayments = expectedPayments;
 
-    const UPDATED_LOAN = loanHelpers.runtimeCast({
+    loanHelpers.runtimeCast({
       ...MONGO_LOAN.toObject(),
       _id: MONGO_LOAN._id.toString(),
       userId: MONGO_LOAN.userId.toString(),
     });
     await MONGO_LOAN.save();
-    return UPDATED_LOAN;
+
+    const recalculatedLoan = await this.recalculateCalculatedValues(MONGO_LOAN);
+    for (const budget of recalculatedLoan.calculatedRelatedBudgets) {
+      await Budget.updateTransactionList(budget.budgetId);
+    }
+    return recalculatedLoan;
   },
   getCalculatedValuesAtTimestamp: async function getLoanCalculatedValuesAtTimestamp(
     {

@@ -6,7 +6,13 @@ describe('loanHelpers', () => {
   describe('validate', () => {
     const correctValidationInputs: Pick<
       ILoan,
-      'name' | 'description' | 'openedTimestamp' | 'closesTimestamp' | 'interestRate' | 'paymentFrequency'
+      | 'name'
+      | 'description'
+      | 'openedTimestamp'
+      | 'closesTimestamp'
+      | 'interestRate'
+      | 'paymentFrequency'
+      | 'expectedPayments'
     >[] = [
       {
         name: 'Loan 1',
@@ -27,6 +33,7 @@ describe('loanHelpers', () => {
           strictValue: '1',
           entryTimestamp: 1663012853,
         },
+        expectedPayments: [],
       },
       {
         name: 'Loan 2',
@@ -47,6 +54,7 @@ describe('loanHelpers', () => {
           strictValue: '1',
           entryTimestamp: 1663012853,
         },
+        expectedPayments: [],
       },
     ];
     test.each(correctValidationInputs)('It works with correct input', (input) => {
@@ -56,7 +64,13 @@ describe('loanHelpers', () => {
 
     const invalidValidationInputs: Pick<
       ILoan,
-      'name' | 'description' | 'openedTimestamp' | 'closesTimestamp' | 'interestRate' | 'paymentFrequency'
+      | 'name'
+      | 'description'
+      | 'openedTimestamp'
+      | 'closesTimestamp'
+      | 'interestRate'
+      | 'paymentFrequency'
+      | 'expectedPayments'
     >[] = [
       {
         // To short name
@@ -78,6 +92,7 @@ describe('loanHelpers', () => {
           strictValue: '1',
           entryTimestamp: 1663012853,
         },
+        expectedPayments: [],
       },
       {
         // name is undefined
@@ -99,6 +114,7 @@ describe('loanHelpers', () => {
           strictValue: '1',
           entryTimestamp: 1663012853,
         },
+        expectedPayments: [],
       },
       {
         //To long name
@@ -120,6 +136,7 @@ describe('loanHelpers', () => {
           strictValue: '1',
           entryTimestamp: 1663012853,
         },
+        expectedPayments: [],
       },
       {
         // To long description
@@ -142,6 +159,7 @@ describe('loanHelpers', () => {
           strictValue: '1',
           entryTimestamp: 1663012853,
         },
+        expectedPayments: [],
       },
       {
         // description is undefined
@@ -163,6 +181,7 @@ describe('loanHelpers', () => {
           strictValue: '1',
           entryTimestamp: 1663012853,
         },
+        expectedPayments: [],
       },
       {
         // openedTimestamp and closesTimestamp is negative (check if validation is called)
@@ -184,6 +203,7 @@ describe('loanHelpers', () => {
           strictValue: '1',
           entryTimestamp: 1663012853,
         },
+        expectedPayments: [],
       },
       {
         // openedTimestamp and closesTimestamp is NaN (check if validation is called)
@@ -205,6 +225,7 @@ describe('loanHelpers', () => {
           strictValue: '1',
           entryTimestamp: 1663012853,
         },
+        expectedPayments: [],
       },
       {
         // openedTimestamp and closesTimestamp is undefined (check if validation is called)
@@ -226,6 +247,7 @@ describe('loanHelpers', () => {
           strictValue: '1',
           entryTimestamp: 1663012853,
         },
+        expectedPayments: [],
       },
       {
         name: 'Loan 1',
@@ -246,6 +268,7 @@ describe('loanHelpers', () => {
           strictValue: '1',
           entryTimestamp: 1663012853,
         },
+        expectedPayments: [],
       },
       {
         // initialPrinciple is NaN
@@ -267,6 +290,7 @@ describe('loanHelpers', () => {
           strictValue: '1',
           entryTimestamp: 1663012853,
         },
+        expectedPayments: [],
       },
       {
         // initialPrinciple is undefined
@@ -288,6 +312,7 @@ describe('loanHelpers', () => {
           strictValue: '1',
           entryTimestamp: 1663012853,
         },
+        expectedPayments: [],
       },
       {
         // interestRate.amount is negative
@@ -309,6 +334,7 @@ describe('loanHelpers', () => {
           strictValue: '1',
           entryTimestamp: 1663012853,
         },
+        expectedPayments: [],
       },
       {
         // interestRate.amount is NaN
@@ -330,6 +356,7 @@ describe('loanHelpers', () => {
           strictValue: '1',
           entryTimestamp: 1663012853,
         },
+        expectedPayments: [],
       },
       {
         // interestRate.amount is Infinity
@@ -351,6 +378,7 @@ describe('loanHelpers', () => {
           strictValue: '1',
           entryTimestamp: 1663012853,
         },
+        expectedPayments: [],
       },
       {
         // interestRate.entryTimestamp is negative
@@ -372,6 +400,7 @@ describe('loanHelpers', () => {
           strictValue: '1',
           entryTimestamp: 1663012853,
         },
+        expectedPayments: [],
       },
       {
         // interestRate.entryTimestamp is Intinity
@@ -393,6 +422,7 @@ describe('loanHelpers', () => {
           strictValue: '1',
           entryTimestamp: 1663012853,
         },
+        expectedPayments: [],
       },
       {
         //interestRate.entryTimestamp in null
@@ -414,6 +444,7 @@ describe('loanHelpers', () => {
           strictValue: '1',
           entryTimestamp: 1663012853,
         },
+        expectedPayments: [],
       },
     ];
     test.each(invalidValidationInputs)('It throws error if input is invalid', (input) => {
