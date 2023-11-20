@@ -28,7 +28,9 @@ export interface IBudgetStats {
   totalInvestedAmount: number;
   totalWithdrawnAmount: number;
   totalAvailableAmount: number;
+  currentlyPaidBackPrincipalAmount: number;
   currentlyEarnedInterestAmount: number;
+  currentlyEarnedFeesAmount: number;
   currentlyLendedPrincipalToLiveLoansAmount: number;
   totalLostPrincipalToCompletedAndDefaultedLoansAmount: number;
   totalGains: number;

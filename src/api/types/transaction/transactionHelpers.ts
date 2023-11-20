@@ -3,15 +3,33 @@ import _ from 'lodash';
 import { ITransaction } from './transactionInterface.js';
 import { transactionAddressHelpers } from '../transactionAddress/transactionAddressHelpers.js';
 import { isValidAmountOfMoney, isValidTimestamp, isValidText } from '../../utils/inputValidator/inputValidator.js';
+import { interestRateHelpers } from '../interestRate/interestRateHelpers.js';
 
 export const transactionHelpers = {
   validate: {
     all: function validateAll(
       transaction: Pick<
         ITransaction,
-        'transactionTimestamp' | 'description' | 'amount' | 'entryTimestamp' | 'from' | 'to'
+        | 'transactionTimestamp'
+        | 'description'
+        | 'interestRate'
+        | 'amount'
+        | 'relatedBudgetId'
+        | 'entryTimestamp'
+        | 'from'
+        | 'to'
       >,
-    ): Pick<ITransaction, 'transactionTimestamp' | 'description' | 'amount' | 'entryTimestamp' | 'from' | 'to'> {
+    ): Pick<
+      ITransaction,
+      | 'transactionTimestamp'
+      | 'description'
+      | 'interestRate'
+      | 'amount'
+      | 'relatedBudgetId'
+      | 'entryTimestamp'
+      | 'from'
+      | 'to'
+    > {
       this.transactionTimestamp(transaction.transactionTimestamp);
       this.description(transaction.description);
       this.amount(transaction.amount);
@@ -19,6 +37,12 @@ export const transactionHelpers = {
 
       transactionAddressHelpers.validate.all(transaction.from);
       transactionAddressHelpers.validate.all(transaction.to);
+
+      if (transaction.from.datatype === 'BUDGET' && transaction.to.datatype === 'LOAN') {
+        interestRateHelpers.validate.all(transaction.interestRate);
+      }
+      if (transaction.from.datatype === 'INTEREST' && transaction.to.datatype === 'LOAN')
+        if (transaction.relatedBudgetId === undefined) throw new Error('(validation) relatedBudgetId is undefined!');
 
       return transaction;
     },
@@ -61,6 +85,12 @@ export const transactionHelpers = {
     if (!_.isString(transaction.description)) throw new Error('Type of transaction.description must be a string!');
     if (transaction.refund !== undefined && !_.isBoolean(transaction.refund))
       throw new Error('Type of transaction.refund must be a boolean!');
+
+    if (transaction.from.datatype === 'BUDGET' && transaction.to.datatype === 'LOAN') {
+      // transaction.interestRate must be defined
+      interestRateHelpers.runtimeCast(transaction.interestRate);
+    }
+
     if (!Number.isFinite(transaction.amount)) throw new Error('Type of transaction.amount must be a number!');
     if (!Number.isFinite(transaction.entryTimestamp))
       throw new Error('Type of transaction.entryTimestamp must be a number!');
@@ -78,6 +108,8 @@ export const transactionHelpers = {
       from: transaction.from,
       to: transaction.to,
       refund: transaction.refund,
+      interestRate: transaction.interestRate,
+      relatedBudgetId: transaction.relatedBudgetId,
       amount: transaction.amount,
       entryTimestamp: transaction.entryTimestamp,
       revisions: transaction.revisions,

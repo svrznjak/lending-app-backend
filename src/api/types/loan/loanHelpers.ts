@@ -2,7 +2,6 @@ import { isValidTimestamp, isValidAmountOfMoney, isValidOption } from './../../u
 import { ILoan } from './loanInterface.js';
 
 import { sanitizeText } from './../../utils/inputSanitizer/inputSanitizer.js';
-import { interestRateHelpers } from '../interestRate/interestRateHelpers.js';
 import { paymentFrequencyHelpers } from '../paymentFrequency/paymentFrequencyHelpers.js';
 import { isValidText } from '../../utils/inputValidator/inputValidator.js';
 import _ from 'lodash';
@@ -11,23 +10,11 @@ export const loanHelpers = {
     all: function validateAll(
       loan: Pick<
         ILoan,
-        | 'name'
-        | 'description'
-        | 'openedTimestamp'
-        | 'closesTimestamp'
-        | 'interestRate'
-        | 'paymentFrequency'
-        | 'expectedPayments'
+        'name' | 'description' | 'openedTimestamp' | 'closesTimestamp' | 'paymentFrequency' | 'expectedPayments'
       >,
     ): Pick<
       ILoan,
-      | 'name'
-      | 'description'
-      | 'openedTimestamp'
-      | 'closesTimestamp'
-      | 'interestRate'
-      | 'paymentFrequency'
-      | 'expectedPayments'
+      'name' | 'description' | 'openedTimestamp' | 'closesTimestamp' | 'paymentFrequency' | 'expectedPayments'
     > {
       this.name(loan.name);
       this.description(loan.description);
@@ -35,7 +22,6 @@ export const loanHelpers = {
       this.closesTimestamp(loan.closesTimestamp);
       this.expectedPayments(loan.expectedPayments);
 
-      interestRateHelpers.validate.all(loan.interestRate);
       paymentFrequencyHelpers.validate.all(loan.paymentFrequency);
 
       return loan;
@@ -195,7 +181,6 @@ export const loanHelpers = {
         throw new Error('Type of loan.expectedPayments.timestamp must be a number!');
     });
 
-    interestRateHelpers.runtimeCast(loan.interestRate);
     paymentFrequencyHelpers.runtimeCast(loan.paymentFrequency);
 
     // typecheck relatedBudgets
@@ -218,15 +203,18 @@ export const loanHelpers = {
       notes: loan.notes,
       openedTimestamp: loan.openedTimestamp,
       closesTimestamp: loan.closesTimestamp,
-      interestRate: loan.interestRate,
       paymentFrequency: loan.paymentFrequency,
       expectedPayments: loan.expectedPayments,
       status: loan.status,
       calculatedInvestedAmount: loan.calculatedInvestedAmount,
+      calculatedOutstandingPrincipal: loan.calculatedOutstandingPrincipal,
       calculatedTotalPaidPrincipal: loan.calculatedTotalPaidPrincipal,
       calculatedOutstandingInterest: loan.calculatedOutstandingInterest,
+      calculatedOutstandingFees: loan.calculatedOutstandingFees,
       calculatedPaidInterest: loan.calculatedPaidInterest,
+      calculatedPaidFees: loan.calculatedPaidFees,
       calculatedTotalForgiven: loan.calculatedTotalForgiven,
+      calculatedTotalRefunded: loan.calculatedTotalRefunded,
       calculatedLastTransactionTimestamp: loan.calculatedLastTransactionTimestamp,
       calculatedRelatedBudgets: loan.calculatedRelatedBudgets,
       transactionList: loan.transactionList,

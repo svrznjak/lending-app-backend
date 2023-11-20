@@ -29,10 +29,12 @@ import UserModel from './db/model/UserModel.js';
 import { paymentFrequencyHelpers } from './types/paymentFrequency/paymentFrequencyHelpers.js';
 import paranoidCalculator from './utils/paranoidCalculator/paranoidCalculator.js';
 import { IBudget } from './types/budget/budgetInterface.js';
+import { interestRateHelpers } from './types/interestRate/interestRateHelpers.js';
 
 interface fund {
   budgetId: string;
   amount: number;
+  interestRate: IInterestRate;
 }
 
 const Loan = {
@@ -41,13 +43,7 @@ const Loan = {
     userId: string,
     input: Pick<
       ILoan,
-      | 'name'
-      | 'description'
-      | 'openedTimestamp'
-      | 'closesTimestamp'
-      | 'interestRate'
-      | 'paymentFrequency'
-      | 'expectedPayments'
+      'name' | 'description' | 'openedTimestamp' | 'closesTimestamp' | 'paymentFrequency' | 'expectedPayments'
     >,
     funds: fund[],
     initialTransactionDescription: string,
@@ -113,6 +109,8 @@ const Loan = {
               addressId: Mongo_Loan._id.toString(),
             },
             amount: funds[i].amount,
+            interestRate: funds[i].interestRate,
+            relatedBudgetId: funds[i].budgetId,
             entryTimestamp: transactionHelpers.validate.entryTimestamp(new Date().getTime()),
           },
           { session: session },
@@ -404,6 +402,7 @@ const Loan = {
       loanId,
       transactionTimestamp,
       description,
+      interestRate,
       amount,
     }: {
       userId: string;
@@ -411,6 +410,7 @@ const Loan = {
       loanId: string;
       transactionTimestamp: number;
       description: string;
+      interestRate: IInterestRate;
       amount: number;
     },
     {
@@ -423,6 +423,12 @@ const Loan = {
   ): Promise<ITransaction> {
     transactionHelpers.validate.description(description);
     description = transactionHelpers.sanitize.description(description);
+    transactionHelpers.validate.transactionTimestamp(transactionTimestamp);
+
+    // validate interestRate
+    interestRateHelpers.validate.all(interestRate);
+
+    // validate amount
     transactionHelpers.validate.amount(amount);
 
     const NEW_TRANSACTION = await transaction.add(
@@ -439,6 +445,8 @@ const Loan = {
           addressId: loanId,
         },
         amount,
+        interestRate: interestRate,
+        relatedBudgetId: budgetId,
         entryTimestamp: transactionHelpers.validate.entryTimestamp(new Date().getTime()),
       } as Pick<
         ITransaction,
@@ -459,12 +467,14 @@ const Loan = {
     {
       userId,
       loanId,
+      budgetId,
       transactionTimestamp,
       description,
       amount,
     }: {
       userId: string;
       loanId: string;
+      budgetId: string;
       transactionTimestamp: number;
       description: string;
       amount: number;
@@ -496,6 +506,7 @@ const Loan = {
           addressId: loanId,
         },
         amount: amount,
+        relatedBudgetId: budgetId,
         entryTimestamp: transactionHelpers.validate.entryTimestamp(new Date().getTime()),
       } as Pick<
         ITransaction,
@@ -795,7 +806,6 @@ const Loan = {
     if (MONGO_LOAN.status.current !== 'PAID') throw new Error('Only PAID loans can be COMPLETED!');
     const CALCULATED_VALUES = await this.getCalculatedValuesAtTimestamp({
       loanId: MONGO_LOAN._id.toString(),
-      interestRate: MONGO_LOAN.interestRate,
       timestampLimit: MONGO_LOAN.calculatedLastTransactionTimestamp,
     });
 
@@ -853,11 +863,15 @@ const Loan = {
     try {
       await this.changeStatus(MONGO_LOAN, 'DEFAULTED', Date.now());
       MONGO_LOAN.calculatedInvestedAmount = RECALCULATED_LOAN.calculatedInvestedAmount;
-      MONGO_LOAN.calculatedLastTransactionTimestamp = RECALCULATED_LOAN.calculatedLastTransactionTimestamp;
-      MONGO_LOAN.calculatedOutstandingInterest = RECALCULATED_LOAN.calculatedOutstandingInterest;
-      MONGO_LOAN.calculatedPaidInterest = RECALCULATED_LOAN.calculatedPaidInterest;
-      MONGO_LOAN.calculatedRelatedBudgets = RECALCULATED_LOAN.calculatedRelatedBudgets;
       MONGO_LOAN.calculatedTotalPaidPrincipal = RECALCULATED_LOAN.calculatedTotalPaidPrincipal;
+      MONGO_LOAN.calculatedOutstandingInterest = RECALCULATED_LOAN.calculatedOutstandingInterest;
+      MONGO_LOAN.calculatedOutstandingFees = RECALCULATED_LOAN.calculatedOutstandingFees;
+      MONGO_LOAN.calculatedPaidInterest = RECALCULATED_LOAN.calculatedPaidInterest;
+      MONGO_LOAN.calculatedPaidFees = RECALCULATED_LOAN.calculatedPaidFees;
+      MONGO_LOAN.calculatedTotalForgiven = RECALCULATED_LOAN.calculatedTotalForgiven;
+      MONGO_LOAN.calculatedTotalRefunded = RECALCULATED_LOAN.calculatedTotalRefunded;
+      MONGO_LOAN.calculatedRelatedBudgets = RECALCULATED_LOAN.calculatedRelatedBudgets;
+      MONGO_LOAN.calculatedLastTransactionTimestamp = RECALCULATED_LOAN.calculatedLastTransactionTimestamp;
       MONGO_LOAN.transactionList = RECALCULATED_LOAN.transactionList;
 
       loanHelpers.runtimeCast({
@@ -941,11 +955,9 @@ const Loan = {
   getCalculatedValuesAtTimestamp: async function getLoanCalculatedValuesAtTimestamp(
     {
       loanId,
-      interestRate,
       timestampLimit,
     }: {
       loanId: string;
-      interestRate: IInterestRate;
       timestampLimit: number;
     },
     { session = undefined }: { session?: ClientSession } = {},
@@ -954,9 +966,13 @@ const Loan = {
       ILoan,
       | 'calculatedInvestedAmount'
       | 'calculatedTotalPaidPrincipal'
+      | 'calculatedOutstandingPrincipal'
       | 'calculatedOutstandingInterest'
+      | 'calculatedOutstandingFees'
       | 'calculatedPaidInterest'
+      | 'calculatedPaidFees'
       | 'calculatedTotalForgiven'
+      | 'calculatedTotalRefunded'
       | 'calculatedLastTransactionTimestamp'
       | 'calculatedRelatedBudgets'
       | 'transactionList'
@@ -964,9 +980,13 @@ const Loan = {
   > {
     let calculatedInvestedAmount = 0;
     let calculatedTotalPaidPrincipal = 0;
+    let calculatedOutstandingPrincipal = 0;
     let calculatedOutstandingInterest = 0;
+    let calculatedOutstandingFees = 0;
     let calculatedPaidInterest = 0;
+    let calculatedPaidFees = 0;
     let calculatedTotalForgiven = 0;
+    let calculatedTotalRefunded = 0;
     let calculatedLastTransactionTimestamp = 0;
     const calculatedRelatedBudgets = {};
     // get all transactions
@@ -988,6 +1008,10 @@ const Loan = {
         calculatedRelatedBudgets[transaction.from.addressId].invested =
           calculatedRelatedBudgets[transaction.from.addressId].invested + transaction.amount;
       }
+      if (transaction.from.datatype === 'INTEREST' && transaction.to.datatype === 'LOAN') {
+        if (calculatedRelatedBudgets[transaction.relatedBudgetId] === undefined)
+          calculatedRelatedBudgets[transaction.relatedBudgetId] = { invested: 0, withdrawn: 0 };
+      }
       /* deprecated 
       if (transaction.to.datatype === 'BUDGET') {
         if (calculatedRelatedBudgets[transaction.to.addressId] === undefined)
@@ -999,22 +1023,29 @@ const Loan = {
 
     const TRANSACTIONS_LIST: ITransactionInterval[] = this.generateTransactionsList({
       loanTransactions: loanTransactions,
-      interestRate: interestRate,
       timestampLimit: timestampLimit,
     });
     if (TRANSACTIONS_LIST.length > 0) {
       calculatedInvestedAmount = TRANSACTIONS_LIST[TRANSACTIONS_LIST.length - 1].totalInvested;
       calculatedOutstandingInterest = TRANSACTIONS_LIST[TRANSACTIONS_LIST.length - 1].outstandingInterest;
       calculatedPaidInterest = TRANSACTIONS_LIST[TRANSACTIONS_LIST.length - 1].totalPaidInterest;
+      calculatedOutstandingFees = TRANSACTIONS_LIST[TRANSACTIONS_LIST.length - 1].outstandingFees;
+      calculatedPaidFees = TRANSACTIONS_LIST[TRANSACTIONS_LIST.length - 1].totalPaidFees;
       calculatedTotalPaidPrincipal = TRANSACTIONS_LIST[TRANSACTIONS_LIST.length - 1].totalPaidPrincipal;
+      calculatedOutstandingPrincipal = TRANSACTIONS_LIST[TRANSACTIONS_LIST.length - 1].outstandingPrincipal;
       calculatedTotalForgiven = TRANSACTIONS_LIST[TRANSACTIONS_LIST.length - 1].totalForgiven;
+      calculatedTotalRefunded = TRANSACTIONS_LIST[TRANSACTIONS_LIST.length - 1].totalRefunded;
     }
     return {
       calculatedInvestedAmount,
+      calculatedOutstandingPrincipal,
       calculatedOutstandingInterest,
       calculatedPaidInterest,
+      calculatedOutstandingFees,
+      calculatedPaidFees,
       calculatedTotalPaidPrincipal,
       calculatedTotalForgiven,
+      calculatedTotalRefunded,
       calculatedLastTransactionTimestamp,
       calculatedRelatedBudgets: Object.keys(calculatedRelatedBudgets).map((key) => {
         return {
@@ -1036,13 +1067,13 @@ const Loan = {
     const CALCULATED_VALUES_UNTIL_NOW = await this.getCalculatedValuesAtTimestamp(
       {
         loanId: MONGO_LOAN._id.toString(),
-        interestRate: MONGO_LOAN.interestRate,
-        timestampLimit: MONGO_LOAN.calculatedLastTransactionTimestamp,
+        timestampLimit: Date.now(),
       },
       { session },
     );
-
+    /* save only when loan is completed or defaulted
     MONGO_LOAN.calculatedInvestedAmount = CALCULATED_VALUES_UNTIL_NOW.calculatedInvestedAmount;
+    MONGO_LOAN.calculatedOutstandingPrincipal = CALCULATED_VALUES_UNTIL_NOW.calculatedOutstandingPrincipal;
     MONGO_LOAN.calculatedLastTransactionTimestamp = CALCULATED_VALUES_UNTIL_NOW.calculatedLastTransactionTimestamp;
     MONGO_LOAN.calculatedOutstandingInterest = CALCULATED_VALUES_UNTIL_NOW.calculatedOutstandingInterest;
     MONGO_LOAN.calculatedPaidInterest = CALCULATED_VALUES_UNTIL_NOW.calculatedPaidInterest;
@@ -1050,34 +1081,25 @@ const Loan = {
     MONGO_LOAN.calculatedTotalPaidPrincipal = CALCULATED_VALUES_UNTIL_NOW.calculatedTotalPaidPrincipal;
     MONGO_LOAN.calculatedTotalForgiven = CALCULATED_VALUES_UNTIL_NOW.calculatedTotalForgiven;
     MONGO_LOAN.transactionList = CALCULATED_VALUES_UNTIL_NOW.transactionList;
+    */
     // Check if PAID
     if (
-      _.round(
-        paranoidCalculator.add(
-          CALCULATED_VALUES_UNTIL_NOW.calculatedTotalPaidPrincipal,
-          CALCULATED_VALUES_UNTIL_NOW.calculatedTotalForgiven,
-        ),
-        2,
-      ) >= _.round(CALCULATED_VALUES_UNTIL_NOW.calculatedInvestedAmount, 2) &&
+      _.round(CALCULATED_VALUES_UNTIL_NOW.calculatedOutstandingPrincipal, 2) <= 0 &&
       _.round(CALCULATED_VALUES_UNTIL_NOW.calculatedOutstandingInterest, 2) === 0 &&
+      _.round(CALCULATED_VALUES_UNTIL_NOW.calculatedOutstandingFees, 2) === 0 &&
       MONGO_LOAN.status.current === 'ACTIVE'
     ) {
       await this.changeStatus(MONGO_LOAN, 'PAID', Date.now());
     } else if (
-      _.round(
-        paranoidCalculator.add(
-          CALCULATED_VALUES_UNTIL_NOW.calculatedTotalPaidPrincipal,
-          CALCULATED_VALUES_UNTIL_NOW.calculatedTotalForgiven,
-        ),
-        2,
-      ) < _.round(CALCULATED_VALUES_UNTIL_NOW.calculatedInvestedAmount, 2) ||
-      _.round(CALCULATED_VALUES_UNTIL_NOW.calculatedOutstandingInterest, 2) > 0
+      _.round(CALCULATED_VALUES_UNTIL_NOW.calculatedOutstandingPrincipal, 2) > 0 ||
+      _.round(CALCULATED_VALUES_UNTIL_NOW.calculatedOutstandingInterest, 2) > 0 ||
+      _.round(CALCULATED_VALUES_UNTIL_NOW.calculatedOutstandingFees, 2) > 0
     ) {
       if (MONGO_LOAN.status.current === 'PAID') {
         await this.changeStatus(MONGO_LOAN, 'ACTIVE', Date.now());
       }
     }
-    await MONGO_LOAN.save({ session });
+    // await MONGO_LOAN.save({ session });
 
     const CHANGED_LOAN = loanHelpers.runtimeCast({
       ...MONGO_LOAN.toObject(),
@@ -1102,22 +1124,17 @@ const Loan = {
   },
   generateTransactionsList: function generateLoanTransactionsList({
     loanTransactions,
-    interestRate,
     timestampLimit,
   }: {
     loanTransactions: ITransaction[];
-    interestRate: IInterestRate;
     timestampLimit: number | undefined;
   }): ITransactionInterval[] {
     if (timestampLimit === undefined) timestampLimit = new Date().getTime();
     // return empty if no transactions are present in loan
     if (loanTransactions.length === 0) return [];
 
-    // get loanId
-    let loanId = '';
-    if (loanTransactions[0].to.datatype === 'LOAN') loanId = loanTransactions[0].to.addressId;
-    else if (loanTransactions[0].from.datatype === 'LOAN') loanId = loanTransactions[0].from.addressId;
-    else throw new Error('Transaction does not include LOAN datatype');
+    if (loanTransactions[0].to.datatype !== 'LOAN' && loanTransactions[0].from.datatype !== 'LOAN')
+      throw new Error('Transaction does not include LOAN datatype');
 
     // check if loanTransactions are in correct order (transactionTimestamp from newest to oldest)
     for (let i = 1; i < loanTransactions.length - 1; i++) {
@@ -1125,18 +1142,6 @@ const Loan = {
         throw new Error('Transactions are not passed in correct order');
     }
 
-    const IS_FIXED_AMOUNT_INTEREST =
-      interestRate.duration === 'FULL_DURATION' && interestRate.type === 'FIXED_PER_DURATION';
-
-    let interest_per_day = 0;
-    let interest_per_hour = 0;
-    let interest_percentage_per_hour = 0;
-
-    if (!IS_FIXED_AMOUNT_INTEREST) {
-      interest_per_day = normalizeInterestRateToDay(interestRate);
-      interest_per_hour = interest_per_day / 24;
-      interest_percentage_per_hour = interest_per_hour / 100;
-    }
     /* 
     // get all changes to interestRate
     const loanInterestRates = [loan.interestRate];
@@ -1148,26 +1153,6 @@ const Loan = {
       revisionOfInterestRate = revisionOfInterestRate.revisions;
     }
     */
-
-    // add fixed amount interest to loan
-    if (IS_FIXED_AMOUNT_INTEREST) {
-      loanTransactions.push({
-        _id: '',
-        userId: '',
-        transactionTimestamp: loanTransactions[loanTransactions.length - 1].transactionTimestamp,
-        description: 'fixed-interest',
-        from: {
-          datatype: 'INTEREST',
-          addressId: '',
-        },
-        to: {
-          datatype: 'LOAN',
-          addressId: loanId,
-        },
-        amount: interestRate.amount,
-        entryTimestamp: loanTransactions[loanTransactions.length - 1].transactionTimestamp + 1, // Add fixed interest after first transaction
-      });
-    }
 
     // add another empty loan transaction in order to calculate interes
     // Not ideal solution as frontend has to ignore it, but its simple...
@@ -1186,13 +1171,36 @@ const Loan = {
 
     const listOfTransactions: ITransactionInterval[] = [];
 
+    interface IInvestment {
+      budgetId: string;
+      initialInvestment: number;
+      outstandingPrincipal: number;
+      totalPaidPrincipal: number;
+      outstandingInterest: number;
+      totalPaidInterest: number;
+      totalRefundedAmount: number;
+      totalForgivenAmount: number;
+      interestRate: IInterestRate;
+      calculatedInterestPerHour: number | undefined;
+      fixedAmountInterest: number | undefined;
+    }
+    const investments: IInvestment[] = [];
+
+    interface IFee {
+      budgetId: string;
+      outstandingAmount: number;
+    }
+    const fees: IFee[] = [];
+
     let totalInvested = 0;
     let totalPaidPrincipal = 0;
     let totalPaidInterest = 0;
+    let totalPaidFees = 0;
     let totalRefunded = 0;
     let totalForgiven = 0;
     let outstandingPrincipal = 0;
     let outstandingInterest = 0;
+    let outstandingFees = 0;
     for (let i = loanTransactions.length - 1; i >= 0; i--) {
       const loanTransaction = loanTransactions[i];
 
@@ -1208,6 +1216,7 @@ const Loan = {
         | 'feeCharged'
         | 'principalPaid'
         | 'interestPaid'
+        | 'feePaid'
         | 'refundedAmount'
         | 'forgivenAmount'
       > = {
@@ -1217,12 +1226,13 @@ const Loan = {
         from: loanTransaction.from,
         to: loanTransaction.to,
         invested: 0,
-        feeCharged: 0,
         interestCharged: 0,
-        principalPaid: 0,
-        interestPaid: 0,
-        refundedAmount: 0,
-        forgivenAmount: 0,
+        feeCharged: 0,
+        principalPaid: [],
+        interestPaid: [],
+        feePaid: [],
+        refundedAmount: [],
+        forgivenAmount: [],
       };
 
       //
@@ -1242,71 +1252,236 @@ const Loan = {
        * then interestCharged should is not charged
        * to prevent negative interest (interest to loaner)
        */
-      if (!IS_FIXED_AMOUNT_INTEREST && outstandingPrincipal > 0) {
-        if (interestRate.type === 'PERCENTAGE_PER_DURATION' && interestRate.isCompounding) {
-          for (let i = 0; i < DIFFERENCE_IN_HOURS; i++) {
-            transactionInformation.interestCharged +=
-              (outstandingPrincipal + transactionInformation.interestCharged) * interest_percentage_per_hour;
+
+      // loop investments and calculate interest for each
+      for (const investment of investments) {
+        if (investment.outstandingPrincipal <= 0 && investment.outstandingInterest <= 0) continue;
+        const interestRate = investment.interestRate;
+        if (investment.fixedAmountInterest === undefined) {
+          let interestCharged = 0;
+          if (interestRate.type === 'PERCENTAGE_PER_DURATION' && interestRate.isCompounding) {
+            const interest_percentage_per_hour = investment.calculatedInterestPerHour / 100;
+            for (let i = 0; i < DIFFERENCE_IN_HOURS; i++) {
+              interestCharged +=
+                (investment.outstandingPrincipal + investment.outstandingInterest + interestCharged) *
+                interest_percentage_per_hour;
+            }
+          } else if (interestRate.type === 'PERCENTAGE_PER_DURATION' && !interestRate.isCompounding) {
+            const interest_percentage_per_hour = investment.calculatedInterestPerHour / 100;
+            interestCharged = investment.outstandingPrincipal * interest_percentage_per_hour * DIFFERENCE_IN_HOURS;
+          } else if (interestRate.type === 'FIXED_PER_DURATION' && interestRate.duration !== 'FULL_DURATION') {
+            interestCharged = investment.calculatedInterestPerHour * DIFFERENCE_IN_HOURS;
           }
-        } else if (interestRate.type === 'PERCENTAGE_PER_DURATION' && !interestRate.isCompounding) {
-          transactionInformation.interestCharged =
-            outstandingPrincipal * interest_percentage_per_hour * DIFFERENCE_IN_HOURS;
-        } else if (interestRate.type === 'FIXED_PER_DURATION' && interestRate.duration !== 'FULL_DURATION') {
-          transactionInformation.interestCharged = interest_per_hour * DIFFERENCE_IN_HOURS;
+          transactionInformation.interestCharged = interestCharged;
+          investment.outstandingInterest += interestCharged;
+          outstandingInterest += interestCharged;
         }
-        outstandingInterest += transactionInformation.interestCharged;
       }
+
       // calculate principal payment and next outstandingPrincipal
-      if (loanTransaction.from.datatype === 'BUDGET') {
+      if (loanTransaction.from.datatype === 'BUDGET' && loanTransaction.to.datatype === 'LOAN') {
+        // if budget is investing to loan add to investments
+        const interestRate = loanTransaction.interestRate;
+        const IS_FIXED_AMOUNT_INTEREST =
+          interestRate.duration === 'FULL_DURATION' && interestRate.type === 'FIXED_PER_DURATION';
+
+        let interest_per_day = 0;
+        let interest_per_hour = 0;
+
+        if (!IS_FIXED_AMOUNT_INTEREST) {
+          interest_per_day = normalizeInterestRateToDay(interestRate);
+          interest_per_hour = interest_per_day / 24;
+        }
+        // add fixed amount interest to loan
+        /* Deprecated: added in investment stats below
+        if (IS_FIXED_AMOUNT_INTEREST) {
+          loanTransactions.push({
+            _id: '',
+            userId: '',
+            transactionTimestamp: loanTransaction.transactionTimestamp,
+            description: 'fixed-interest',
+            from: {
+              datatype: 'INTEREST',
+              addressId: '',
+            },
+            to: {
+              datatype: 'LOAN',
+              addressId: loanId,
+            },
+            amount: interestRate.amount,
+            entryTimestamp: loanTransaction.transactionTimestamp + 1, // Add fixed interest after transaction
+          });
+        }*/
+        investments.push({
+          budgetId: loanTransaction.from.addressId,
+          initialInvestment: loanTransaction.amount,
+          outstandingPrincipal: loanTransaction.amount,
+          totalPaidPrincipal: 0,
+          outstandingInterest: IS_FIXED_AMOUNT_INTEREST ? interestRate.amount : 0,
+          totalPaidInterest: 0,
+          totalRefundedAmount: 0,
+          totalForgivenAmount: 0,
+          interestRate: interestRate,
+          calculatedInterestPerHour: !IS_FIXED_AMOUNT_INTEREST ? interest_per_hour : undefined,
+          fixedAmountInterest: IS_FIXED_AMOUNT_INTEREST ? interestRate.amount : undefined,
+        });
+
         transactionInformation.invested = loanTransaction.amount;
         totalInvested += loanTransaction.amount;
         outstandingPrincipal += loanTransaction.amount;
       } else if (loanTransaction.from.datatype === 'INTEREST') {
-        if (outstandingPrincipal < 0 && -outstandingPrincipal < loanTransaction.amount) {
-          transactionInformation.feeCharged = loanTransaction.amount;
-          totalPaidPrincipal += outstandingPrincipal;
-          outstandingInterest += loanTransaction.amount + outstandingPrincipal;
-          outstandingPrincipal = 0;
-        } else if (outstandingPrincipal < 0 && -outstandingPrincipal >= loanTransaction.amount) {
-          transactionInformation.feeCharged = loanTransaction.amount;
-          totalPaidPrincipal += outstandingPrincipal;
-          outstandingPrincipal = outstandingPrincipal + loanTransaction.amount;
-          outstandingInterest = 0;
-        } else {
-          transactionInformation.feeCharged = loanTransaction.amount;
-          outstandingInterest += loanTransaction.amount;
+        // in case transaction is manual fee
+        if (loanTransaction.relatedBudgetId === undefined) {
+          throw new Error('Related budget id is undefined');
         }
-      } else if (loanTransaction.from.datatype === 'OUTSIDE') {
-        if (loanTransaction.amount <= outstandingInterest) {
-          transactionInformation.interestPaid = loanTransaction.amount;
-          outstandingInterest -= loanTransaction.amount;
-          totalPaidInterest += loanTransaction.amount;
-        } else {
-          transactionInformation.interestPaid = outstandingInterest;
-          totalPaidInterest += outstandingInterest;
-          transactionInformation.principalPaid = loanTransaction.amount - outstandingInterest;
-          totalPaidPrincipal += transactionInformation.principalPaid;
-          outstandingInterest = 0;
-          outstandingPrincipal -= transactionInformation.principalPaid;
+        fees.push({
+          budgetId: loanTransaction.relatedBudgetId.toString(),
+          outstandingAmount: loanTransaction.amount,
+        });
+
+        transactionInformation.feeCharged = loanTransaction.amount;
+        outstandingFees += loanTransaction.amount;
+      } else if (loanTransaction.from.datatype === 'OUTSIDE' && loanTransaction.to.datatype === 'LOAN') {
+        // in case loan is paid
+        let remainingPaymentAmount = loanTransaction.amount;
+        // first pay off fees in order of oldest to newest
+        for (const fee of fees) {
+          if (fee.outstandingAmount <= 0) continue;
+          if (remainingPaymentAmount <= 0) break;
+          if (remainingPaymentAmount < fee.outstandingAmount) {
+            fee.outstandingAmount -= remainingPaymentAmount;
+            outstandingFees -= remainingPaymentAmount;
+            transactionInformation.feePaid.push({ budgetId: fee.budgetId, amount: remainingPaymentAmount });
+            totalPaidFees += remainingPaymentAmount;
+            remainingPaymentAmount = 0;
+          } else {
+            transactionInformation.feePaid.push({ budgetId: fee.budgetId, amount: remainingPaymentAmount });
+            totalPaidFees += fee.outstandingAmount;
+            outstandingFees -= fee.outstandingAmount;
+            remainingPaymentAmount -= fee.outstandingAmount;
+            fee.outstandingAmount = 0;
+          }
         }
+        if (remainingPaymentAmount < 0) throw new Error('Remaining payment amount is negative, and should not be!');
+
+        // then pay off interest of each investment in proportion of their outstanding principal
+        let percentageOfTotalInterestPaid = remainingPaymentAmount / outstandingInterest;
+        if (percentageOfTotalInterestPaid > 1) percentageOfTotalInterestPaid = 1;
+
+        if (remainingPaymentAmount > 0)
+          for (const investment of investments) {
+            if (investment.outstandingPrincipal <= 0) continue;
+
+            if (percentageOfTotalInterestPaid === 1) {
+              investment.totalPaidInterest += investment.outstandingInterest;
+              totalPaidInterest += investment.outstandingInterest;
+              outstandingInterest -= investment.outstandingInterest;
+              transactionInformation.interestPaid.push({
+                budgetId: investment.budgetId,
+                amount: investment.outstandingInterest,
+              });
+              remainingPaymentAmount -= investment.outstandingInterest;
+              investment.outstandingInterest = 0;
+            } else {
+              const interestPaidToInvestment = investment.outstandingInterest * percentageOfTotalInterestPaid;
+              investment.outstandingInterest -= interestPaidToInvestment;
+              investment.totalPaidInterest += interestPaidToInvestment;
+              totalPaidInterest += interestPaidToInvestment;
+              outstandingInterest -= interestPaidToInvestment;
+              transactionInformation.interestPaid.push({
+                budgetId: investment.budgetId,
+                amount: interestPaidToInvestment,
+              });
+              remainingPaymentAmount -= interestPaidToInvestment;
+            }
+          }
+
+        if (remainingPaymentAmount < 0) throw new Error('Remaining payment amount is negative, and should not be!');
+
+        // then pay off principal of each investment in proportion of their outstanding principal
+
+        if (remainingPaymentAmount > 0)
+          for (const investment of investments) {
+            if (investment.outstandingPrincipal <= 0) continue;
+
+            const principalPaidToInvestment =
+              remainingPaymentAmount * (investment.outstandingPrincipal / outstandingPrincipal);
+            investment.outstandingPrincipal -= principalPaidToInvestment;
+            investment.totalPaidPrincipal += principalPaidToInvestment;
+            outstandingPrincipal -= principalPaidToInvestment;
+            totalPaidPrincipal += principalPaidToInvestment;
+            transactionInformation.principalPaid.push({
+              budgetId: investment.budgetId,
+              amount: principalPaidToInvestment,
+            });
+          }
       } else if (loanTransaction.from.datatype === 'LOAN' && loanTransaction.to.datatype === 'OUTSIDE') {
         // Refund
-        transactionInformation.refundedAmount = loanTransaction.amount;
-        totalRefunded += loanTransaction.amount;
-        outstandingPrincipal += loanTransaction.amount;
-        totalPaidPrincipal -= loanTransaction.amount;
+        for (const investment of investments) {
+          const refundAmountForInvestment =
+            loanTransaction.amount * (investment.outstandingPrincipal / outstandingPrincipal);
+          investment.outstandingPrincipal += refundAmountForInvestment;
+          investment.totalRefundedAmount += refundAmountForInvestment;
+          outstandingPrincipal += refundAmountForInvestment;
+          totalRefunded += refundAmountForInvestment;
+          transactionInformation.refundedAmount.push({
+            budgetId: investment.budgetId,
+            amount: refundAmountForInvestment,
+          });
+        }
       } else if (loanTransaction.from.datatype === 'LOAN' && loanTransaction.to.datatype === 'FORGIVENESS') {
         //  Forgiveness
-        if (loanTransaction.amount <= outstandingInterest) {
-          transactionInformation.forgivenAmount = loanTransaction.amount;
-          outstandingInterest -= loanTransaction.amount;
-          totalForgiven += loanTransaction.amount;
-        } else {
-          transactionInformation.forgivenAmount = loanTransaction.amount;
-          totalForgiven += loanTransaction.amount;
-          outstandingPrincipal -= loanTransaction.amount - outstandingInterest;
-          outstandingInterest = 0;
+        // First forgive interest
+        let remainingForgivenessAmount = loanTransaction.amount;
+
+        let percentageOfTotalInterestOutstanding = remainingForgivenessAmount / outstandingInterest;
+        if (percentageOfTotalInterestOutstanding > 1) percentageOfTotalInterestOutstanding = 1;
+
+        for (const investment of investments) {
+          if (investment.outstandingPrincipal <= 0) continue;
+
+          if (percentageOfTotalInterestOutstanding === 1) {
+            investment.totalForgivenAmount += investment.outstandingInterest;
+            totalForgiven += investment.outstandingInterest;
+            transactionInformation.forgivenAmount.push({
+              budgetId: investment.budgetId,
+              amount: investment.outstandingInterest,
+            });
+            remainingForgivenessAmount -= investment.outstandingInterest;
+            investment.outstandingInterest = 0;
+          } else {
+            const interestForgivenToInvestment = investment.outstandingInterest * percentageOfTotalInterestOutstanding;
+            investment.outstandingInterest -= interestForgivenToInvestment;
+            investment.totalForgivenAmount += interestForgivenToInvestment;
+            totalForgiven += interestForgivenToInvestment;
+            transactionInformation.forgivenAmount.push({
+              budgetId: investment.budgetId,
+              amount: interestForgivenToInvestment,
+            });
+            remainingForgivenessAmount -= interestForgivenToInvestment;
+          }
         }
+
+        if (remainingForgivenessAmount < 0)
+          throw new Error('Remaining forgiveness amount is negative, and should not be!');
+
+        // then forgive principal of each investment in proportion of their outstanding principal
+
+        if (remainingForgivenessAmount > 0)
+          for (const investment of investments) {
+            if (investment.outstandingPrincipal <= 0) continue;
+
+            const principalForgivenToInvestment =
+              remainingForgivenessAmount * (investment.outstandingPrincipal / outstandingPrincipal);
+            investment.outstandingPrincipal -= principalForgivenToInvestment;
+            investment.totalForgivenAmount += principalForgivenToInvestment;
+            outstandingPrincipal -= principalForgivenToInvestment;
+            totalForgiven += principalForgivenToInvestment;
+            transactionInformation.forgivenAmount.push({
+              budgetId: investment.budgetId,
+              amount: principalForgivenToInvestment,
+            });
+          }
       }
 
       /**
@@ -1324,10 +1499,12 @@ const Loan = {
         totalInvested: totalInvested,
         totalPaidPrincipal: totalPaidPrincipal,
         totalPaidInterest: totalPaidInterest,
+        totalPaidFees: totalPaidFees,
         totalRefunded: totalRefunded,
         totalForgiven: totalForgiven,
         outstandingPrincipal: outstandingPrincipal,
         outstandingInterest: outstandingInterest,
+        outstandingFees: outstandingFees,
       });
     }
     return listOfTransactions;

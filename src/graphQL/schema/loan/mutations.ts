@@ -3,7 +3,6 @@ import { GraphQLFloat, GraphQLID, GraphQLList } from 'graphql';
 import { GraphQLObjectType, GraphQLNonNull, GraphQLString } from 'graphql';
 import { ILoan } from '../../../api/types/loan/loanInterface.js';
 import { getUserByAuthId } from '../../../api/user.js';
-import { interestRateInputType } from '../interestRate/type.js';
 
 import Loan from '../../../api/loan.js';
 import { loanType, fundInputType, loanExpectedPaymentInput } from './type.js';
@@ -12,6 +11,7 @@ import { transactionType } from '../transaction/type.js';
 import LoanModel from '../../../api/db/model/LoanModel.js';
 
 import Budget from '../../../api/budget.js';
+import { interestRateInputType } from '../interestRate/type.js';
 export default new GraphQLObjectType({
   name: 'LoanMutations',
   fields: (): any => ({
@@ -22,7 +22,6 @@ export default new GraphQLObjectType({
         description: { type: GraphQLString },
         openedTimestamp: { type: new GraphQLNonNull(GraphQLFloat) },
         closesTimestamp: { type: new GraphQLNonNull(GraphQLFloat) },
-        interestRate: { type: new GraphQLNonNull(interestRateInputType) },
         paymentFrequency: { type: new GraphQLNonNull(paymentFrequencyInputType) },
         expectedPayments: { type: new GraphQLList(loanExpectedPaymentInput) },
         initialTransactionDescription: { type: new GraphQLNonNull(GraphQLString) },
@@ -35,23 +34,19 @@ export default new GraphQLObjectType({
         try {
           const newLoanInfo: Pick<
             ILoan,
-            | 'name'
-            | 'description'
-            | 'openedTimestamp'
-            | 'closesTimestamp'
-            | 'interestRate'
-            | 'paymentFrequency'
-            | 'expectedPayments'
+            'name' | 'description' | 'openedTimestamp' | 'closesTimestamp' | 'paymentFrequency' | 'expectedPayments'
           > = {
             name: args.name,
             description: args.description,
             openedTimestamp: args.openedTimestamp,
             closesTimestamp: args.closesTimestamp,
-            interestRate: args.interestRate,
             paymentFrequency: args.paymentFrequency,
             expectedPayments: args.expectedPayments,
           };
-          newLoanInfo.interestRate.entryTimestamp = new Date().getTime();
+          // set interest rate timestamp to every fund
+          for (const fund of args.funds) {
+            fund.interestRate.entryTimestamp = Date.now();
+          }
           return await Loan.create(user._id.toString(), newLoanInfo, args.funds, args.initialTransactionDescription);
         } catch (err: any) {
           console.log(err.message);
@@ -150,6 +145,7 @@ export default new GraphQLObjectType({
       type: transactionType,
       args: {
         loanId: { type: new GraphQLNonNull(GraphQLID) },
+        budgetId: { type: new GraphQLNonNull(GraphQLID) },
         description: { type: new GraphQLNonNull(GraphQLString) },
         transactionTimestamp: { type: new GraphQLNonNull(GraphQLFloat) },
         amount: { type: new GraphQLNonNull(GraphQLFloat) },
@@ -165,6 +161,7 @@ export default new GraphQLObjectType({
           const newTransaction = await Loan.addManualInterest({
             userId: user._id,
             loanId: args.loanId,
+            budgetId: args.budgetId,
             transactionTimestamp: args.transactionTimestamp,
             description: args.description,
             amount: args.amount,
@@ -181,6 +178,7 @@ export default new GraphQLObjectType({
       args: {
         loanId: { type: new GraphQLNonNull(GraphQLID) },
         budgetId: { type: new GraphQLNonNull(GraphQLID) },
+        interestRate: { type: new GraphQLNonNull(interestRateInputType) },
         description: { type: new GraphQLNonNull(GraphQLString) },
         transactionTimestamp: { type: new GraphQLNonNull(GraphQLFloat) },
         amount: { type: new GraphQLNonNull(GraphQLFloat) },
@@ -199,6 +197,7 @@ export default new GraphQLObjectType({
             userId: user._id,
             budgetId: args.budgetId,
             loanId: args.loanId,
+            interestRate: args.interestRate,
             transactionTimestamp: args.transactionTimestamp,
             description: args.description,
             amount: args.amount,

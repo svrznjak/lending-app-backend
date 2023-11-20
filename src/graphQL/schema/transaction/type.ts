@@ -1,4 +1,12 @@
-import { GraphQLEnumType, GraphQLFloat, GraphQLID, GraphQLNonNull, GraphQLObjectType, GraphQLString } from 'graphql';
+import {
+  GraphQLBoolean,
+  GraphQLEnumType,
+  GraphQLFloat,
+  GraphQLID,
+  GraphQLNonNull,
+  GraphQLObjectType,
+  GraphQLString,
+} from 'graphql';
 import Budgets from '../../../api/budget.js';
 import Loans from '../../../api/loan.js';
 import { IBudget } from '../../../api/types/budget/budgetInterface.js';
@@ -6,6 +14,7 @@ import { ILoan } from '../../../api/types/loan/loanInterface.js';
 import { ITransaction } from '../../../api/types/transaction/transactionInterface.js';
 import { budgetsType } from '../budget/type.js';
 import { loanType } from '../loan/type.js';
+import { interestRateType } from '../interestRate/type.js';
 
 export const transactionType = new GraphQLObjectType({
   name: 'TransactionType',
@@ -15,6 +24,9 @@ export const transactionType = new GraphQLObjectType({
     description: { type: GraphQLString },
     from: { type: new GraphQLNonNull(transactionAddressType) },
     to: { type: new GraphQLNonNull(transactionAddressType) },
+    refund: { type: GraphQLNonNull(GraphQLBoolean) },
+    interestRate: { type: interestRateType },
+    relatedBudgetId: { type: GraphQLID },
     amount: { type: new GraphQLNonNull(GraphQLFloat) },
     entryTimestamp: { type: new GraphQLNonNull(GraphQLFloat) },
     affectedBudget: {

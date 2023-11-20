@@ -28,6 +28,8 @@ export default {
           addressId: Mongo_transaction.to.addressId.toString(),
         },
         refund: Mongo_transaction.refund,
+        interestRate: Mongo_transaction.interestRate,
+        relatedBudgetId: Mongo_transaction.relatedBudgetId,
         amount: Mongo_transaction.amount,
         entryTimestamp: Mongo_transaction.entryTimestamp,
       });
@@ -39,7 +41,15 @@ export default {
   add: async function addTransaction(
     transaction: Pick<
       ITransaction,
-      'userId' | 'transactionTimestamp' | 'description' | 'from' | 'to' | 'amount' | 'entryTimestamp'
+      | 'userId'
+      | 'transactionTimestamp'
+      | 'description'
+      | 'from'
+      | 'to'
+      | 'interestRate'
+      | 'relatedBudgetId'
+      | 'amount'
+      | 'entryTimestamp'
     >,
     {
       session = undefined,
@@ -76,6 +86,8 @@ export default {
           addressId: newTransactionInDB.to.addressId.toString(),
         },
         refund: newTransactionInDB.refund,
+        interestRate: newTransactionInDB.interestRate,
+        relatedBudgetId: newTransactionInDB.relatedBudgetId,
         amount: newTransactionInDB.amount,
         entryTimestamp: newTransactionInDB.entryTimestamp,
       };
@@ -98,6 +110,10 @@ export default {
     // get old transaction
     const transaction: any = await TransactionModel.findById(transactionId);
     if (transaction === null) throw new Error('Transaction you wanted to edit, does not exist.');
+
+    if (transaction.from.datatype === 'BUDGET' && transaction.to.datatype === 'LOAN') {
+      throw new Error('Transaction from budget to loan can not be edited');
+    }
 
     if (transaction.from.datatype === 'LOAN') {
       const AFFECTED_LOAN: ILoan = await Loan.getOneFromUser({
@@ -130,6 +146,8 @@ export default {
         addressId: transaction.to.addressId.toString(),
       },
       refund: transaction.refund,
+      interestRate: transaction.interestRate,
+      relatedBudgetId: transaction.relatedBudgetId,
       amount: transaction.amount,
       entryTimestamp: transaction.entryTimestamp,
       revisions: transaction.revisions !== undefined ? transaction.revisions.toObject() : undefined,
@@ -156,6 +174,8 @@ export default {
             addressId: transaction.to.addressId.toString(),
           },
           refund: transaction.refund,
+          interestRate: transaction.interestRate,
+          relatedBudgetId: transaction.relatedBudgetId,
           amount: transaction.amount,
           entryTimestamp: transaction.entryTimestamp,
           revisions: transaction.revisions !== undefined ? transaction.revisions.toObject() : undefined,
@@ -192,6 +212,8 @@ export default {
         addressId: Mongo_editedTransaction.to.addressId.toString(),
       },
       refund: Mongo_editedTransaction.refund,
+      interestRate: Mongo_editedTransaction.interestRate,
+      relatedBudgetId: Mongo_editedTransaction.relatedBudgetId,
       amount: Mongo_editedTransaction.amount,
       entryTimestamp: Mongo_editedTransaction.entryTimestamp,
       revisions: Mongo_editedTransaction.revisions,
@@ -203,13 +225,13 @@ export default {
       await Budget.updateTransactionList(editedTransaction.to.addressId);
     }
     if (editedTransaction.from.datatype === 'LOAN') {
-      const recalculatedLoan = await this.recalculateCalculatedValues(editedTransaction.from.addressId);
+      const recalculatedLoan = await Loan.recalculateCalculatedValues(editedTransaction.from.addressId);
       for (const budget of recalculatedLoan.calculatedRelatedBudgets) {
         await Budget.updateTransactionList(budget.budgetId);
       }
     }
     if (editedTransaction.to.datatype === 'LOAN') {
-      const recalculatedLoan = await this.recalculateCalculatedValues(editedTransaction.to.addressId);
+      const recalculatedLoan = await Loan.recalculateCalculatedValues(editedTransaction.to.addressId);
       for (const budget of recalculatedLoan.calculatedRelatedBudgets) {
         await Budget.updateTransactionList(budget.budgetId);
       }
@@ -223,6 +245,10 @@ export default {
     // if (!transaction) throw new Error('Transaction you wanted to delete was not found!');
     try {
       const TRANSACTION = await this.getOne({ transactionId });
+
+      if (TRANSACTION.from.datatype === 'BUDGET' && TRANSACTION.to.datatype === 'LOAN') {
+        throw new Error('Transaction from budget to loan can not be deleted');
+      }
       if (TRANSACTION.from.datatype === 'LOAN') {
         const AFFECTED_LOAN: ILoan = await Loan.getOneFromUser({
           userId: TRANSACTION.userId,
@@ -301,6 +327,8 @@ export default {
           addressId: transaction.to.addressId.toString(),
         },
         refund: transaction.refund,
+        interestRate: transaction.interestRate,
+        relatedBudgetId: transaction.relatedBudgetId,
         amount: transaction.amount,
         entryTimestamp: transaction.entryTimestamp,
         revisions: transaction.revisions,

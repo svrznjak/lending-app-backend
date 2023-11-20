@@ -1,4 +1,3 @@
-import { IInterestRate } from '../interestRate/interestRateInterface.js';
 import { IPaymentFrequency } from '../paymentFrequency/paymentFrequencyInterface.js';
 import { INote } from '../note/noteInterface.js';
 import { ITransactionAddress } from '../transactionAddress/transactionAddressInterface.js';
@@ -12,15 +11,18 @@ export interface ILoan {
   notes: INote[];
   openedTimestamp: number;
   closesTimestamp: number;
-  interestRate: IInterestRate;
   paymentFrequency: IPaymentFrequency;
   expectedPayments: IExpectedPayment[];
   status: ILoanStatus;
   calculatedInvestedAmount: number;
+  calculatedOutstandingPrincipal: number;
   calculatedTotalPaidPrincipal: number;
   calculatedOutstandingInterest: number;
+  calculatedOutstandingFees: number;
   calculatedPaidInterest: number;
+  calculatedPaidFees: number;
   calculatedTotalForgiven: number;
+  calculatedTotalRefunded: number;
   calculatedLastTransactionTimestamp: number;
   calculatedRelatedBudgets: IRelatedBudget[];
   transactionList: ITransactionInterval[];
@@ -39,19 +41,27 @@ export interface ITransactionInterval {
   totalInvested: number;
   totalPaidPrincipal: number;
   totalPaidInterest: number;
+  totalPaidFees: number;
   totalRefunded: number;
   totalForgiven: number;
   from: ITransactionAddress;
   to: ITransactionAddress;
   invested: number;
-  feeCharged: number;
   interestCharged: number;
-  principalPaid: number;
-  interestPaid: number;
-  refundedAmount: number;
-  forgivenAmount: number;
+  feeCharged: number;
+  principalPaid: IPaymentDetails[];
+  interestPaid: IPaymentDetails[];
+  feePaid: IPaymentDetails[];
+  refundedAmount: IPaymentDetails[];
+  forgivenAmount: IPaymentDetails[];
   outstandingPrincipal: number;
   outstandingInterest: number;
+  outstandingFees: number;
+}
+
+interface IPaymentDetails {
+  budgetId: string;
+  amount: number;
 }
 
 export interface IExpectedPayment {

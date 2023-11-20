@@ -6,27 +6,13 @@ describe('loanHelpers', () => {
   describe('validate', () => {
     const correctValidationInputs: Pick<
       ILoan,
-      | 'name'
-      | 'description'
-      | 'openedTimestamp'
-      | 'closesTimestamp'
-      | 'interestRate'
-      | 'paymentFrequency'
-      | 'expectedPayments'
+      'name' | 'description' | 'openedTimestamp' | 'closesTimestamp' | 'paymentFrequency' | 'expectedPayments'
     >[] = [
       {
         name: 'Loan 1',
         description: 'Car loan.',
         openedTimestamp: 1663012800,
         closesTimestamp: 1753012802,
-        interestRate: {
-          type: 'PERCENTAGE_PER_DURATION',
-          duration: 'MONTH',
-          amount: 5,
-          entryTimestamp: 1663012853,
-          revisions: undefined,
-          isCompounding: false,
-        },
         paymentFrequency: {
           occurrence: 'MONTHLY',
           isStrict: true,
@@ -40,14 +26,6 @@ describe('loanHelpers', () => {
         description: '',
         openedTimestamp: 1663012800,
         closesTimestamp: 1753012802,
-        interestRate: {
-          type: 'FIXED_PER_DURATION',
-          duration: 'FULL_DURATION',
-          amount: 4,
-          entryTimestamp: 1663012853,
-          revisions: undefined,
-          isCompounding: false,
-        },
         paymentFrequency: {
           occurrence: 'MONTHLY',
           isStrict: true,
@@ -64,13 +42,7 @@ describe('loanHelpers', () => {
 
     const invalidValidationInputs: Pick<
       ILoan,
-      | 'name'
-      | 'description'
-      | 'openedTimestamp'
-      | 'closesTimestamp'
-      | 'interestRate'
-      | 'paymentFrequency'
-      | 'expectedPayments'
+      'name' | 'description' | 'openedTimestamp' | 'closesTimestamp' | 'paymentFrequency' | 'expectedPayments'
     >[] = [
       {
         // To short name
@@ -78,14 +50,6 @@ describe('loanHelpers', () => {
         description: 'Car loan.',
         openedTimestamp: 1663012800,
         closesTimestamp: 1753012802,
-        interestRate: {
-          type: 'PERCENTAGE_PER_DURATION',
-          duration: 'MONTH',
-          amount: 5,
-          entryTimestamp: 1663012853,
-          revisions: undefined,
-          isCompounding: false,
-        },
         paymentFrequency: {
           occurrence: 'MONTHLY',
           isStrict: true,
@@ -100,14 +64,6 @@ describe('loanHelpers', () => {
         description: 'Car loan.',
         openedTimestamp: 1663012800,
         closesTimestamp: 1753012802,
-        interestRate: {
-          type: 'PERCENTAGE_PER_DURATION',
-          duration: 'MONTH',
-          amount: 5,
-          entryTimestamp: 1663012853,
-          revisions: undefined,
-          isCompounding: false,
-        },
         paymentFrequency: {
           occurrence: 'MONTHLY',
           isStrict: true,
@@ -122,14 +78,6 @@ describe('loanHelpers', () => {
         description: 'Car loan.',
         openedTimestamp: 1663012800,
         closesTimestamp: 1753012802,
-        interestRate: {
-          type: 'PERCENTAGE_PER_DURATION',
-          duration: 'MONTH',
-          amount: 5,
-          entryTimestamp: 1663012853,
-          revisions: undefined,
-          isCompounding: false,
-        },
         paymentFrequency: {
           occurrence: 'MONTHLY',
           isStrict: true,
@@ -145,14 +93,6 @@ describe('loanHelpers', () => {
           'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam luctus facilisis lorem eu aliquet. Suspendisse imperdiet laoreet condimentum.Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam luctus facilisis lorem eu aliquet. Suspendisse imperdiet laoreet condimentum.Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam luctus facilisis lorem eu aliquet. Suspendisse imperdiet laoreet condimentum.Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam luctus facilisis lorem eu aliquet. Suspendisse imperdiet laoreet condimentum.Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam luctus facilisis lorem eu aliquet. Suspendisse imperdiet laoreet condimentum.Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam luctus facilisis lorem eu aliquet. Suspendisse imperdiet laoreet condimentum.Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam luctus facilisis lorem eu aliquet. Suspendisse imperdiet laoreet condimentum.Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam luctus facilisis lorem eu aliquet. Suspendisse imperdiet laoreet condimentum.',
         openedTimestamp: 1663012800,
         closesTimestamp: 1753012802,
-        interestRate: {
-          type: 'PERCENTAGE_PER_DURATION',
-          duration: 'MONTH',
-          amount: 5,
-          entryTimestamp: 1663012853,
-          revisions: undefined,
-          isCompounding: false,
-        },
         paymentFrequency: {
           occurrence: 'MONTHLY',
           isStrict: true,
@@ -167,14 +107,6 @@ describe('loanHelpers', () => {
         description: undefined,
         openedTimestamp: 1663012800,
         closesTimestamp: 1753012802,
-        interestRate: {
-          type: 'PERCENTAGE_PER_DURATION',
-          duration: 'MONTH',
-          amount: 5,
-          entryTimestamp: 1663012853,
-          revisions: undefined,
-          isCompounding: false,
-        },
         paymentFrequency: {
           occurrence: 'MONTHLY',
           isStrict: true,
@@ -189,14 +121,6 @@ describe('loanHelpers', () => {
         description: 'Car loan.',
         openedTimestamp: -1,
         closesTimestamp: -1,
-        interestRate: {
-          type: 'PERCENTAGE_PER_DURATION',
-          duration: 'MONTH',
-          amount: 5,
-          entryTimestamp: 1663012853,
-          revisions: undefined,
-          isCompounding: false,
-        },
         paymentFrequency: {
           occurrence: 'MONTHLY',
           isStrict: true,
@@ -211,14 +135,6 @@ describe('loanHelpers', () => {
         description: 'Car loan.',
         openedTimestamp: NaN,
         closesTimestamp: NaN,
-        interestRate: {
-          type: 'PERCENTAGE_PER_DURATION',
-          duration: 'MONTH',
-          amount: 5,
-          entryTimestamp: 1663012853,
-          revisions: undefined,
-          isCompounding: false,
-        },
         paymentFrequency: {
           occurrence: 'MONTHLY',
           isStrict: true,
@@ -233,14 +149,6 @@ describe('loanHelpers', () => {
         description: 'Car loan.',
         openedTimestamp: undefined,
         closesTimestamp: undefined,
-        interestRate: {
-          type: 'PERCENTAGE_PER_DURATION',
-          duration: 'MONTH',
-          amount: 5,
-          entryTimestamp: 1663012853,
-          revisions: undefined,
-          isCompounding: false,
-        },
         paymentFrequency: {
           occurrence: 'MONTHLY',
           isStrict: true,
@@ -254,14 +162,6 @@ describe('loanHelpers', () => {
         description: 'Car loan.',
         openedTimestamp: 1663012800,
         closesTimestamp: 1753012802,
-        interestRate: {
-          type: 'PERCENTAGE_PER_DURATION',
-          duration: 'MONTH',
-          amount: 5,
-          entryTimestamp: 1663012853,
-          revisions: undefined,
-          isCompounding: false,
-        },
         paymentFrequency: {
           occurrence: 'MONTHLY',
           isStrict: true,
@@ -276,14 +176,6 @@ describe('loanHelpers', () => {
         description: 'Car loan.',
         openedTimestamp: 1663012800,
         closesTimestamp: 1753012802,
-        interestRate: {
-          type: 'PERCENTAGE_PER_DURATION',
-          duration: 'MONTH',
-          amount: 5,
-          entryTimestamp: 1663012853,
-          revisions: undefined,
-          isCompounding: false,
-        },
         paymentFrequency: {
           occurrence: 'MONTHLY',
           isStrict: true,
@@ -298,14 +190,6 @@ describe('loanHelpers', () => {
         description: 'Car loan.',
         openedTimestamp: 1663012800,
         closesTimestamp: 1753012802,
-        interestRate: {
-          type: 'PERCENTAGE_PER_DURATION',
-          duration: 'MONTH',
-          amount: 5,
-          entryTimestamp: 1663012853,
-          revisions: undefined,
-          isCompounding: false,
-        },
         paymentFrequency: {
           occurrence: 'MONTHLY',
           isStrict: true,
@@ -320,124 +204,6 @@ describe('loanHelpers', () => {
         description: 'Car loan.',
         openedTimestamp: 1663012800,
         closesTimestamp: 1753012802,
-        interestRate: {
-          type: 'PERCENTAGE_PER_DURATION',
-          duration: 'MONTH',
-          amount: -1,
-          entryTimestamp: 1663012853,
-          revisions: undefined,
-          isCompounding: false,
-        },
-        paymentFrequency: {
-          occurrence: 'MONTHLY',
-          isStrict: true,
-          strictValue: '1',
-          entryTimestamp: 1663012853,
-        },
-        expectedPayments: [],
-      },
-      {
-        // interestRate.amount is NaN
-        name: 'Loan 1',
-        description: 'Car loan.',
-        openedTimestamp: 1663012800,
-        closesTimestamp: 1753012802,
-        interestRate: {
-          type: 'PERCENTAGE_PER_DURATION',
-          duration: 'MONTH',
-          amount: NaN,
-          entryTimestamp: 1663012853,
-          revisions: undefined,
-          isCompounding: false,
-        },
-        paymentFrequency: {
-          occurrence: 'MONTHLY',
-          isStrict: true,
-          strictValue: '1',
-          entryTimestamp: 1663012853,
-        },
-        expectedPayments: [],
-      },
-      {
-        // interestRate.amount is Infinity
-        name: 'Loan 1',
-        description: 'Car loan.',
-        openedTimestamp: 1663012800,
-        closesTimestamp: 1753012802,
-        interestRate: {
-          type: 'PERCENTAGE_PER_DURATION',
-          duration: 'MONTH',
-          amount: Infinity,
-          entryTimestamp: 1663012853,
-          revisions: undefined,
-          isCompounding: false,
-        },
-        paymentFrequency: {
-          occurrence: 'MONTHLY',
-          isStrict: true,
-          strictValue: '1',
-          entryTimestamp: 1663012853,
-        },
-        expectedPayments: [],
-      },
-      {
-        // interestRate.entryTimestamp is negative
-        name: 'Loan 1',
-        description: 'Car loan.',
-        openedTimestamp: 1663012800,
-        closesTimestamp: 1753012802,
-        interestRate: {
-          type: 'PERCENTAGE_PER_DURATION',
-          duration: 'MONTH',
-          amount: 5,
-          entryTimestamp: -1,
-          revisions: undefined,
-          isCompounding: false,
-        },
-        paymentFrequency: {
-          occurrence: 'MONTHLY',
-          isStrict: true,
-          strictValue: '1',
-          entryTimestamp: 1663012853,
-        },
-        expectedPayments: [],
-      },
-      {
-        // interestRate.entryTimestamp is Intinity
-        name: 'Loan 1',
-        description: 'Car loan.',
-        openedTimestamp: 1663012800,
-        closesTimestamp: 1753012802,
-        interestRate: {
-          type: 'PERCENTAGE_PER_DURATION',
-          duration: 'MONTH',
-          amount: 5,
-          entryTimestamp: Infinity,
-          revisions: undefined,
-          isCompounding: false,
-        },
-        paymentFrequency: {
-          occurrence: 'MONTHLY',
-          isStrict: true,
-          strictValue: '1',
-          entryTimestamp: 1663012853,
-        },
-        expectedPayments: [],
-      },
-      {
-        //interestRate.entryTimestamp in null
-        name: 'Loan 1',
-        description: 'Car loan.',
-        openedTimestamp: 1663012800,
-        closesTimestamp: 1753012802,
-        interestRate: {
-          type: 'PERCENTAGE_PER_DURATION',
-          duration: 'MONTH',
-          amount: 5,
-          entryTimestamp: null,
-          revisions: undefined,
-          isCompounding: false,
-        },
         paymentFrequency: {
           occurrence: 'MONTHLY',
           isStrict: true,
@@ -466,14 +232,6 @@ describe('loanHelpers', () => {
           notes: [],
           openedTimestamp: 1663012800,
           closesTimestamp: 1753012802,
-          interestRate: {
-            type: 'PERCENTAGE_PER_DURATION',
-            duration: 'MONTH',
-            amount: 5,
-            entryTimestamp: 1663012853,
-            revisions: undefined,
-            isCompounding: false,
-          },
           status: {
             current: 'ACTIVE',
             timestamp: 1663012853,
@@ -495,13 +253,6 @@ describe('loanHelpers', () => {
         notes: [],
         openedTimestamp: 1663012800,
         closesTimestamp: 1753012802,
-        interestRate: {
-          type: 'PERCENTAGE_PER_DURATION',
-          duration: 'MONTH',
-          amount: 5,
-          entryTimestamp: 1663012853,
-          revisions: undefined,
-        },
         paymentFrequency: {
           occurrence: 'MONTHLY',
           isStrict: true,
@@ -519,13 +270,6 @@ describe('loanHelpers', () => {
         notes: [],
         openedTimestamp: 1663033800,
         closesTimestamp: 1753099802,
-        interestRate: {
-          type: 'FIXED_PER_DURATION',
-          duration: 'FULL_DURATION',
-          amount: 15,
-          entryTimestamp: 1663212853,
-          revisions: undefined,
-        },
         paymentFrequency: {
           occurrence: 'MONTHLY',
           isStrict: true,
@@ -551,13 +295,6 @@ describe('loanHelpers', () => {
         notes: [],
         openedTimestamp: 1663012800,
         closesTimestamp: 1753012802,
-        interestRate: {
-          type: 'PERCENTAGE_PER_DURATION',
-          duration: 'MONTH',
-          amount: 5,
-          entryTimestamp: 1663012853,
-          revisions: undefined,
-        },
         calculatedTotalPaidPrincipal: 100,
         calculatedOutstandingInterest: 50,
         calculatedPaidInterest: 50,
@@ -570,13 +307,6 @@ describe('loanHelpers', () => {
         notes: [],
         openedTimestamp: 1663012800,
         closesTimestamp: 1753012802,
-        interestRate: {
-          type: 'PERCENTAGE_PER_DURATION',
-          duration: 'MONTH',
-          amount: 5,
-          entryTimestamp: 1663012853,
-          revisions: undefined,
-        },
         calculatedTotalPaidPrincipal: 100,
         calculatedOutstandingInterest: 50,
         calculatedPaidInterest: 50,
@@ -589,13 +319,6 @@ describe('loanHelpers', () => {
         notes: [],
         openedTimestamp: 1663012800,
         closesTimestamp: 1753012802,
-        interestRate: {
-          type: 'PERCENTAGE_PER_DURATION',
-          duration: 'MONTH',
-          amount: 5,
-          entryTimestamp: 1663012853,
-          revisions: undefined,
-        },
         calculatedTotalPaidPrincipal: 100,
         calculatedOutstandingInterest: 50,
         calculatedPaidInterest: 50,
@@ -608,13 +331,6 @@ describe('loanHelpers', () => {
         notes: [],
         openedTimestamp: 1663012800,
         closesTimestamp: 1753012802,
-        interestRate: {
-          type: 'PERCENTAGE_PER_DURATION',
-          duration: 'MONTH',
-          amount: 5,
-          entryTimestamp: 1663012853,
-          revisions: undefined,
-        },
         calculatedTotalPaidPrincipal: 100,
         calculatedOutstandingInterest: 50,
         calculatedPaidInterest: 50,
@@ -626,13 +342,6 @@ describe('loanHelpers', () => {
         notes: [],
         openedTimestamp: 1663012800,
         closesTimestamp: 1753012802,
-        interestRate: {
-          type: 'PERCENTAGE_PER_DURATION',
-          duration: 'MONTH',
-          amount: 5,
-          entryTimestamp: 1663012853,
-          revisions: undefined,
-        },
         calculatedTotalPaidPrincipal: 100,
         calculatedOutstandingInterest: 50,
         calculatedPaidInterest: 50,
@@ -645,13 +354,6 @@ describe('loanHelpers', () => {
         notes: [],
         openedTimestamp: 1663012800,
         closesTimestamp: 1753012802,
-        interestRate: {
-          type: 'PERCENTAGE_PER_DURATION',
-          duration: 'MONTH',
-          amount: 5,
-          entryTimestamp: 1663012853,
-          revisions: undefined,
-        },
         calculatedTotalPaidPrincipal: 100,
         calculatedOutstandingInterest: 50,
         calculatedPaidInterest: 50,
@@ -664,13 +366,6 @@ describe('loanHelpers', () => {
         notes: [],
         openedTimestamp: 1663012800,
         closesTimestamp: 1753012802,
-        interestRate: {
-          type: 'PERCENTAGE_PER_DURATION',
-          duration: 'MONTH',
-          amount: 5,
-          entryTimestamp: 1663012853,
-          revisions: undefined,
-        },
         calculatedTotalPaidPrincipal: 100,
         calculatedOutstandingInterest: 50,
         calculatedPaidInterest: 50,
@@ -683,13 +378,6 @@ describe('loanHelpers', () => {
         notes: [],
         openedTimestamp: 1663012800,
         closesTimestamp: 1753012802,
-        interestRate: {
-          type: 'PERCENTAGE_PER_DURATION',
-          duration: 'MONTH',
-          amount: 5,
-          entryTimestamp: 1663012853,
-          revisions: undefined,
-        },
         calculatedTotalPaidPrincipal: 100,
         calculatedOutstandingInterest: 50,
         calculatedPaidInterest: 50,
@@ -701,13 +389,6 @@ describe('loanHelpers', () => {
         description: 'Car loan.',
         openedTimestamp: 1663012800,
         closesTimestamp: 1753012802,
-        interestRate: {
-          type: 'PERCENTAGE_PER_DURATION',
-          duration: 'MONTH',
-          amount: 5,
-          entryTimestamp: 1663012853,
-          revisions: undefined,
-        },
         calculatedTotalPaidPrincipal: 100,
         calculatedOutstandingInterest: 50,
         calculatedPaidInterest: 50,
@@ -720,13 +401,6 @@ describe('loanHelpers', () => {
         notes: undefined,
         openedTimestamp: 1663012800,
         closesTimestamp: 1753012802,
-        interestRate: {
-          type: 'PERCENTAGE_PER_DURATION',
-          duration: 'MONTH',
-          amount: 5,
-          entryTimestamp: 1663012853,
-          revisions: undefined,
-        },
         calculatedTotalPaidPrincipal: 100,
         calculatedOutstandingInterest: 50,
         calculatedPaidInterest: 50,
@@ -739,13 +413,6 @@ describe('loanHelpers', () => {
         notes: 2.2,
         openedTimestamp: 1663012800,
         closesTimestamp: 1753012802,
-        interestRate: {
-          type: 'PERCENTAGE_PER_DURATION',
-          duration: 'MONTH',
-          amount: 5,
-          entryTimestamp: 1663012853,
-          revisions: undefined,
-        },
         calculatedTotalPaidPrincipal: 100,
         calculatedOutstandingInterest: 50,
         calculatedPaidInterest: 50,
@@ -758,13 +425,6 @@ describe('loanHelpers', () => {
         notes: [],
         openedTimestamp: '1663012800',
         closesTimestamp: 1753012802,
-        interestRate: {
-          type: 'PERCENTAGE_PER_DURATION',
-          duration: 'MONTH',
-          amount: 5,
-          entryTimestamp: 1663012853,
-          revisions: undefined,
-        },
         calculatedTotalPaidPrincipal: 100,
         calculatedOutstandingInterest: 50,
         calculatedPaidInterest: 50,
@@ -777,13 +437,6 @@ describe('loanHelpers', () => {
         notes: [],
         openedTimestamp: 1663012800,
         closesTimestamp: '1753012802',
-        interestRate: {
-          type: 'PERCENTAGE_PER_DURATION',
-          duration: 'MONTH',
-          amount: 5,
-          entryTimestamp: 1663012853,
-          revisions: undefined,
-        },
         calculatedTotalPaidPrincipal: 100,
         calculatedOutstandingInterest: 50,
         calculatedPaidInterest: 50,
@@ -795,13 +448,6 @@ describe('loanHelpers', () => {
         description: 'Car loan.',
         notes: [],
         closesTimestamp: 1753012802,
-        interestRate: {
-          type: 'PERCENTAGE_PER_DURATION',
-          duration: 'MONTH',
-          amount: 5,
-          entryTimestamp: 1663012853,
-          revisions: undefined,
-        },
         calculatedTotalPaidPrincipal: 100,
         calculatedOutstandingInterest: 50,
         calculatedPaidInterest: 50,
@@ -813,13 +459,6 @@ describe('loanHelpers', () => {
         description: 'Car loan.',
         notes: [],
         openedTimestamp: 1663012800,
-        interestRate: {
-          type: 'PERCENTAGE_PER_DURATION',
-          duration: 'MONTH',
-          amount: 5,
-          entryTimestamp: 1663012853,
-          revisions: undefined,
-        },
         calculatedTotalPaidPrincipal: 100,
         calculatedOutstandingInterest: 50,
         calculatedPaidInterest: 50,
@@ -832,44 +471,6 @@ describe('loanHelpers', () => {
         notes: [],
         openedTimestamp: 1663012800,
         closesTimestamp: 1753012802,
-        interestRate: {
-          type: 'PERCENTAGE_PER_DURATION',
-          duration: 'MONTH',
-          amount: 5,
-          entryTimestamp: 1663012853,
-          revisions: undefined,
-        },
-        calculatedTotalPaidPrincipal: 100,
-        calculatedOutstandingInterest: 50,
-        calculatedPaidInterest: 50,
-      },
-      {
-        // interestRate is missing
-        _id: 'xxx',
-        name: 'Loan 1',
-        description: 'Car loan.',
-        notes: [],
-        openedTimestamp: 1663012800,
-        closesTimestamp: 1753012802,
-        calculatedTotalPaidPrincipal: 100,
-        calculatedOutstandingInterest: 50,
-        calculatedPaidInterest: 50,
-      },
-      {
-        // interestRate.amount is NaN
-        _id: 'xxx',
-        name: 'Loan 1',
-        description: 'Car loan.',
-        notes: [],
-        openedTimestamp: 1663012800,
-        closesTimestamp: 1753012802,
-        interestRate: {
-          type: 'PERCENTAGE_PER_DURATION',
-          duration: 'MONTH',
-          amount: NaN,
-          entryTimestamp: 1663012853,
-          revisions: undefined,
-        },
         calculatedTotalPaidPrincipal: 100,
         calculatedOutstandingInterest: 50,
         calculatedPaidInterest: 50,
@@ -882,13 +483,6 @@ describe('loanHelpers', () => {
         notes: [],
         openedTimestamp: 1663012800,
         closesTimestamp: 1753012802,
-        interestRate: {
-          type: 'PERCENTAGE_PER_DURATION',
-          duration: 'MONTH',
-          amount: 5,
-          entryTimestamp: 1663012853,
-          revisions: undefined,
-        },
         calculatedOutstandingInterest: 50,
         calculatedPaidInterest: 50,
       },
@@ -900,13 +494,6 @@ describe('loanHelpers', () => {
         notes: [],
         openedTimestamp: 1663012800,
         closesTimestamp: 1753012802,
-        interestRate: {
-          type: 'PERCENTAGE_PER_DURATION',
-          duration: 'MONTH',
-          amount: 5,
-          entryTimestamp: 1663012853,
-          revisions: undefined,
-        },
         calculatedTotalPaidPrincipal: NaN,
         calculatedOutstandingInterest: 50,
         calculatedPaidInterest: 50,
@@ -919,13 +506,6 @@ describe('loanHelpers', () => {
         notes: [],
         openedTimestamp: 1663012800,
         closesTimestamp: 1753012802,
-        interestRate: {
-          type: 'PERCENTAGE_PER_DURATION',
-          duration: 'MONTH',
-          amount: 5,
-          entryTimestamp: 1663012853,
-          revisions: undefined,
-        },
         calculatedTotalPaidPrincipal: 100,
         calculatedPaidInterest: 50,
       },
@@ -937,13 +517,6 @@ describe('loanHelpers', () => {
         notes: [],
         openedTimestamp: 1663012800,
         closesTimestamp: 1753012802,
-        interestRate: {
-          type: 'PERCENTAGE_PER_DURATION',
-          duration: 'MONTH',
-          amount: 5,
-          entryTimestamp: 1663012853,
-          revisions: undefined,
-        },
         calculatedTotalPaidPrincipal: 100,
         calculatedOutstandingInterest: NaN,
         calculatedPaidInterest: 50,
@@ -956,13 +529,6 @@ describe('loanHelpers', () => {
         notes: [],
         openedTimestamp: 1663012800,
         closesTimestamp: 1753012802,
-        interestRate: {
-          type: 'PERCENTAGE_PER_DURATION',
-          duration: 'MONTH',
-          amount: 5,
-          entryTimestamp: 1663012853,
-          revisions: undefined,
-        },
         calculatedTotalPaidPrincipal: 100,
         calculatedOutstandingInterest: 50,
       },
@@ -974,13 +540,6 @@ describe('loanHelpers', () => {
         notes: [],
         openedTimestamp: 1663012800,
         closesTimestamp: 1753012802,
-        interestRate: {
-          type: 'PERCENTAGE_PER_DURATION',
-          duration: 'MONTH',
-          amount: 5,
-          entryTimestamp: 1663012853,
-          revisions: undefined,
-        },
         calculatedTotalPaidPrincipal: 100,
         calculatedOutstandingInterest: 50,
         calculatedPaidInterest: NaN,

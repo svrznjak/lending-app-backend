@@ -1,7 +1,6 @@
 import mongoose from 'mongoose';
 import existsOneWithId from '../plugins/existsOneWithId.js';
 
-import { LoanInterestRateSchema } from './LoanInterestRateSchema.js';
 import { LoanPaymentFrequencySchema } from './LoanPaymentFrequencySchema.js';
 
 const NoteSchema = new mongoose.Schema({
@@ -29,6 +28,11 @@ const ExpectedPaymentSchema = new mongoose.Schema({
   notified: { type: Boolean, required: true, default: false },
 });
 
+const PaymentDetailsSchema = new mongoose.Schema({
+  budgetId: { type: String, required: true },
+  amount: { type: Number, required: true },
+});
+
 export const LoanSchema = new mongoose.Schema(
   {
     _id: {
@@ -49,7 +53,6 @@ export const LoanSchema = new mongoose.Schema(
     notes: { type: [NoteSchema], default: [], required: true },
     openedTimestamp: { type: Number, required: true },
     closesTimestamp: { type: Number, required: true },
-    interestRate: { type: LoanInterestRateSchema, required: true },
     paymentFrequency: {
       type: LoanPaymentFrequencySchema,
       required: true,
@@ -63,10 +66,14 @@ export const LoanSchema = new mongoose.Schema(
       required: true,
     },
     calculatedInvestedAmount: { type: Number },
+    calculatedOutstandingPrincipal: { type: Number },
     calculatedTotalPaidPrincipal: { type: Number },
     calculatedOutstandingInterest: { type: Number },
+    calculatedOutstandingFees: { type: Number },
     calculatedPaidInterest: { type: Number },
+    calculatedPaidFees: { type: Number },
     calculatedTotalForgiven: { type: Number },
+    calculatedTotalRefunded: { type: Number },
     calculatedLastTransactionTimestamp: { type: Number },
     calculatedRelatedBudgets: {
       type: [
@@ -95,6 +102,7 @@ export const LoanSchema = new mongoose.Schema(
           totalInvested: { type: Number },
           totalPaidPrincipal: { type: Number },
           totalPaidInterest: { type: Number },
+          totalPaidFees: { type: Number },
           totalRefunded: { type: Number },
           totalForgiven: { type: Number },
           from: {
@@ -122,12 +130,14 @@ export const LoanSchema = new mongoose.Schema(
           invested: { type: Number },
           feeCharged: { type: Number },
           interestCharged: { type: Number },
-          principalPaid: { type: Number },
-          interestPaid: { type: Number },
-          refundedAmount: { type: Number },
-          forgivenAmount: { type: Number },
+          principalPaid: { type: [PaymentDetailsSchema], default: [] },
+          interestPaid: { type: [PaymentDetailsSchema], default: [] },
+          feePaid: { type: [PaymentDetailsSchema], default: [] },
+          refundedAmount: { type: [PaymentDetailsSchema], default: [] },
+          forgivenAmount: { type: [PaymentDetailsSchema], default: [] },
           outstandingPrincipal: { type: Number },
           outstandingInterest: { type: Number },
+          outstandingFees: { type: Number },
         },
       ],
       default: [],

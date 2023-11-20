@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import existsOneWithId from '../plugins/existsOneWithId.js';
+import { LoanInterestRateSchema } from './LoanInterestRateSchema.js';
 
 export const TransactionAddressSchema = new mongoose.Schema({
   datatype: {
@@ -30,6 +31,8 @@ const TransactionSchema = new mongoose.Schema(
     from: { type: TransactionAddressSchema, required: true },
     to: { type: TransactionAddressSchema, required: true },
     refund: { type: Boolean, default: false },
+    interestRate: { type: LoanInterestRateSchema, required: false },
+    relatedBudgetId: { type: mongoose.Schema.Types.ObjectId, ref: 'Budgets', required: false },
     amount: { type: Number, required: true },
     entryTimestamp: { type: Number, required: true },
   },

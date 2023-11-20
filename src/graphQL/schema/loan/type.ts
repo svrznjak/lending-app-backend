@@ -9,7 +9,7 @@ import {
   GraphQLInputObjectType,
   GraphQLBoolean,
 } from 'graphql';
-import { interestRateType } from '../interestRate/type.js';
+import { interestRateInputType } from '../interestRate/type.js';
 import { paymentFrequencyType } from '../paymentFrequency/type.js';
 import { noteType } from '../note/type.js';
 import { transactionAddressType } from '../transaction/type.js';
@@ -25,17 +25,20 @@ export const loanType = new GraphQLObjectType({
     notes: { type: new GraphQLList(noteType) },
     openedTimestamp: { type: new GraphQLNonNull(GraphQLFloat) },
     closesTimestamp: { type: new GraphQLNonNull(GraphQLFloat) },
-    interestRate: { type: new GraphQLNonNull(interestRateType) },
     paymentFrequency: { type: new GraphQLNonNull(paymentFrequencyType) },
     expectedPayments: { type: new GraphQLList(loanExpectedPayment) },
     status: {
       type: new GraphQLNonNull(loanStatus),
     },
     calculatedInvestedAmount: { type: new GraphQLNonNull(GraphQLFloat) },
+    calculatedOutstandingPrincipal: { type: new GraphQLNonNull(GraphQLFloat) },
     calculatedTotalPaidPrincipal: { type: new GraphQLNonNull(GraphQLFloat) },
     calculatedOutstandingInterest: { type: new GraphQLNonNull(GraphQLFloat) },
+    calculatedOutstandingFees: { type: new GraphQLNonNull(GraphQLFloat) },
     calculatedPaidInterest: { type: new GraphQLNonNull(GraphQLFloat) },
+    calculatedPaidFees: { type: new GraphQLNonNull(GraphQLFloat) },
     calculatedTotalForgiven: { type: new GraphQLNonNull(GraphQLFloat) },
+    calculatedTotalRefunded: { type: new GraphQLNonNull(GraphQLFloat) },
     calculatedLastTransactionTimestamp: { type: new GraphQLNonNull(GraphQLFloat) },
     calculatedRelatedBudgets: { type: new GraphQLList(loanRelatedBudget) },
     transactionList: { type: new GraphQLList(loanTransactionList) },
@@ -47,6 +50,7 @@ export const fundInputType = new GraphQLInputObjectType({
   fields: (): any => ({
     budgetId: { type: new GraphQLNonNull(GraphQLID) },
     amount: { type: new GraphQLNonNull(GraphQLFloat) },
+    interestRate: { type: new GraphQLNonNull(interestRateInputType) },
   }),
 });
 
@@ -105,6 +109,14 @@ export const loanRelatedBudget = new GraphQLObjectType({
   }),
 });
 
+const loanPaymentDetailsSchema = new GraphQLObjectType({
+  name: 'LoanPaymentDetailsType',
+  fields: (): any => ({
+    budgetId: { type: new GraphQLNonNull(GraphQLID) },
+    amount: { type: new GraphQLNonNull(GraphQLFloat) },
+  }),
+});
+
 export const loanTransactionList = new GraphQLObjectType({
   name: 'loanTransactionListType',
   fields: (): any => ({
@@ -114,6 +126,7 @@ export const loanTransactionList = new GraphQLObjectType({
     totalInvested: { type: new GraphQLNonNull(GraphQLFloat) },
     totalPaidPrincipal: { type: new GraphQLNonNull(GraphQLFloat) },
     totalPaidInterest: { type: new GraphQLNonNull(GraphQLFloat) },
+    totalPaidFees: { type: new GraphQLNonNull(GraphQLFloat) },
     totalRefunded: { type: new GraphQLNonNull(GraphQLFloat) },
     totalForgiven: { type: new GraphQLNonNull(GraphQLFloat) },
     from: { type: new GraphQLNonNull(transactionAddressType) },
@@ -121,12 +134,14 @@ export const loanTransactionList = new GraphQLObjectType({
     invested: { type: new GraphQLNonNull(GraphQLFloat) },
     feeCharged: { type: new GraphQLNonNull(GraphQLFloat) },
     interestCharged: { type: new GraphQLNonNull(GraphQLFloat) },
-    principalPaid: { type: new GraphQLNonNull(GraphQLFloat) },
-    interestPaid: { type: new GraphQLNonNull(GraphQLFloat) },
-    refundedAmount: { type: new GraphQLNonNull(GraphQLFloat) },
-    forgivenAmount: { type: new GraphQLNonNull(GraphQLFloat) },
+    principalPaid: { type: new GraphQLList(loanPaymentDetailsSchema) },
+    interestPaid: { type: new GraphQLList(loanPaymentDetailsSchema) },
+    feePaid: { type: new GraphQLList(loanPaymentDetailsSchema) },
+    refundedAmount: { type: new GraphQLList(loanPaymentDetailsSchema) },
+    forgivenAmount: { type: new GraphQLList(loanPaymentDetailsSchema) },
     outstandingPrincipal: { type: new GraphQLNonNull(GraphQLFloat) },
     outstandingInterest: { type: new GraphQLNonNull(GraphQLFloat) },
+    outstandingFees: { type: new GraphQLNonNull(GraphQLFloat) },
   }),
 });
 

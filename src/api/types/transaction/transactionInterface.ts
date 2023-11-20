@@ -1,3 +1,4 @@
+import { IInterestRate } from '../interestRate/interestRateInterface.js';
 import { ITransactionAddress } from '../transactionAddress/transactionAddressInterface.js';
 
 export interface ITransaction {
@@ -8,6 +9,8 @@ export interface ITransaction {
   from: ITransactionAddress;
   to: ITransactionAddress;
   refund?: boolean;
+  interestRate?: IInterestRate;
+  relatedBudgetId?: string;
   amount: number;
   entryTimestamp: number;
   revisions?: ITransaction;
