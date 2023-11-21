@@ -906,7 +906,7 @@ export default {
             ),
           },
         });
-      } else if (transaction.from.datatype === 'INTEREST' && transaction.to.datatype === 'LOAN') {
+      } else if (transaction.from.datatype === 'FEE' && transaction.to.datatype === 'LOAN') {
         // manual interest / fee
         // Not sure if there is anything to do here
         console.log('x');

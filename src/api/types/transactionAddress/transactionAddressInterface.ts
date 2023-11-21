@@ -1,4 +1,4 @@
 export interface ITransactionAddress {
-  datatype: 'BUDGET' | 'LOAN' | 'INTEREST' | 'OUTSIDE' | 'FORGIVENESS';
+  datatype: 'BUDGET' | 'LOAN' | 'FEE' | 'OUTSIDE' | 'FORGIVENESS';
   addressId: string;
 }

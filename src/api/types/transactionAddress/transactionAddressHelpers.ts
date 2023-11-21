@@ -12,7 +12,7 @@ export const transactionAddressHelpers = {
       if (
         !isValidOption({
           option: datatype,
-          validOptions: ['BUDGET', 'LOAN', 'INTEREST', 'OUTSIDE', 'FORGIVENESS'],
+          validOptions: ['BUDGET', 'LOAN', 'FEE', 'OUTSIDE', 'FORGIVENESS'],
           caseSensitive: true,
         })
       )

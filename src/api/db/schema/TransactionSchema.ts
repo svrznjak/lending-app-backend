@@ -5,7 +5,7 @@ import { LoanInterestRateSchema } from './LoanInterestRateSchema.js';
 export const TransactionAddressSchema = new mongoose.Schema({
   datatype: {
     type: String,
-    enum: ['BUDGET', 'LOAN', 'INTEREST', 'OUTSIDE', 'FORGIVENESS'],
+    enum: ['BUDGET', 'LOAN', 'FEE', 'OUTSIDE', 'FORGIVENESS'],
     required: true,
   },
   addressId: {

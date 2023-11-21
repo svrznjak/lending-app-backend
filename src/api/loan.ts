@@ -508,7 +508,7 @@ const Loan = {
         transactionTimestamp: transactionTimestamp,
         description: description,
         from: {
-          datatype: 'INTEREST',
+          datatype: 'FEE',
           addressId: '000000000000000000000000',
         },
         to: {
@@ -1018,7 +1018,7 @@ const Loan = {
         calculatedRelatedBudgets[transaction.from.addressId].invested =
           calculatedRelatedBudgets[transaction.from.addressId].invested + transaction.amount;
       }
-      if (transaction.from.datatype === 'INTEREST' && transaction.to.datatype === 'LOAN') {
+      if (transaction.from.datatype === 'FEE' && transaction.to.datatype === 'LOAN') {
         if (calculatedRelatedBudgets[transaction.relatedBudgetId] === undefined)
           calculatedRelatedBudgets[transaction.relatedBudgetId] = { invested: 0, withdrawn: 0 };
       }
@@ -1311,7 +1311,7 @@ const Loan = {
             transactionTimestamp: loanTransaction.transactionTimestamp,
             description: 'fixed-interest',
             from: {
-              datatype: 'INTEREST',
+              datatype: 'FEE',
               addressId: '',
             },
             to: {
@@ -1339,7 +1339,7 @@ const Loan = {
         transactionInformation.invested = loanTransaction.amount;
         totalInvested += loanTransaction.amount;
         outstandingPrincipal += loanTransaction.amount;
-      } else if (loanTransaction.from.datatype === 'INTEREST') {
+      } else if (loanTransaction.from.datatype === 'FEE') {
         // in case transaction is manual fee
         if (loanTransaction.relatedBudgetId === undefined) {
           throw new Error('Related budget id is undefined');

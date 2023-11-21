@@ -62,7 +62,7 @@ export const transactionAddressType = new GraphQLObjectType({
           values: {
             BUDGET: { value: 'BUDGET' },
             LOAN: { value: 'LOAN' },
-            INTEREST: { value: 'INTEREST' },
+            INTEREST: { value: 'FEE' },
             OUTSIDE: { value: 'OUTSIDE' },
             FORGIVENESS: { value: 'FORGIVENESS' },
           },

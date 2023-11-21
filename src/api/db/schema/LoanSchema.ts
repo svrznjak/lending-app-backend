@@ -103,7 +103,7 @@ export const LoanSchema = new mongoose.Schema(
             type: {
               datatype: {
                 type: String,
-                enum: ['BUDGET', 'LOAN', 'INTEREST', 'OUTSIDE', 'FORGIVENESS'],
+                enum: ['BUDGET', 'LOAN', 'FEE', 'OUTSIDE', 'FORGIVENESS'],
               },
               addressId: {
                 type: String,
@@ -114,7 +114,7 @@ export const LoanSchema = new mongoose.Schema(
             type: {
               datatype: {
                 type: String,
-                enum: ['BUDGET', 'LOAN', 'INTEREST', 'OUTSIDE', 'FORGIVENESS'],
+                enum: ['BUDGET', 'LOAN', 'FEE', 'OUTSIDE', 'FORGIVENESS'],
               },
               addressId: {
                 type: String,

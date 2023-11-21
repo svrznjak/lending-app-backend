@@ -41,7 +41,7 @@ export const transactionHelpers = {
       if (transaction.from.datatype === 'BUDGET' && transaction.to.datatype === 'LOAN') {
         interestRateHelpers.validate.all(transaction.interestRate);
       }
-      if (transaction.from.datatype === 'INTEREST' && transaction.to.datatype === 'LOAN')
+      if (transaction.from.datatype === 'FEE' && transaction.to.datatype === 'LOAN')
         if (transaction.relatedBudgetId === undefined) throw new Error('(validation) relatedBudgetId is undefined!');
 
       return transaction;
