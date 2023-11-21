@@ -5,22 +5,34 @@ import { sanitizeText } from './../../utils/inputSanitizer/inputSanitizer.js';
 import { paymentFrequencyHelpers } from '../paymentFrequency/paymentFrequencyHelpers.js';
 import { isValidText } from '../../utils/inputValidator/inputValidator.js';
 import _ from 'lodash';
+import { noteHelpers } from '../note/noteHelpers.js';
+import { INote } from '../note/noteInterface.js';
 export const loanHelpers = {
   validate: {
     all: function validateAll(
       loan: Pick<
         ILoan,
-        'name' | 'description' | 'openedTimestamp' | 'closesTimestamp' | 'paymentFrequency' | 'expectedPayments'
+        | 'name'
+        | 'description'
+        | 'openedTimestamp'
+        | 'closesTimestamp'
+        | 'paymentFrequency'
+        | 'expectedPayments'
+        | 'notes'
       >,
     ): Pick<
       ILoan,
-      'name' | 'description' | 'openedTimestamp' | 'closesTimestamp' | 'paymentFrequency' | 'expectedPayments'
+      'name' | 'description' | 'openedTimestamp' | 'closesTimestamp' | 'paymentFrequency' | 'expectedPayments' | 'notes'
     > {
       this.name(loan.name);
       this.description(loan.description);
       this.openedTimestamp(loan.openedTimestamp);
       this.closesTimestamp(loan.closesTimestamp);
       this.expectedPayments(loan.expectedPayments);
+
+      for (const note of loan.notes) {
+        noteHelpers.validate.all(note);
+      }
 
       paymentFrequencyHelpers.validate.all(loan.paymentFrequency);
 
@@ -121,12 +133,19 @@ export const loanHelpers = {
     all: function sanitizeAll(loan: Partial<ILoan>): void {
       loan.name = this.name(loan.name);
       loan.description = this.description(loan.description);
+      loan.notes = this.notes(loan.notes);
     },
     name: function sanitizeName(name: string): string {
       return sanitizeText({ text: name });
     },
     description: function sanitizeDescription(description: string): string {
       return sanitizeText({ text: description });
+    },
+    notes: function sanitizeNotes(notes: INote[]): INote[] {
+      for (const note of notes) {
+        noteHelpers.sanitize.all(note);
+      }
+      return notes;
     },
   },
   runtimeCast: function runtimeCast(loan: any): ILoan {
@@ -193,6 +212,11 @@ export const loanHelpers = {
       if (!Number.isFinite(relatedBudget.withdrawn))
         throw new Error('Type of loan.relatedBudget.withdrawn must be a number!');
     });
+
+    //typecheck notes
+    for (const note of loan.notes) {
+      noteHelpers.runtimeCast(note);
+    }
 
     return {
       _id: loan._id,

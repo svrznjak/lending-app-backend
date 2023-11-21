@@ -43,55 +43,65 @@ const Loan = {
     userId: string,
     input: Pick<
       ILoan,
-      'name' | 'description' | 'openedTimestamp' | 'closesTimestamp' | 'paymentFrequency' | 'expectedPayments'
+      | 'name'
+      | 'description'
+      | 'customerId'
+      | 'openedTimestamp'
+      | 'closesTimestamp'
+      | 'paymentFrequency'
+      | 'expectedPayments'
     >,
     funds: fund[],
     initialTransactionDescription: string,
   ): Promise<ILoan> {
-    // Do checks on inputs
-    loanHelpers.validate.all(input);
-    loanHelpers.sanitize.all(input);
-
-    if (funds.length <= 0) throw new Error('Funds should be provided to new loan!');
-
     // check if user exists
     await User.checkIfExists(userId);
+
+    const newLoanData: ILoan = loanHelpers.runtimeCast({
+      _id: new mongoose.Types.ObjectId().toString(),
+      userId: userId,
+      name: input.name,
+      description: input.description,
+      customerId: input.customerId,
+      notes: [],
+      openedTimestamp: input.openedTimestamp,
+      closesTimestamp: input.closesTimestamp,
+      paymentFrequency: input.paymentFrequency,
+      expectedPayments: input.expectedPayments,
+      status: {
+        current: 'ACTIVE',
+        timestamp: input.openedTimestamp,
+      },
+      calculatedInvestedAmount: 0,
+      calculatedOutstandingPrincipal: 0,
+      calculatedTotalPaidPrincipal: 0,
+      calculatedOutstandingInterest: 0,
+      calculatedOutstandingFees: 0,
+      calculatedPaidInterest: 0,
+      calculatedPaidFees: 0,
+      calculatedTotalForgiven: 0,
+      calculatedTotalRefunded: 0,
+      calculatedLastTransactionTimestamp: input.openedTimestamp,
+      calculatedRelatedBudgets: [],
+      transactionList: [],
+    });
+
+    // Do checks on inputs
+    loanHelpers.validate.all(newLoanData);
+    loanHelpers.sanitize.all(newLoanData);
+
+    if (funds.length <= 0) throw new Error('Funds should be provided to new loan!');
 
     // check if budgets exist
     for (let i = 0; i < funds.length; i++) {
       await Budget.checkIfExists(funds[i].budgetId);
-
-      // TODO: This is incorrect + real test happens on transaction level
-      /*
-      const recalculatedBudget = await Budget.updateTransactionList(MONGO_LOAN.{
-      if (recalculatedBudget.calculatedTotalAvailableAmount < funds[i].amount)
-        throw new Error(`Budget (id: ${funds[i].budgetId}) has insufficient funds.`);
-        */
     }
 
     const session: ClientSession = await mongoose.connection.startSession();
     try {
       session.startTransaction();
 
-      const Mongo_Loan: ILoanDocument = await new LoanModel(
-        loanHelpers.runtimeCast({
-          _id: new mongoose.Types.ObjectId().toString(),
-          userId: userId,
-          ...input,
-          notes: [],
-          status: {
-            current: 'ACTIVE',
-            timestamp: input.openedTimestamp,
-          },
-          calculatedInvestedAmount: 0,
-          calculatedOutstandingInterest: 0,
-          calculatedPaidInterest: 0,
-          calculatedTotalPaidPrincipal: 0,
-          calculatedTotalForgiven: 0,
-          calculatedLastTransactionTimestamp: input.openedTimestamp,
-          calculatedRelatedBudgets: [],
-        }),
-      ).save({ session });
+      const Mongo_Loan: ILoanDocument = await new LoanModel(newLoanData).save({ session });
 
       // Prepare initial transactions from budgets to loan in creation
       for (let i = 0; i < funds.length; i++) {
@@ -149,22 +159,19 @@ const Loan = {
     loanId,
     name,
     description,
+    customerId,
   }: {
     userId: string;
     loanId: string;
     name?: string;
     description?: string;
+    customerId?: string;
   }): Promise<ILoan> {
-    // Check if user exists
-    await User.checkIfExists(userId);
-
-    // Check if loan exists
-    await this.checkIfExists(loanId);
-
     // Get loan
     const loan: ILoanDocument = await LoanModel.findOne({ _id: loanId, userId: userId });
+    if (loan === null) throw new Error('Loan does not exist!');
 
-    const newInfo: Partial<Pick<ILoan, 'name' | 'description' | 'closesTimestamp' | 'paymentFrequency'>> = {};
+    const newInfo: Partial<Pick<ILoan, 'name' | 'description' | 'customerId'>> = {};
     if (name !== undefined) {
       newInfo.name = loanHelpers.validate.name(name);
       newInfo.name = loanHelpers.sanitize.name(newInfo.name);
@@ -172,6 +179,9 @@ const Loan = {
     if (description !== undefined) {
       newInfo.description = loanHelpers.validate.description(description);
       newInfo.description = loanHelpers.sanitize.description(newInfo.description);
+    }
+    if (customerId !== undefined) {
+      newInfo.customerId = customerId;
     }
     loan.set(newInfo);
 

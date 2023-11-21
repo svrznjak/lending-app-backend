@@ -5,9 +5,7 @@ import { isValidText, isValidTimestamp } from '../../utils/inputValidator/inputV
 
 export const noteHelpers = {
   validate: {
-    all: function validateAll(
-      note: Pick<INote, 'content' | 'entryTimestamp'>,
-    ): Pick<INote, 'content' | 'entryTimestamp'> {
+    all: function validateAll(note: INote): INote {
       this.content(note.content);
       this.entryTimestamp(note.entryTimestamp);
       return note;

@@ -4,6 +4,7 @@ import { GraphQLSchema, GraphQLObjectType } from 'graphql';
 import userQueries from './schema/user/queries.js';
 import budgetQueries from './schema/budget/queries.js';
 import loanQueries from './schema/loan/queries.js';
+import customerQueries from './schema/customer/queries.js';
 import transactionQueries from './schema/transaction/queries.js';
 
 // Merge imported queries into GraphQLObjectType
@@ -20,6 +21,10 @@ const mergedQueries = new GraphQLObjectType({
     },
     Loan: {
       type: loanQueries,
+      resolve: () => ({}),
+    },
+    Customer: {
+      type: customerQueries,
       resolve: () => ({}),
     },
     Transaction: {

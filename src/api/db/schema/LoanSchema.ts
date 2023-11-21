@@ -2,13 +2,7 @@ import mongoose from 'mongoose';
 import existsOneWithId from '../plugins/existsOneWithId.js';
 
 import { LoanPaymentFrequencySchema } from './LoanPaymentFrequencySchema.js';
-
-const NoteSchema = new mongoose.Schema({
-  content: { type: String, required: true },
-  entryTimestamp: { type: Number, required: true },
-});
-
-NoteSchema.add({ revisions: [NoteSchema] });
+import { NoteSchema } from './NoteSchema.js';
 
 const LoanStatusSchema = new mongoose.Schema({
   current: {

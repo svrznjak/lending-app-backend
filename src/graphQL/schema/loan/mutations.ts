@@ -20,6 +20,7 @@ export default new GraphQLObjectType({
       args: {
         name: { type: new GraphQLNonNull(GraphQLString) },
         description: { type: GraphQLString },
+        customerId: { type: GraphQLID },
         openedTimestamp: { type: new GraphQLNonNull(GraphQLFloat) },
         closesTimestamp: { type: new GraphQLNonNull(GraphQLFloat) },
         paymentFrequency: { type: new GraphQLNonNull(paymentFrequencyInputType) },
@@ -34,10 +35,17 @@ export default new GraphQLObjectType({
         try {
           const newLoanInfo: Pick<
             ILoan,
-            'name' | 'description' | 'openedTimestamp' | 'closesTimestamp' | 'paymentFrequency' | 'expectedPayments'
+            | 'name'
+            | 'description'
+            | 'customerId'
+            | 'openedTimestamp'
+            | 'closesTimestamp'
+            | 'paymentFrequency'
+            | 'expectedPayments'
           > = {
             name: args.name,
             description: args.description,
+            customerId: args.customerId,
             openedTimestamp: args.openedTimestamp,
             closesTimestamp: args.closesTimestamp,
             paymentFrequency: args.paymentFrequency,
@@ -60,13 +68,11 @@ export default new GraphQLObjectType({
         loanId: { type: new GraphQLNonNull(GraphQLID) },
         name: { type: GraphQLString },
         description: { type: GraphQLString },
+        customerId: { type: GraphQLID },
       },
       async resolve(_parent: any, args: any, context: any): Promise<ILoan> {
         const userAuthId = await context.getCurrentUserAuthIdOrThrowValidationError();
         const user = await getUserByAuthId(userAuthId);
-
-        // get loan to check if loan with loanId exists for specified user userId
-        await Loan.getOneFromUser({ userId: user._id, loanId: args.loanId });
 
         try {
           const updatedLoan = await Loan.edit({
@@ -74,6 +80,7 @@ export default new GraphQLObjectType({
             loanId: args.loanId,
             name: args.name,
             description: args.description,
+            customerId: args.customerId,
           });
           return updatedLoan;
         } catch (err: any) {
