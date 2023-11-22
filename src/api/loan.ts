@@ -11,7 +11,7 @@ import {
 import * as User from './user.js';
 import transaction from './transaction.js';
 import { loanHelpers } from './types/loan/loanHelpers.js';
-import { ILoan, ILoanStatus, IRelatedBudget, ITransactionInterval } from './types/loan/loanInterface.js';
+import { IInvestment, ILoan, ILoanStatus, IRelatedBudget, ITransactionInterval } from './types/loan/loanInterface.js';
 import { IPaymentFrequency } from './types/paymentFrequency/paymentFrequencyInterface.js';
 import { ITransaction } from './types/transaction/transactionInterface.js';
 import Budget from './budget.js';
@@ -180,15 +180,17 @@ const Loan = {
       newInfo.description = loanHelpers.validate.description(description);
       newInfo.description = loanHelpers.sanitize.description(newInfo.description);
     }
-    if (customerId !== undefined) {
-      newInfo.customerId = customerId;
-    }
+    newInfo.customerId = customerId;
     loan.set(newInfo);
 
     loanHelpers.runtimeCast({
       ...loan.toObject(),
       _id: loan._id.toString(),
       userId: loan.userId.toString(),
+      notes: loan.notes.map((note: any) => ({
+        ...note.toObject(),
+        _id: note._id.toString(),
+      })),
     });
     await loan.save();
     const recalculatedLoan = await this.recalculateCalculatedValues(loan);
@@ -220,6 +222,10 @@ const Loan = {
         ...MONGO_LOAN.toObject(),
         _id: MONGO_LOAN._id.toString(),
         userId: MONGO_LOAN.userId.toString(),
+        notes: MONGO_LOAN.notes.map((note: any) => ({
+          ...note.toObject(),
+          _id: note._id.toString(),
+        })),
       });
     }
 
@@ -234,6 +240,10 @@ const Loan = {
           ...MONGO_LOAN.toObject(),
           _id: MONGO_LOAN._id.toString(),
           userId: MONGO_LOAN.userId.toString(),
+          notes: MONGO_LOAN.notes.map((note: any) => ({
+            ...note.toObject(),
+            _id: note._id.toString(),
+          })),
         });
         LoanCache.setCachedItem({
           itemId: MONGO_LOAN._id.toString(),
@@ -275,6 +285,10 @@ const Loan = {
               ...LOANS[i].toObject(),
               _id: LOANS[i]._id.toString(),
               userId: LOANS[i].userId.toString(),
+              notes: LOANS[i].notes.map((note: any) => ({
+                ...note.toObject(),
+                _id: note._id.toString(),
+              })),
             }),
           );
           // Do not recalculate if loan is completed or defaulted, because no change to data will ever be made
@@ -283,6 +297,10 @@ const Loan = {
             ...LOANS[i].toObject(),
             _id: LOANS[i]._id.toString(),
             userId: LOANS[i].userId.toString(),
+            notes: LOANS[i].notes.map((note: any) => ({
+              ...note.toObject(),
+              _id: note._id.toString(),
+            })),
           });
           LoanCache.setCachedItem({
             itemId: LOANS[i]._id.toString(),
@@ -778,6 +796,10 @@ const Loan = {
       ...MONGO_LOAN.toObject(),
       _id: MONGO_LOAN._id.toString(),
       userId: MONGO_LOAN.userId.toString(),
+      notes: MONGO_LOAN.notes.map((note: any) => ({
+        ...note.toObject(),
+        _id: note._id.toString(),
+      })),
     });
     return MONGO_LOAN;
   },
@@ -845,6 +867,10 @@ const Loan = {
       ...MONGO_LOAN.toObject(),
       _id: MONGO_LOAN._id.toString(),
       userId: MONGO_LOAN.userId.toString(),
+      notes: MONGO_LOAN.notes.map((note: any) => ({
+        ...note.toObject(),
+        _id: note._id.toString(),
+      })),
     });
     await MONGO_LOAN.save();
     const recalculatedLoan2 = await this.recalculateCalculatedValues(MONGO_LOAN);
@@ -888,6 +914,10 @@ const Loan = {
         ...MONGO_LOAN.toObject(),
         _id: MONGO_LOAN._id.toString(),
         userId: MONGO_LOAN.userId.toString(),
+        notes: MONGO_LOAN.notes.map((note: any) => ({
+          ...note.toObject(),
+          _id: note._id.toString(),
+        })),
       });
       await MONGO_LOAN.save();
 
@@ -946,13 +976,22 @@ const Loan = {
     paymentFrequencyHelpers.validate.all(paymentFrequency);
     MONGO_LOAN.paymentFrequency = newPaymentFrequency;
 
-    // set expectedPayments
-    MONGO_LOAN.expectedPayments = expectedPayments;
+    // replace MONGO_LOAN.expectedPayments with new expectedPayments
+    MONGO_LOAN.expectedPayments = expectedPayments.map((expectedPayment) => {
+      return {
+        ...expectedPayment,
+        _id: new mongoose.Types.ObjectId().toString(),
+      };
+    });
 
     loanHelpers.runtimeCast({
       ...MONGO_LOAN.toObject(),
       _id: MONGO_LOAN._id.toString(),
       userId: MONGO_LOAN.userId.toString(),
+      notes: MONGO_LOAN.notes.map((note: any) => ({
+        ...note.toObject(),
+        _id: note._id.toString(),
+      })),
     });
     await MONGO_LOAN.save();
 
@@ -1087,11 +1126,11 @@ const Loan = {
     MONGO_LOAN.calculatedLastTransactionTimestamp = CALCULATED_VALUES_UNTIL_NOW.calculatedLastTransactionTimestamp;
     MONGO_LOAN.calculatedOutstandingInterest = CALCULATED_VALUES_UNTIL_NOW.calculatedOutstandingInterest;
     MONGO_LOAN.calculatedPaidInterest = CALCULATED_VALUES_UNTIL_NOW.calculatedPaidInterest;
-    MONGO_LOAN.calculatedRelatedBudgets = CALCULATED_VALUES_UNTIL_NOW.calculatedRelatedBudgets;
     MONGO_LOAN.calculatedTotalPaidPrincipal = CALCULATED_VALUES_UNTIL_NOW.calculatedTotalPaidPrincipal;
     MONGO_LOAN.calculatedTotalForgiven = CALCULATED_VALUES_UNTIL_NOW.calculatedTotalForgiven;
     MONGO_LOAN.transactionList = CALCULATED_VALUES_UNTIL_NOW.transactionList;
     */
+    MONGO_LOAN.calculatedRelatedBudgets = CALCULATED_VALUES_UNTIL_NOW.calculatedRelatedBudgets;
     // Check if PAID
     if (
       _.round(CALCULATED_VALUES_UNTIL_NOW.calculatedOutstandingPrincipal, 2) <= 0 &&
@@ -1109,24 +1148,28 @@ const Loan = {
         await this.changeStatus(MONGO_LOAN, 'ACTIVE', Date.now());
       }
     }
-    // await MONGO_LOAN.save({ session });
 
     const CHANGED_LOAN = loanHelpers.runtimeCast({
       ...MONGO_LOAN.toObject(),
       ...CALCULATED_VALUES_UNTIL_NOW,
       _id: MONGO_LOAN._id.toString(),
       userId: MONGO_LOAN.userId.toString(),
+      notes: MONGO_LOAN.notes.map((note: any) => ({
+        ...note.toObject(),
+        _id: note._id.toString(),
+      })),
     });
 
-    LoanCache.setCachedItem({
-      itemId: MONGO_LOAN._id.toString(),
-      value: {
-        ...CHANGED_LOAN,
-        ...CALCULATED_VALUES_UNTIL_NOW,
-      },
-    });
+    if (session === undefined)
+      LoanCache.setCachedItem({
+        itemId: MONGO_LOAN._id.toString(),
+        value: {
+          ...CHANGED_LOAN,
+          ...CALCULATED_VALUES_UNTIL_NOW,
+        },
+      });
 
-    // Saved in recalculateStatus  await MONGO_LOAN.save();
+    await MONGO_LOAN.save({ session });
     return {
       ...CHANGED_LOAN,
       ...CALCULATED_VALUES_UNTIL_NOW,
@@ -1181,19 +1224,6 @@ const Loan = {
 
     const listOfTransactions: ITransactionInterval[] = [];
 
-    interface IInvestment {
-      budgetId: string;
-      initialInvestment: number;
-      outstandingPrincipal: number;
-      totalPaidPrincipal: number;
-      outstandingInterest: number;
-      totalPaidInterest: number;
-      totalRefundedAmount: number;
-      totalForgivenAmount: number;
-      interestRate: IInterestRate;
-      calculatedInterestPerHour: number | undefined;
-      fixedAmountInterest: number | undefined;
-    }
     const investments: IInvestment[] = [];
 
     interface IFee {
@@ -1515,6 +1545,7 @@ const Loan = {
         outstandingPrincipal: outstandingPrincipal,
         outstandingInterest: outstandingInterest,
         outstandingFees: outstandingFees,
+        investmentStats: investments,
       });
     }
     return listOfTransactions;
@@ -1526,7 +1557,7 @@ const Loan = {
       'status.current': 'ACTIVE',
       expectedPayments: {
         $elemMatch: {
-          timestamp: {
+          paymentDate: {
             $lte: Date.now(),
           },
           notified: false,
@@ -1584,7 +1615,7 @@ const Loan = {
         'status.current': 'ACTIVE',
         expectedPayments: {
           $elemMatch: {
-            timestamp: {
+            paymentDate: {
               $lte: Date.now(),
             },
             notified: false,

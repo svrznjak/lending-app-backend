@@ -2,7 +2,7 @@ import { GraphQLObjectType, GraphQLNonNull, GraphQLID, GraphQLString, GraphQLLis
 import { noteType } from '../note/type.js';
 
 export const customerType = new GraphQLObjectType({
-  name: 'LoanType',
+  name: 'CustomerType',
   fields: (): any => ({
     _id: { type: new GraphQLNonNull(GraphQLID) },
     userId: { type: new GraphQLNonNull(GraphQLID) },

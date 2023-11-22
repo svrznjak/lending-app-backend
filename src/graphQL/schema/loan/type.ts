@@ -9,7 +9,7 @@ import {
   GraphQLInputObjectType,
   GraphQLBoolean,
 } from 'graphql';
-import { interestRateInputType } from '../interestRate/type.js';
+import { interestRateInputType, interestRateType } from '../interestRate/type.js';
 import { paymentFrequencyType } from '../paymentFrequency/type.js';
 import { noteType } from '../note/type.js';
 import { transactionAddressType } from '../transaction/type.js';
@@ -57,7 +57,9 @@ export const fundInputType = new GraphQLInputObjectType({
 export const loanExpectedPayment = new GraphQLObjectType({
   name: 'loanExpectedPaymentType',
   fields: (): any => ({
-    timestamp: { type: new GraphQLNonNull(GraphQLFloat) },
+    paymentDate: { type: new GraphQLNonNull(GraphQLFloat) },
+    outstandingPrincipalBeforePayment: { type: new GraphQLNonNull(GraphQLFloat) },
+    totalPaidPrincipalBeforePayment: { type: new GraphQLNonNull(GraphQLFloat) },
     principalPayment: { type: new GraphQLNonNull(GraphQLFloat) },
     interestPayment: { type: new GraphQLNonNull(GraphQLFloat) },
     notified: { type: new GraphQLNonNull(GraphQLBoolean) },
@@ -67,9 +69,12 @@ export const loanExpectedPayment = new GraphQLObjectType({
 export const loanExpectedPaymentInput = new GraphQLInputObjectType({
   name: 'loanExpectedPaymentInputType',
   fields: (): any => ({
-    timestamp: { type: new GraphQLNonNull(GraphQLFloat) },
+    paymentDate: { type: new GraphQLNonNull(GraphQLFloat) },
+    outstandingPrincipalBeforePayment: { type: new GraphQLNonNull(GraphQLFloat) },
+    totalPaidPrincipalBeforePayment: { type: new GraphQLNonNull(GraphQLFloat) },
     principalPayment: { type: new GraphQLNonNull(GraphQLFloat) },
     interestPayment: { type: new GraphQLNonNull(GraphQLFloat) },
+    notified: { type: new GraphQLNonNull(GraphQLBoolean) },
   }),
 });
 export const loanStatusValues = new GraphQLEnumType({
@@ -142,6 +147,22 @@ export const loanTransactionList = new GraphQLObjectType({
     outstandingPrincipal: { type: new GraphQLNonNull(GraphQLFloat) },
     outstandingInterest: { type: new GraphQLNonNull(GraphQLFloat) },
     outstandingFees: { type: new GraphQLNonNull(GraphQLFloat) },
+    investmentStats: { type: new GraphQLList(loanInvestmentStats) },
+  }),
+});
+
+export const loanInvestmentStats = new GraphQLObjectType({
+  name: 'LoanInvestmentStatsType',
+  fields: (): any => ({
+    budgetId: { type: new GraphQLNonNull(GraphQLID) },
+    initialInvestment: { type: new GraphQLNonNull(GraphQLFloat) },
+    outstandingPrincipal: { type: new GraphQLNonNull(GraphQLFloat) },
+    totalPaidPrincipal: { type: new GraphQLNonNull(GraphQLFloat) },
+    outstandingInterest: { type: new GraphQLNonNull(GraphQLFloat) },
+    totalPaidInterest: { type: new GraphQLNonNull(GraphQLFloat) },
+    totalRefundedAmount: { type: new GraphQLNonNull(GraphQLFloat) },
+    totalForgivenAmount: { type: new GraphQLNonNull(GraphQLFloat) },
+    interestRate: { type: new GraphQLNonNull(interestRateType) },
   }),
 });
 

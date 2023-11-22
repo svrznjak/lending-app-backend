@@ -38,6 +38,7 @@ const mergedQueries = new GraphQLObjectType({
 import userMutations from './schema/user/mutations.js';
 import budgetMutations from './schema/budget/mutations.js';
 import loanMutations from './schema/loan/mutations.js';
+import customerMutations from './schema/customer/mutations.js';
 import transactionMutations from './schema/transaction/mutations.js';
 
 // Merge imported mutations into GraphQLObjectType
@@ -54,6 +55,10 @@ const mergedMutations = new GraphQLObjectType({
     },
     Loan: {
       type: loanMutations,
+      resolve: () => ({}),
+    },
+    Customer: {
+      type: customerMutations,
       resolve: () => ({}),
     },
     Transaction: {

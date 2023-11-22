@@ -3,6 +3,7 @@ import existsOneWithId from '../plugins/existsOneWithId.js';
 
 import { LoanPaymentFrequencySchema } from './LoanPaymentFrequencySchema.js';
 import { NoteSchema } from './NoteSchema.js';
+import { LoanInterestRateSchema } from './LoanInterestRateSchema.js';
 
 const LoanStatusSchema = new mongoose.Schema({
   current: {
@@ -16,7 +17,9 @@ const LoanStatusSchema = new mongoose.Schema({
 LoanStatusSchema.add({ previous: LoanStatusSchema });
 
 const ExpectedPaymentSchema = new mongoose.Schema({
-  timestamp: { type: Number, required: true },
+  paymentDate: { type: Number, required: true },
+  outstandingPrincipalBeforePayment: { type: Number, required: true },
+  totalPaidPrincipalBeforePayment: { type: Number, required: true },
   principalPayment: { type: Number, required: true },
   interestPayment: { type: Number, required: true },
   notified: { type: Boolean, required: true, default: false },
@@ -52,6 +55,9 @@ export const LoanSchema = new mongoose.Schema(
       required: true,
     },
     expectedPayments: {
+      _id: {
+        type: mongoose.Schema.Types.ObjectId,
+      },
       type: [ExpectedPaymentSchema],
       default: [],
     },
@@ -132,6 +138,25 @@ export const LoanSchema = new mongoose.Schema(
           outstandingPrincipal: { type: Number },
           outstandingInterest: { type: Number },
           outstandingFees: { type: Number },
+          investmentStats: {
+            type: [
+              {
+                budgetId: { type: String, required: true },
+                initialInvestment: { type: Number, required: true },
+                outstandingPrincipal: { type: Number, required: true },
+                totalPaidPrincipal: { type: Number, required: true },
+                outstandingInterest: { type: Number, required: true },
+                totalPaidInterest: { type: Number, required: true },
+                totalRefundedAmount: { type: Number, required: true },
+                totalForgivenAmount: { type: Number, required: true },
+                interestRate: {
+                  type: LoanInterestRateSchema,
+                  required: true,
+                },
+              },
+            ],
+            default: [],
+          },
         },
       ],
       default: [],

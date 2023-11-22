@@ -4,12 +4,14 @@ import { noteHelpers } from './noteHelpers.js';
 
 describe('noteHelpers', () => {
   describe('validate', () => {
-    const correctValidationInputs: Pick<INote, 'content' | 'entryTimestamp'>[] = [
+    const correctValidationInputs: INote[] = [
       {
+        _id: 'xxxx',
         content: `New note!`,
         entryTimestamp: 1663017539,
       },
       {
+        _id: 'xxxx',
         content: `This is Perfect
         note!`,
         entryTimestamp: 1663019999,
@@ -20,34 +22,40 @@ describe('noteHelpers', () => {
       expect(result).toEqual(input);
     });
 
-    const invalidValidationInputs: Pick<INote, 'content' | 'entryTimestamp'>[] = [
+    const invalidValidationInputs: INote[] = [
       {
         // content is undefined
+        _id: 'xxx',
         content: undefined,
         entryTimestamp: 1663019999,
       },
       {
         // entryTimestamp is negative
+        _id: 'xxx',
         content: `This is Perfect note!`,
         entryTimestamp: -1,
       },
       {
         // entryTimestamp is NaN
+        _id: 'xxx',
         content: `This is Perfect note!`,
         entryTimestamp: NaN,
       },
       {
         // entryTimestamp is undefined
+        _id: 'xxx',
         content: `This is Perfect note!`,
         entryTimestamp: undefined,
       },
       {
         // entryTimestamp is null
+        _id: 'xxx',
         content: `This is Perfect note!`,
         entryTimestamp: null,
       },
       {
         // entryTimestamp is to large
+        _id: 'xxx',
         content: `This is Perfect note!`,
         // eslint-disable-next-line @typescript-eslint/no-loss-of-precision
         entryTimestamp: 9999999999999999999,

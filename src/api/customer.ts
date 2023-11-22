@@ -21,6 +21,7 @@ export default {
       phone: input.phone,
       address: input.address,
       notes: [],
+      isArchived: false,
       entryTimestamp: Date.now(),
     });
 
@@ -32,7 +33,15 @@ export default {
       const newCustomer = await new CustomerModel(newCustomerData).save();
       customerCache.addCustomerToUsersCache({ userId, customer: newCustomer });
 
-      return customerHelpers.runtimeCast(newCustomer);
+      return customerHelpers.runtimeCast({
+        ...newCustomer.toObject(),
+        _id: newCustomer._id.toString(),
+        userId: newCustomer.userId.toString(),
+        notes: newCustomer.notes.map((note: any) => ({
+          ...note.toObject(),
+          _id: note._id.toString(),
+        })),
+      });
     } catch (err) {
       console.log(err);
       throw new Error(err);
@@ -81,6 +90,10 @@ export default {
       ...MONGO_CUSTOMER.toObject(),
       _id: MONGO_CUSTOMER._id.toString(),
       userId: MONGO_CUSTOMER.userId.toString(),
+      notes: MONGO_CUSTOMER.notes.map((note: any) => ({
+        ...note.toObject(),
+        _id: note._id.toString(),
+      })),
     });
 
     await MONGO_CUSTOMER.save();
@@ -100,6 +113,10 @@ export default {
       ...MONGO_CUSTOMER.toObject(),
       _id: MONGO_CUSTOMER._id.toString(),
       userId: MONGO_CUSTOMER.userId.toString(),
+      notes: MONGO_CUSTOMER.notes.map((note: any) => ({
+        ...note.toObject(),
+        _id: note._id.toString(),
+      })),
     });
 
     await MONGO_CUSTOMER.save();
@@ -119,6 +136,10 @@ export default {
       ...MONGO_CUSTOMER.toObject(),
       _id: MONGO_CUSTOMER._id.toString(),
       userId: MONGO_CUSTOMER.userId.toString(),
+      notes: MONGO_CUSTOMER.notes.map((note: any) => ({
+        ...note.toObject(),
+        _id: note._id.toString(),
+      })),
     });
 
     await MONGO_CUSTOMER.save();
@@ -161,6 +182,10 @@ export default {
         ...customer.toObject(),
         _id: customer._id.toString(),
         userId: customer.userId.toString(),
+        notes: customer.notes.map((note: any) => ({
+          ...note.toObject(),
+          _id: note._id.toString(),
+        })),
       }),
     );
 
@@ -187,6 +212,10 @@ export default {
       ...MONGO_CUSTOMER.toObject(),
       _id: MONGO_CUSTOMER._id.toString(),
       userId: MONGO_CUSTOMER.userId.toString(),
+      notes: MONGO_CUSTOMER.notes.map((note: any) => ({
+        ...note.toObject(),
+        _id: note._id.toString(),
+      })),
     });
 
     await MONGO_CUSTOMER.save();
@@ -203,7 +232,7 @@ export default {
   ): Promise<ICustomer> {
     const MONGO_CUSTOMER = await CustomerModel.findOne({ _id: customerId, userId: userId });
     if (MONGO_CUSTOMER === null) throw new Error('Customer does not exist!');
-    const NOTE_INDEX = MONGO_CUSTOMER.notes.findIndex((note) => note._id === noteId);
+    const NOTE_INDEX = MONGO_CUSTOMER.notes.findIndex((note) => note._id.toString() === noteId);
     if (NOTE_INDEX === -1) throw new Error('Note does not exist!');
     MONGO_CUSTOMER.notes[NOTE_INDEX].content = content;
     MONGO_CUSTOMER.notes[NOTE_INDEX].entryTimestamp = Date.now();
@@ -213,6 +242,10 @@ export default {
       ...MONGO_CUSTOMER.toObject(),
       _id: MONGO_CUSTOMER._id.toString(),
       userId: MONGO_CUSTOMER.userId.toString(),
+      notes: MONGO_CUSTOMER.notes.map((note: any) => ({
+        ...note.toObject(),
+        _id: note._id.toString(),
+      })),
     });
 
     await MONGO_CUSTOMER.save();
@@ -228,7 +261,7 @@ export default {
   ): Promise<ICustomer> {
     const MONGO_CUSTOMER = await CustomerModel.findOne({ _id: customerId, userId: userId });
     if (MONGO_CUSTOMER === null) throw new Error('Customer does not exist!');
-    const NOTE_INDEX = MONGO_CUSTOMER.notes.findIndex((note) => note._id === noteId);
+    const NOTE_INDEX = MONGO_CUSTOMER.notes.findIndex((note) => note._id.toString() === noteId);
     if (NOTE_INDEX === -1) throw new Error('Note does not exist!');
     MONGO_CUSTOMER.notes.splice(NOTE_INDEX, 1);
     MONGO_CUSTOMER.markModified('notes');
@@ -237,6 +270,10 @@ export default {
       ...MONGO_CUSTOMER.toObject(),
       _id: MONGO_CUSTOMER._id.toString(),
       userId: MONGO_CUSTOMER.userId.toString(),
+      notes: MONGO_CUSTOMER.notes.map((note: any) => ({
+        ...note.toObject(),
+        _id: note._id.toString(),
+      })),
     });
 
     await MONGO_CUSTOMER.save();

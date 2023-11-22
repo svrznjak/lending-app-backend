@@ -1,13 +1,7 @@
 import _ from 'lodash';
-import {
-  isValidAmountOfMoney,
-  isValidEmail,
-  isValidOption,
-  isValidText,
-  isValidTimestamp,
-} from '../../utils/inputValidator/inputValidator.js';
+import { isValidEmail, isValidText, isValidTimestamp } from '../../utils/inputValidator/inputValidator.js';
 import { ICustomer } from './customerInterface.js';
-import { sanitizeText } from '../../utils/inputSanitizer/inputSanitizer.js';
+import { sanitizeText, sanitizeEmail } from '../../utils/inputSanitizer/inputSanitizer.js';
 import { noteHelpers } from '../note/noteHelpers.js';
 import { INote } from '../note/noteInterface.js';
 
@@ -65,8 +59,8 @@ export const customerHelpers = {
     name: function sanitizeName(name: string): string {
       return sanitizeText({ text: name });
     },
-    email: function sanitizeEmail(email: string): string {
-      return sanitizeEmail(email);
+    email: function sanitizeCustomerEmail(email: string): string {
+      return sanitizeEmail({ email });
     },
     phone: function sanitizePhone(phone: string): string {
       return sanitizeText({ text: phone });

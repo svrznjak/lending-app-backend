@@ -1,6 +1,7 @@
 import { IPaymentFrequency } from '../paymentFrequency/paymentFrequencyInterface.js';
 import { INote } from '../note/noteInterface.js';
 import { ITransactionAddress } from '../transactionAddress/transactionAddressInterface.js';
+import { IInterestRate } from '../interestRate/interestRateInterface.js';
 
 export interface ILoan {
   _id: string;
@@ -57,6 +58,7 @@ export interface ITransactionInterval {
   outstandingPrincipal: number;
   outstandingInterest: number;
   outstandingFees: number;
+  investmentStats: IInvestment[];
 }
 
 interface IPaymentDetails {
@@ -65,10 +67,25 @@ interface IPaymentDetails {
 }
 
 export interface IExpectedPayment {
-  timestamp: number;
+  paymentDate: number;
+  outstandingPrincipalBeforePayment: number;
+  totalPaidPrincipalBeforePayment: number;
   principalPayment: number;
   interestPayment: number;
   notified?: boolean;
+}
+export interface IInvestment {
+  budgetId: string;
+  initialInvestment: number;
+  outstandingPrincipal: number;
+  totalPaidPrincipal: number;
+  outstandingInterest: number;
+  totalPaidInterest: number;
+  totalRefundedAmount: number;
+  totalForgivenAmount: number;
+  interestRate: IInterestRate;
+  calculatedInterestPerHour: number | undefined;
+  fixedAmountInterest: number | undefined;
 }
 
 export interface IRelatedBudget {

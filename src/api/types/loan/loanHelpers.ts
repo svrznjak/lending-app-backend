@@ -107,6 +107,16 @@ export const loanHelpers = {
       if (!Array.isArray(expectedPayments)) throw new Error('(validation) expectedPayments is invalid!');
       expectedPayments.forEach((expectedPayment) => {
         if (
+          !isValidTimestamp({
+            timestamp: expectedPayment.paymentDate,
+          })
+        )
+          throw new Error('(validation) expectedPayment paymentDate is invalid!');
+        if (!isValidAmountOfMoney({ amount: expectedPayment.outstandingPrincipalBeforePayment }))
+          throw new Error('(validation) expectedPayment outstandingPrincipalBeforePayment is invalid!');
+        if (!isValidAmountOfMoney({ amount: expectedPayment.totalPaidPrincipalBeforePayment }))
+          throw new Error('(validation) expectedPayment totalPaidPrincipalBeforePayment is invalid!');
+        if (
           !isValidAmountOfMoney({
             amount: expectedPayment.principalPayment,
           })
@@ -118,12 +128,6 @@ export const loanHelpers = {
           })
         )
           throw new Error('(validation) expectedPayment interestPayment is invalid!');
-        if (
-          !isValidTimestamp({
-            timestamp: expectedPayment.timestamp,
-          })
-        )
-          throw new Error('(validation) expectedPayment timestamp is invalid!');
       });
       return expectedPayments;
     },
@@ -192,12 +196,16 @@ export const loanHelpers = {
     loan.expectedPayments.forEach((expectedPayment) => {
       if (typeof expectedPayment !== 'object' || expectedPayment === null)
         throw new Error('Type of loan.expectedPayments must be an object!');
+      if (!Number.isFinite(expectedPayment.paymentDate))
+        throw new Error('Type of loan.expectedPayments.paymentDate must be a number!');
+      if (!Number.isFinite(expectedPayment.outstandingPrincipalBeforePayment))
+        throw new Error('Type of loan.expectedPayments.outstandingPrincipalBeforePayment must be a number!');
+      if (!Number.isFinite(expectedPayment.totalPaidPrincipalBeforePayment))
+        throw new Error('Type of loan.expectedPayments.totalPaidPrincipalBeforePayment must be a number!');
       if (!Number.isFinite(expectedPayment.principalPayment))
         throw new Error('Type of loan.expectedPayments.principalPayment must be a number!');
       if (!Number.isFinite(expectedPayment.interestPayment))
         throw new Error('Type of loan.expectedPayments.interestPayment must be a number!');
-      if (!Number.isFinite(expectedPayment.timestamp))
-        throw new Error('Type of loan.expectedPayments.timestamp must be a number!');
     });
 
     paymentFrequencyHelpers.runtimeCast(loan.paymentFrequency);

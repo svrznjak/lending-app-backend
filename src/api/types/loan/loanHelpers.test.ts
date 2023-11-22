@@ -6,11 +6,19 @@ describe('loanHelpers', () => {
   describe('validate', () => {
     const correctValidationInputs: Pick<
       ILoan,
-      'name' | 'description' | 'openedTimestamp' | 'closesTimestamp' | 'paymentFrequency' | 'expectedPayments'
+      | 'name'
+      | 'description'
+      | 'customerId'
+      | 'openedTimestamp'
+      | 'closesTimestamp'
+      | 'paymentFrequency'
+      | 'expectedPayments'
+      | 'notes'
     >[] = [
       {
         name: 'Loan 1',
         description: 'Car loan.',
+        customerId: 'xxx',
         openedTimestamp: 1663012800,
         closesTimestamp: 1753012802,
         paymentFrequency: {
@@ -20,10 +28,12 @@ describe('loanHelpers', () => {
           entryTimestamp: 1663012853,
         },
         expectedPayments: [],
+        notes: [],
       },
       {
         name: 'Loan 2',
         description: '',
+        customerId: 'xxx',
         openedTimestamp: 1663012800,
         closesTimestamp: 1753012802,
         paymentFrequency: {
@@ -33,6 +43,7 @@ describe('loanHelpers', () => {
           entryTimestamp: 1663012853,
         },
         expectedPayments: [],
+        notes: [],
       },
     ];
     test.each(correctValidationInputs)('It works with correct input', (input) => {
@@ -42,12 +53,20 @@ describe('loanHelpers', () => {
 
     const invalidValidationInputs: Pick<
       ILoan,
-      'name' | 'description' | 'openedTimestamp' | 'closesTimestamp' | 'paymentFrequency' | 'expectedPayments'
+      | 'name'
+      | 'description'
+      | 'customerId'
+      | 'openedTimestamp'
+      | 'closesTimestamp'
+      | 'paymentFrequency'
+      | 'expectedPayments'
+      | 'notes'
     >[] = [
       {
         // To short name
         name: '',
         description: 'Car loan.',
+        customerId: 'xxx',
         openedTimestamp: 1663012800,
         closesTimestamp: 1753012802,
         paymentFrequency: {
@@ -57,11 +76,13 @@ describe('loanHelpers', () => {
           entryTimestamp: 1663012853,
         },
         expectedPayments: [],
+        notes: [],
       },
       {
         // name is undefined
         name: undefined,
         description: 'Car loan.',
+        customerId: 'xxx',
         openedTimestamp: 1663012800,
         closesTimestamp: 1753012802,
         paymentFrequency: {
@@ -71,11 +92,13 @@ describe('loanHelpers', () => {
           entryTimestamp: 1663012853,
         },
         expectedPayments: [],
+        notes: [],
       },
       {
         //To long name
         name: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam luctus facilisis lorem eu aliquet. Suspendisse imperdiet laoreet condimentum.',
         description: 'Car loan.',
+        customerId: 'xxx',
         openedTimestamp: 1663012800,
         closesTimestamp: 1753012802,
         paymentFrequency: {
@@ -85,12 +108,14 @@ describe('loanHelpers', () => {
           entryTimestamp: 1663012853,
         },
         expectedPayments: [],
+        notes: [],
       },
       {
         // To long description
         name: 'Loan 1',
         description:
           'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam luctus facilisis lorem eu aliquet. Suspendisse imperdiet laoreet condimentum.Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam luctus facilisis lorem eu aliquet. Suspendisse imperdiet laoreet condimentum.Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam luctus facilisis lorem eu aliquet. Suspendisse imperdiet laoreet condimentum.Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam luctus facilisis lorem eu aliquet. Suspendisse imperdiet laoreet condimentum.Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam luctus facilisis lorem eu aliquet. Suspendisse imperdiet laoreet condimentum.Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam luctus facilisis lorem eu aliquet. Suspendisse imperdiet laoreet condimentum.Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam luctus facilisis lorem eu aliquet. Suspendisse imperdiet laoreet condimentum.Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam luctus facilisis lorem eu aliquet. Suspendisse imperdiet laoreet condimentum.',
+        customerId: 'xxx',
         openedTimestamp: 1663012800,
         closesTimestamp: 1753012802,
         paymentFrequency: {
@@ -100,11 +125,13 @@ describe('loanHelpers', () => {
           entryTimestamp: 1663012853,
         },
         expectedPayments: [],
+        notes: [],
       },
       {
         // description is undefined
         name: 'Loan 1',
         description: undefined,
+        customerId: 'xxx',
         openedTimestamp: 1663012800,
         closesTimestamp: 1753012802,
         paymentFrequency: {
@@ -114,11 +141,13 @@ describe('loanHelpers', () => {
           entryTimestamp: 1663012853,
         },
         expectedPayments: [],
+        notes: [],
       },
       {
         // openedTimestamp and closesTimestamp is negative (check if validation is called)
         name: 'Loan 1',
         description: 'Car loan.',
+        customerId: 'xxx',
         openedTimestamp: -1,
         closesTimestamp: -1,
         paymentFrequency: {
@@ -128,11 +157,13 @@ describe('loanHelpers', () => {
           entryTimestamp: 1663012853,
         },
         expectedPayments: [],
+        notes: [],
       },
       {
         // openedTimestamp and closesTimestamp is NaN (check if validation is called)
         name: 'Loan 1',
         description: 'Car loan.',
+        customerId: 'xxx',
         openedTimestamp: NaN,
         closesTimestamp: NaN,
         paymentFrequency: {
@@ -142,11 +173,13 @@ describe('loanHelpers', () => {
           entryTimestamp: 1663012853,
         },
         expectedPayments: [],
+        notes: [],
       },
       {
         // openedTimestamp and closesTimestamp is undefined (check if validation is called)
         name: 'Loan 1',
         description: 'Car loan.',
+        customerId: 'xxx',
         openedTimestamp: undefined,
         closesTimestamp: undefined,
         paymentFrequency: {
@@ -156,10 +189,12 @@ describe('loanHelpers', () => {
           entryTimestamp: 1663012853,
         },
         expectedPayments: [],
+        notes: [],
       },
       {
         name: 'Loan 1',
         description: 'Car loan.',
+        customerId: 'xxx',
         openedTimestamp: 1663012800,
         closesTimestamp: 1753012802,
         paymentFrequency: {
@@ -169,11 +204,13 @@ describe('loanHelpers', () => {
           entryTimestamp: 1663012853,
         },
         expectedPayments: [],
+        notes: [],
       },
       {
         // initialPrinciple is NaN
         name: 'Loan 1',
         description: 'Car loan.',
+        customerId: 'xxx',
         openedTimestamp: 1663012800,
         closesTimestamp: 1753012802,
         paymentFrequency: {
@@ -183,11 +220,13 @@ describe('loanHelpers', () => {
           entryTimestamp: 1663012853,
         },
         expectedPayments: [],
+        notes: [],
       },
       {
         // initialPrinciple is undefined
         name: 'Loan 1',
         description: 'Car loan.',
+        customerId: 'xxx',
         openedTimestamp: 1663012800,
         closesTimestamp: 1753012802,
         paymentFrequency: {
@@ -197,11 +236,13 @@ describe('loanHelpers', () => {
           entryTimestamp: 1663012853,
         },
         expectedPayments: [],
+        notes: [],
       },
       {
         // interestRate.amount is negative
         name: 'Loan 1',
         description: 'Car loan.',
+        customerId: 'xxx',
         openedTimestamp: 1663012800,
         closesTimestamp: 1753012802,
         paymentFrequency: {
@@ -211,6 +252,7 @@ describe('loanHelpers', () => {
           entryTimestamp: 1663012853,
         },
         expectedPayments: [],
+        notes: [],
       },
     ];
     test.each(invalidValidationInputs)('It throws error if input is invalid', (input) => {

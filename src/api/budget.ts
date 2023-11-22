@@ -406,13 +406,15 @@ export default {
     const budget = await BudgetModel.findOne({ _id: budgetId });
 
     budget.isArchived = isArchived;
-    const changedBudget = budgetHelpers.runtimeCast({
-      ...budget.toObject(),
-      _id: budget._id.toString(),
-      userId: budget.userId.toString(),
-    });
     await budget.save();
-    return changedBudget;
+    const updatedBudgetWithTransactionList = await this.updateTransactionList(budget);
+
+    // return casted budget
+    return budgetHelpers.runtimeCast({
+      ...updatedBudgetWithTransactionList,
+      _id: updatedBudgetWithTransactionList._id.toString(),
+      userId: updatedBudgetWithTransactionList.userId.toString(),
+    });
   },
 
   // As a lender, I want to change the existing budget name and description, so that I can set a more fitting name and description.
@@ -513,13 +515,15 @@ export default {
       newInfo.defaultPaymentFrequency.entryTimestamp = paymentFrequencyHelpers.validate.entryTimestamp(Date.now());
     }
     budget.set(newInfo);
-    const changedBudget = budgetHelpers.runtimeCast({
-      ...budget.toObject(),
-      _id: budget._id.toString(),
-      userId: budget.userId.toString(),
-    });
     await budget.save();
-    return changedBudget;
+    const updatedBudgetWithTransactionList = await this.updateTransactionList(budget);
+
+    // return casted budget
+    return budgetHelpers.runtimeCast({
+      ...updatedBudgetWithTransactionList,
+      _id: updatedBudgetWithTransactionList._id.toString(),
+      userId: updatedBudgetWithTransactionList.userId.toString(),
+    });
   },
   /**
    * @param  {string} budgetId - _id of budget
@@ -647,10 +651,10 @@ export default {
 
     const TRANSACTION_LIST: IBudgetTransaction[] = [];
 
-    for (let i = 0; i < transactions.length; i++) {
+    for (let i = 0, y = 0; i < transactions.length; i++) {
       const transaction = transactions[i];
       updateRelatedLoansStatuses(transaction.transactionTimestamp);
-      if (i == 0) {
+      if (y == 0) {
         // Assuming that first transaction is always a deposit to budget
         if (!(transaction.to.datatype === 'BUDGET' && transaction.from.datatype === 'OUTSIDE'))
           throw new Error(
@@ -682,6 +686,7 @@ export default {
             avarageAssociatedLoanAmount: null,
           },
         });
+        y++;
       } else if (transaction.from.datatype === 'OUTSIDE' && transaction.to.datatype === 'BUDGET') {
         TRANSACTION_LIST.push({
           _id: transaction._id.toString(),
@@ -691,18 +696,19 @@ export default {
           to: transaction.to,
           amount: transaction.amount,
           budgetStats: {
-            ...TRANSACTION_LIST[i - 1].budgetStats,
+            ...TRANSACTION_LIST[y - 1].budgetStats,
             ...calculatedFields(transaction),
             totalInvestedAmount: paranoidCalculator.add(
-              TRANSACTION_LIST[i - 1].budgetStats.totalInvestedAmount,
+              TRANSACTION_LIST[y - 1].budgetStats.totalInvestedAmount,
               transaction.amount,
             ),
             totalAvailableAmount: paranoidCalculator.add(
-              TRANSACTION_LIST[i - 1].budgetStats.totalAvailableAmount,
+              TRANSACTION_LIST[y - 1].budgetStats.totalAvailableAmount,
               transaction.amount,
             ),
           },
         });
+        y++;
       } else if (transaction.from.datatype === 'BUDGET' && transaction.to.datatype === 'OUTSIDE') {
         TRANSACTION_LIST.push({
           _id: transaction._id.toString(),
@@ -712,21 +718,22 @@ export default {
           to: transaction.to,
           amount: transaction.amount,
           budgetStats: {
-            ...TRANSACTION_LIST[i - 1].budgetStats,
+            ...TRANSACTION_LIST[y - 1].budgetStats,
             ...calculatedFields(transaction),
             totalWithdrawnAmount: paranoidCalculator.add(
-              TRANSACTION_LIST[i - 1].budgetStats.totalWithdrawnAmount,
+              TRANSACTION_LIST[y - 1].budgetStats.totalWithdrawnAmount,
               transaction.amount,
             ),
             totalAvailableAmount: paranoidCalculator.subtract(
-              TRANSACTION_LIST[i - 1].budgetStats.totalAvailableAmount,
+              TRANSACTION_LIST[y - 1].budgetStats.totalAvailableAmount,
               transaction.amount,
             ),
           },
         });
+        y++;
       } else if (transaction.from.datatype === 'BUDGET' && transaction.to.datatype === 'LOAN') {
-        currentLoanStats[transaction.to.addressId].amountLent = paranoidCalculator.add(
-          currentLoanStats[transaction.to.addressId].amountLent,
+        currentLoanStats[transaction.to.addressId.toString()].amountLent = paranoidCalculator.add(
+          currentLoanStats[transaction.to.addressId.toString()].amountLent,
           transaction.amount,
         );
 
@@ -738,18 +745,19 @@ export default {
           to: transaction.to,
           amount: transaction.amount,
           budgetStats: {
-            ...TRANSACTION_LIST[i - 1].budgetStats,
+            ...TRANSACTION_LIST[y - 1].budgetStats,
             ...calculatedFields(transaction),
             totalLentAmount: paranoidCalculator.add(
-              TRANSACTION_LIST[i - 1].budgetStats.totalLentAmount,
+              TRANSACTION_LIST[y - 1].budgetStats.totalLentAmount,
               transaction.amount,
             ),
             totalAvailableAmount: paranoidCalculator.subtract(
-              TRANSACTION_LIST[i - 1].budgetStats.totalAvailableAmount,
+              TRANSACTION_LIST[y - 1].budgetStats.totalAvailableAmount,
               transaction.amount,
             ),
           },
         });
+        y++;
       } else if (transaction.from.datatype === 'OUTSIDE' && transaction.to.datatype === 'LOAN') {
         const relatedLoan = relatedLoans.find((loan) => loan._id.toString() === transaction.to.addressId.toString());
         const transactionInLoan = relatedLoan.transactionList.find(
@@ -800,30 +808,31 @@ export default {
             },
             amount: totalPaidToThisBudget,
             budgetStats: {
-              ...TRANSACTION_LIST[i - 1].budgetStats,
+              ...TRANSACTION_LIST[y - 1].budgetStats,
               ...calculatedFields(transaction),
               totalAvailableAmount: paranoidCalculator.add(
-                TRANSACTION_LIST[i - 1].budgetStats.totalAvailableAmount,
+                TRANSACTION_LIST[y - 1].budgetStats.totalAvailableAmount,
                 totalPaidToThisBudget,
               ),
               currentlyPaidBackPrincipalAmount: paranoidCalculator.add(
-                TRANSACTION_LIST[i - 1].budgetStats.currentlyPaidBackPrincipalAmount,
+                TRANSACTION_LIST[y - 1].budgetStats.currentlyPaidBackPrincipalAmount,
                 principalPaymentToThisBudget,
               ),
               currentlyEarnedInterestAmount: paranoidCalculator.add(
-                TRANSACTION_LIST[i - 1].budgetStats.currentlyEarnedInterestAmount,
+                TRANSACTION_LIST[y - 1].budgetStats.currentlyEarnedInterestAmount,
                 interestPaymentToThisBudget,
               ),
               currentlyEarnedFeesAmount: paranoidCalculator.add(
-                TRANSACTION_LIST[i - 1].budgetStats.currentlyEarnedFeesAmount,
+                TRANSACTION_LIST[y - 1].budgetStats.currentlyEarnedFeesAmount,
                 feePaymentToThisBudget,
               ),
               currentlyLendedPrincipalToLiveLoansAmount: paranoidCalculator.subtract(
-                TRANSACTION_LIST[i - 1].budgetStats.currentlyLendedPrincipalToLiveLoansAmount,
+                TRANSACTION_LIST[y - 1].budgetStats.currentlyLendedPrincipalToLiveLoansAmount,
                 principalPaymentToThisBudget,
               ),
             },
           });
+          y++;
         }
       } else if (transaction.from.datatype === 'LOAN' && transaction.to.datatype === 'OUTSIDE') {
         // refund payment
@@ -868,14 +877,15 @@ export default {
             to: transaction.to, // LOAN
             amount: refundedFromThisBudget,
             budgetStats: {
-              ...TRANSACTION_LIST[i - 1].budgetStats,
+              ...TRANSACTION_LIST[y - 1].budgetStats,
               ...calculatedFields(transaction),
               totalAvailableAmount: paranoidCalculator.subtract(
-                TRANSACTION_LIST[i - 1].budgetStats.totalAvailableAmount,
+                TRANSACTION_LIST[y - 1].budgetStats.totalAvailableAmount,
                 refundedFromThisBudget,
               ),
             },
           });
+          y++;
         }
       } else if (transaction.from.datatype === 'LOAN' && transaction.to.datatype === 'FORGIVENESS') {
         // forgiveness of loan
@@ -893,10 +903,10 @@ export default {
           to: transaction.to, // FORGIVENESS
           amount: 0,
           budgetStats: {
-            ...TRANSACTION_LIST[i - 1].budgetStats,
+            ...TRANSACTION_LIST[y - 1].budgetStats,
             ...calculatedFields(transaction),
             totalForgivenAmount: paranoidCalculator.add(
-              TRANSACTION_LIST[i - 1].budgetStats.totalForgivenAmount,
+              TRANSACTION_LIST[y - 1].budgetStats.totalForgivenAmount,
               transactionInLoan.forgivenAmount.reduce((accumulator, currentValue) => {
                 if (currentValue.budgetId === budgetId) {
                   return paranoidCalculator.add(accumulator, currentValue.amount);
@@ -906,6 +916,7 @@ export default {
             ),
           },
         });
+        y++;
       } else if (transaction.from.datatype === 'FEE' && transaction.to.datatype === 'LOAN') {
         // manual interest / fee
         // Not sure if there is anything to do here
