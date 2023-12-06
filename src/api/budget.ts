@@ -109,11 +109,11 @@ export default {
     },
     { session = undefined }: { session?: ClientSession } = {},
   ): Promise<IBudget> {
-    if (userId === undefined) throw new Error('userId is required!');
-    if (budgetId === undefined) throw new Error('budgetId is required!');
+    if (typeof userId !== 'string') throw new Error('userId is required!');
+    if (typeof budgetId !== 'string') throw new Error('budgetId is required!');
 
     const ALL_BUDGETS = await this.getAllFromUser({ userId }, { session });
-    const BUDGET = ALL_BUDGETS.find((budget) => budget._id === budgetId);
+    const BUDGET = ALL_BUDGETS.find((budget) => budget._id === budgetId.toString());
     if (BUDGET === undefined) throw new Error('Budget could not be found');
     return BUDGET;
 
@@ -635,7 +635,10 @@ export default {
 
     const relatedLoans: ILoan[] = await Promise.all(
       relatedLoansIds.map(async (loan) => {
-        return await Loan.getOneFromUser({ userId: MONGO_BUDGET.userId, loanId: loan._id.toString() }, { session });
+        return await Loan.getOneFromUser(
+          { userId: MONGO_BUDGET.userId.toString(), loanId: loan._id.toString() },
+          { session, runUpdateBudgetTransactionList: false },
+        );
       }),
     );
 
@@ -923,6 +926,9 @@ export default {
         console.log('x');
       } else {
         throw new Error('Should not happen');
+      }
+      if (TRANSACTION_LIST[y - 1].budgetStats['totalAvailableAmount'] < 0) {
+        throw new Error('Budget funds cannot be negative!');
       }
     }
     TRANSACTION_LIST.reverse();

@@ -71,27 +71,85 @@ export default {
       if (runChecks) {
         await this.checkIfTransactionCanExist({ transaction: validatedTransaction }, { session: session });
       }
-      const newTransactionInDB: any = await new TransactionModel(validatedTransaction).save({ session });
-      const newTransaction: ITransaction = {
-        _id: newTransactionInDB._id.toString(),
-        userId: newTransactionInDB.userId.toString(),
-        transactionTimestamp: newTransactionInDB.transactionTimestamp,
-        description: newTransactionInDB.description,
-        from: {
-          datatype: newTransactionInDB.from.datatype,
-          addressId: newTransactionInDB.from.addressId.toString(),
-        },
-        to: {
-          datatype: newTransactionInDB.to.datatype,
-          addressId: newTransactionInDB.to.addressId.toString(),
-        },
-        refund: newTransactionInDB.refund,
-        interestRate: newTransactionInDB.interestRate,
-        relatedBudgetId: newTransactionInDB.relatedBudgetId,
-        amount: newTransactionInDB.amount,
-        entryTimestamp: newTransactionInDB.entryTimestamp,
-      };
-      return transactionHelpers.runtimeCast(newTransaction);
+
+      // in case where session is not defined it is needed just to test run loan.recalculateCaluclatedValues and budget.updateTransactionList
+      if (session === undefined) {
+        const session: ClientSession = await mongoose.connection.startSession();
+        try {
+          session.startTransaction();
+          const newTransactionInDB: any = await new TransactionModel(validatedTransaction).save({ session });
+          if (newTransactionInDB.from.datatype === 'BUDGET') {
+            await Budget.updateTransactionList(newTransactionInDB.from.addressId.toString(), session);
+          }
+          if (newTransactionInDB.to.datatype === 'BUDGET') {
+            await Budget.updateTransactionList(newTransactionInDB.to.addressId.toString(), session);
+          }
+          if (newTransactionInDB.from.datatype === 'LOAN') {
+            const recalculatedLoan: ILoan = await Loan.recalculateCalculatedValues(
+              newTransactionInDB.from.addressId.toString(),
+              session,
+            );
+            for (const budget of recalculatedLoan.calculatedRelatedBudgets) {
+              await Budget.updateTransactionList(budget.budgetId, session);
+            }
+          }
+          if (newTransactionInDB.to.datatype === 'LOAN') {
+            const recalculatedLoan: ILoan = await Loan.recalculateCalculatedValues(
+              newTransactionInDB.to.addressId.toString(),
+              session,
+            );
+            for (const budget of recalculatedLoan.calculatedRelatedBudgets) {
+              await Budget.updateTransactionList(budget.budgetId, session);
+            }
+          }
+          await session.commitTransaction();
+          return transactionHelpers.runtimeCast({
+            _id: newTransactionInDB._id.toString(),
+            userId: newTransactionInDB.userId.toString(),
+            transactionTimestamp: newTransactionInDB.transactionTimestamp,
+            description: newTransactionInDB.description,
+            from: {
+              datatype: newTransactionInDB.from.datatype,
+              addressId: newTransactionInDB.from.addressId.toString(),
+            },
+            to: {
+              datatype: newTransactionInDB.to.datatype,
+              addressId: newTransactionInDB.to.addressId.toString(),
+            },
+            refund: newTransactionInDB.refund,
+            interestRate: newTransactionInDB.interestRate,
+            relatedBudgetId: newTransactionInDB.relatedBudgetId,
+            amount: newTransactionInDB.amount,
+            entryTimestamp: newTransactionInDB.entryTimestamp,
+          });
+        } catch (err) {
+          await session.abortTransaction();
+          throw err;
+        } finally {
+          session.endSession();
+        }
+      } else {
+        const newTransactionInDB: any = await new TransactionModel(validatedTransaction).save({ session });
+        return transactionHelpers.runtimeCast({
+          _id: newTransactionInDB._id.toString(),
+          userId: newTransactionInDB.userId.toString(),
+          transactionTimestamp: newTransactionInDB.transactionTimestamp,
+          description: newTransactionInDB.description,
+          from: {
+            datatype: newTransactionInDB.from.datatype,
+            addressId: newTransactionInDB.from.addressId.toString(),
+          },
+          to: {
+            datatype: newTransactionInDB.to.datatype,
+            addressId: newTransactionInDB.to.addressId.toString(),
+          },
+          refund: newTransactionInDB.refund,
+          interestRate: newTransactionInDB.interestRate,
+          relatedBudgetId: newTransactionInDB.relatedBudgetId,
+          amount: newTransactionInDB.amount,
+          entryTimestamp: newTransactionInDB.entryTimestamp,
+        });
+      }
     } catch (err) {
       console.log(err);
       throw new Error('Transaction creation failed!');
@@ -187,51 +245,81 @@ export default {
     }
 
     // Save edited transaction into DB
-    await transaction.save();
-
-    // Get edited transaction to check if everything is ok
-    const Mongo_editedTransaction: any = await TransactionModel.findById(transactionId).lean();
-    if (Mongo_editedTransaction.transactionTimestamp !== newTransaction.transactionTimestamp)
-      throw new Error('Major error!!!');
-    if (Mongo_editedTransaction.description !== newTransaction.description) throw new Error('Major error!!!');
-    if (Mongo_editedTransaction.amount !== newTransaction.amount) throw new Error('Major error!!!');
-    if (Mongo_editedTransaction.entryTimestamp !== newTransaction.entryTimestamp) throw new Error('Major error!!!');
+    /*
+      use session and perform loan.recalculateCalculatedValues() and budget.updateTransactionList() after save.
+      This causes save to fail is any inconsistency is found during recalculation of loan and budget (for example budget reaches negative value).
+    */
+    const session: ClientSession = await mongoose.connection.startSession();
+    try {
+      session.startTransaction();
+      transaction.save({ session });
+      if (transaction.from.datatype === 'BUDGET') {
+        await Budget.updateTransactionList(transaction.from.addressId.toString(), session);
+      }
+      if (transaction.to.datatype === 'BUDGET') {
+        await Budget.updateTransactionList(transaction.to.addressId.toString(), session);
+      }
+      if (transaction.from.datatype === 'LOAN') {
+        const recalculatedLoan: ILoan = await Loan.recalculateCalculatedValues(
+          transaction.from.addressId.toString(),
+          session,
+        );
+        for (const budget of recalculatedLoan.calculatedRelatedBudgets) {
+          await Budget.updateTransactionList(budget.budgetId, session);
+        }
+      }
+      if (transaction.to.datatype === 'LOAN') {
+        const recalculatedLoan: ILoan = await Loan.recalculateCalculatedValues(
+          transaction.to.addressId.toString(),
+          session,
+        );
+        for (const budget of recalculatedLoan.calculatedRelatedBudgets) {
+          await Budget.updateTransactionList(budget.budgetId, session);
+        }
+      }
+      await session.commitTransaction();
+    } catch (err) {
+      await session.abortTransaction();
+      throw err;
+    } finally {
+      session.endSession();
+    }
 
     // verify transaction values
     const editedTransaction: ITransaction = transactionHelpers.runtimeCast({
-      _id: Mongo_editedTransaction._id.toString(),
-      userId: Mongo_editedTransaction.userId.toString(),
-      transactionTimestamp: Mongo_editedTransaction.transactionTimestamp,
-      description: Mongo_editedTransaction.description,
+      _id: transaction._id.toString(),
+      userId: transaction.userId.toString(),
+      transactionTimestamp: transaction.transactionTimestamp,
+      description: transaction.description,
       from: {
-        datatype: Mongo_editedTransaction.from.datatype,
-        addressId: Mongo_editedTransaction.from.addressId.toString(),
+        datatype: transaction.from.datatype,
+        addressId: transaction.from.addressId.toString(),
       },
       to: {
-        datatype: Mongo_editedTransaction.to.datatype,
-        addressId: Mongo_editedTransaction.to.addressId.toString(),
+        datatype: transaction.to.datatype,
+        addressId: transaction.to.addressId.toString(),
       },
-      refund: Mongo_editedTransaction.refund,
-      interestRate: Mongo_editedTransaction.interestRate,
-      relatedBudgetId: Mongo_editedTransaction.relatedBudgetId,
-      amount: Mongo_editedTransaction.amount,
-      entryTimestamp: Mongo_editedTransaction.entryTimestamp,
-      revisions: Mongo_editedTransaction.revisions,
+      refund: transaction.refund,
+      interestRate: transaction.interestRate,
+      relatedBudgetId: transaction.relatedBudgetId,
+      amount: transaction.amount,
+      entryTimestamp: transaction.entryTimestamp,
+      revisions: transaction.revisions !== undefined ? transaction.revisions.toObject() : undefined,
     });
     if (editedTransaction.from.datatype === 'BUDGET') {
-      await Budget.updateTransactionList(editedTransaction.from.addressId);
+      await Budget.updateTransactionList(editedTransaction.from.addressId.toString());
     }
     if (editedTransaction.to.datatype === 'BUDGET') {
-      await Budget.updateTransactionList(editedTransaction.to.addressId);
+      await Budget.updateTransactionList(editedTransaction.to.addressId.toString());
     }
     if (editedTransaction.from.datatype === 'LOAN') {
-      const recalculatedLoan = await Loan.recalculateCalculatedValues(editedTransaction.from.addressId);
+      const recalculatedLoan = await Loan.recalculateCalculatedValues(editedTransaction.from.addressId.toString());
       for (const budget of recalculatedLoan.calculatedRelatedBudgets) {
         await Budget.updateTransactionList(budget.budgetId);
       }
     }
     if (editedTransaction.to.datatype === 'LOAN') {
-      const recalculatedLoan = await Loan.recalculateCalculatedValues(editedTransaction.to.addressId);
+      const recalculatedLoan = await Loan.recalculateCalculatedValues(editedTransaction.to.addressId.toString());
       for (const budget of recalculatedLoan.calculatedRelatedBudgets) {
         await Budget.updateTransactionList(budget.budgetId);
       }
@@ -243,48 +331,107 @@ export default {
   delete: async function deleteTransaction(transactionId: string): Promise<ITransaction> {
     // const transaction = await TransactionModel.findById(transactionId);
     // if (!transaction) throw new Error('Transaction you wanted to delete was not found!');
+    const transaction: any = await TransactionModel.findById(transactionId);
+    if (transaction === null) throw new Error('Transaction you wanted to edit, does not exist.');
+
+    if (transaction.from.datatype === 'BUDGET' && transaction.to.datatype === 'LOAN') {
+      throw new Error('Transaction from budget to loan can not be deleted');
+    }
+    if (transaction.from.datatype === 'LOAN') {
+      const AFFECTED_LOAN: ILoan = await Loan.getOneFromUser({
+        userId: transaction.userId,
+        loanId: transaction.from.addressId,
+      });
+
+      if (AFFECTED_LOAN.status.current === 'COMPLETED' || AFFECTED_LOAN.status.current === 'DEFAULTED')
+        throw new Error('Transaction from loan with status "COMPLETED" or "DEFAULTED" can not be deleted');
+    } else if (transaction.to.datatype === 'LOAN') {
+      const AFFECTED_LOAN: ILoan = await Loan.getOneFromUser({
+        userId: transaction.userId,
+        loanId: transaction.to.addressId,
+      });
+
+      if (AFFECTED_LOAN.status.current === 'COMPLETED' || AFFECTED_LOAN.status.current === 'DEFAULTED')
+        throw new Error('Transaction from loan with status "COMPLETED" or "DEFAULTED" can not be deleted');
+    }
+    // Save edited transaction into DB
+    /*
+      use session and perform loan.recalculateCalculatedValues() and budget.updateTransactionList() after save.
+      This causes save to fail is any inconsistency is found during recalculation of loan and budget (for example budget reaches negative value).
+    */
+    const session: ClientSession = await mongoose.connection.startSession();
     try {
-      const TRANSACTION = await this.getOne({ transactionId });
-
-      if (TRANSACTION.from.datatype === 'BUDGET' && TRANSACTION.to.datatype === 'LOAN') {
-        throw new Error('Transaction from budget to loan can not be deleted');
-      }
-      if (TRANSACTION.from.datatype === 'LOAN') {
-        const AFFECTED_LOAN: ILoan = await Loan.getOneFromUser({
-          userId: TRANSACTION.userId,
-          loanId: TRANSACTION.from.addressId,
-        });
-
-        if (AFFECTED_LOAN.status.current === 'COMPLETED' || AFFECTED_LOAN.status.current === 'DEFAULTED')
-          throw new Error('Transaction from loan with status "COMPLETED" or "DEFAULTED" can not be deleted');
-      } else if (TRANSACTION.to.datatype === 'LOAN') {
-        const AFFECTED_LOAN: ILoan = await Loan.getOneFromUser({
-          userId: TRANSACTION.userId,
-          loanId: TRANSACTION.to.addressId,
-        });
-
-        if (AFFECTED_LOAN.status.current === 'COMPLETED' || AFFECTED_LOAN.status.current === 'DEFAULTED')
-          throw new Error('Transaction from loan with status "COMPLETED" or "DEFAULTED" can not be deleted');
-      }
-      const deletedTransaction: ITransaction = await TransactionModel.findByIdAndDelete(transactionId).lean();
+      session.startTransaction();
+      const deletedTransaction: ITransaction = await TransactionModel.findByIdAndDelete(transactionId)
+        .session(session)
+        .lean();
       if (deletedTransaction === null) throw new Error('Transaction you wanted to delete was not found!');
+      //transaction.remove({ session });
       if (deletedTransaction.from.datatype === 'BUDGET') {
-        Budget.updateTransactionList(deletedTransaction.from.addressId.toString());
+        await Budget.updateTransactionList(deletedTransaction.from.addressId.toString(), session);
       }
       if (deletedTransaction.to.datatype === 'BUDGET') {
-        Budget.updateTransactionList(deletedTransaction.to.addressId.toString());
+        await Budget.updateTransactionList(deletedTransaction.to.addressId.toString(), session);
       }
       if (deletedTransaction.from.datatype === 'LOAN') {
-        await Loan.recalculateCalculatedValues(deletedTransaction.from.addressId.toString());
+        const recalculatedLoan: ILoan = await Loan.recalculateCalculatedValues(
+          deletedTransaction.from.addressId.toString(),
+          session,
+        );
+        for (const budget of recalculatedLoan.calculatedRelatedBudgets) {
+          await Budget.updateTransactionList(budget.budgetId, session);
+        }
       }
       if (deletedTransaction.to.datatype === 'LOAN') {
-        await Loan.recalculateCalculatedValues(deletedTransaction.to.addressId.toString());
+        const recalculatedLoan: ILoan = await Loan.recalculateCalculatedValues(
+          deletedTransaction.to.addressId.toString(),
+          session,
+        );
+        for (const budget of recalculatedLoan.calculatedRelatedBudgets) {
+          await Budget.updateTransactionList(budget.budgetId, session);
+        }
       }
-      return deletedTransaction;
+      await session.commitTransaction();
     } catch (err) {
-      console.log(err);
-      throw new Error('Transaction deletion failed!');
+      await session.abortTransaction();
+      throw err;
+    } finally {
+      session.endSession();
     }
+    // verify transaction values
+    const deletedTransaction: ITransaction = transactionHelpers.runtimeCast({
+      _id: transaction._id.toString(),
+      userId: transaction.userId.toString(),
+      transactionTimestamp: transaction.transactionTimestamp,
+      description: transaction.description,
+      from: {
+        datatype: transaction.from.datatype,
+        addressId: transaction.from.addressId.toString(),
+      },
+      to: {
+        datatype: transaction.to.datatype,
+        addressId: transaction.to.addressId.toString(),
+      },
+      refund: transaction.refund,
+      interestRate: transaction.interestRate,
+      relatedBudgetId: transaction.relatedBudgetId,
+      amount: transaction.amount,
+      entryTimestamp: transaction.entryTimestamp,
+      revisions: transaction.revisions !== undefined ? transaction.revisions.toObject() : undefined,
+    });
+    if (deletedTransaction.from.datatype === 'BUDGET') {
+      Budget.updateTransactionList(deletedTransaction.from.addressId);
+    }
+    if (deletedTransaction.to.datatype === 'BUDGET') {
+      Budget.updateTransactionList(deletedTransaction.to.addressId);
+    }
+    if (deletedTransaction.from.datatype === 'LOAN') {
+      await Loan.recalculateCalculatedValues(deletedTransaction.from.addressId);
+    }
+    if (deletedTransaction.to.datatype === 'LOAN') {
+      await Loan.recalculateCalculatedValues(deletedTransaction.to.addressId);
+    }
+    return deletedTransaction;
   },
   findTranasactionsFromAndTo: async function findTransactionsFromAndTo(
     transactionAddress: ITransactionAddress,

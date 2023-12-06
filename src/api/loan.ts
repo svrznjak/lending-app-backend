@@ -210,12 +210,15 @@ const Loan = {
       userId: string;
       loanId: string;
     },
-    { session = undefined }: { session?: ClientSession } = {},
+    {
+      session = undefined,
+      runUpdateBudgetTransactionList = true,
+    }: { session?: ClientSession; runUpdateBudgetTransactionList?: boolean } = {},
   ): Promise<ILoan> {
     if (userId === undefined) throw new Error('userId is required!');
     if (loanId === undefined) throw new Error('loanId is required!');
     // if session is provided, do not use cache and don't recalculate, because such a call is a part of ongoing transaction. Changes to data will be made in the end of successful session.
-    if (session !== undefined) {
+    /*if (session !== undefined) {
       const MONGO_LOAN = await LoanModel.findOne({ _id: loanId, userId: userId }).session(session);
       if (MONGO_LOAN === null) throw new Error('Loan could not be found');
       return loanHelpers.runtimeCast({
@@ -227,12 +230,12 @@ const Loan = {
           _id: note._id.toString(),
         })),
       });
-    }
+    }*/
 
-    if (LoanCache.getCachedItem({ itemId: loanId })) {
+    if (LoanCache.getCachedItem({ itemId: loanId }) && session === undefined) {
       return LoanCache.getCachedItem({ itemId: loanId }) as ILoan;
     } else {
-      const MONGO_LOAN = await LoanModel.findOne({ _id: loanId, userId: userId });
+      const MONGO_LOAN = await LoanModel.findOne({ _id: loanId, userId: userId }).session(session);
       if (MONGO_LOAN === null) throw new Error('Loan could not be found');
       // Do not recalculate if loan is completed or defaulted, because no change to data will ever be made
       if (MONGO_LOAN.status.current === 'COMPLETED' || MONGO_LOAN.status.current === 'DEFAULTED') {
@@ -252,10 +255,11 @@ const Loan = {
         return LOAN;
       }
 
-      const recalculatedLoan = await this.recalculateCalculatedValues(MONGO_LOAN);
-      for (const budget of recalculatedLoan.calculatedRelatedBudgets) {
-        await Budget.updateTransactionList(budget.budgetId);
-      }
+      const recalculatedLoan = await this.recalculateCalculatedValues(MONGO_LOAN, session);
+      if (runUpdateBudgetTransactionList)
+        for (const budget of recalculatedLoan.calculatedRelatedBudgets) {
+          await Budget.updateTransactionList(budget.budgetId, session);
+        }
       return recalculatedLoan;
     }
   },
@@ -1131,6 +1135,7 @@ const Loan = {
     MONGO_LOAN.transactionList = CALCULATED_VALUES_UNTIL_NOW.transactionList;
     */
     MONGO_LOAN.calculatedRelatedBudgets = CALCULATED_VALUES_UNTIL_NOW.calculatedRelatedBudgets;
+    MONGO_LOAN.markModified('calculatedRelatedBudgets');
     // Check if PAID
     if (
       _.round(CALCULATED_VALUES_UNTIL_NOW.calculatedOutstandingPrincipal, 2) <= 0 &&
@@ -1312,7 +1317,7 @@ const Loan = {
           } else if (interestRate.type === 'FIXED_PER_DURATION' && interestRate.duration !== 'FULL_DURATION') {
             interestCharged = investment.calculatedInterestPerHour * DIFFERENCE_IN_HOURS;
           }
-          transactionInformation.interestCharged = interestCharged;
+          transactionInformation.interestCharged += interestCharged;
           investment.outstandingInterest += interestCharged;
           outstandingInterest += interestCharged;
         }
@@ -1440,12 +1445,17 @@ const Loan = {
 
         // then pay off principal of each investment in proportion of their outstanding principal
 
-        if (remainingPaymentAmount > 0)
+        // in case loan is not jet paid off
+        if (remainingPaymentAmount > 0 && outstandingPrincipal > 0) {
+          const outstandingPrincipalBeforePayment = outstandingPrincipal;
+          let usableRemainingPaymentAmount = remainingPaymentAmount;
+          if (remainingPaymentAmount > outstandingPrincipal) usableRemainingPaymentAmount = outstandingPrincipal;
+          remainingPaymentAmount -= usableRemainingPaymentAmount;
           for (const investment of investments) {
             if (investment.outstandingPrincipal <= 0) continue;
 
             const principalPaidToInvestment =
-              remainingPaymentAmount * (investment.outstandingPrincipal / outstandingPrincipal);
+              usableRemainingPaymentAmount * (investment.outstandingPrincipal / outstandingPrincipalBeforePayment);
             investment.outstandingPrincipal -= principalPaidToInvestment;
             investment.totalPaidPrincipal += principalPaidToInvestment;
             outstandingPrincipal -= principalPaidToInvestment;
@@ -1455,8 +1465,28 @@ const Loan = {
               amount: principalPaidToInvestment,
             });
           }
+        }
+        // if there is any remaining payment amount left and loan is paid off then add principal to all investments according to their initial investment
+        if (remainingPaymentAmount > 0) {
+          for (const investment of investments) {
+            const principalPaidToInvestment = remainingPaymentAmount * (investment.initialInvestment / totalInvested);
+            investment.outstandingPrincipal -= principalPaidToInvestment;
+            investment.totalPaidPrincipal += principalPaidToInvestment;
+            outstandingPrincipal -= principalPaidToInvestment;
+            totalPaidPrincipal += principalPaidToInvestment;
+            transactionInformation.principalPaid.push({
+              budgetId: investment.budgetId,
+              amount: principalPaidToInvestment,
+            });
+          }
+        }
       } else if (loanTransaction.from.datatype === 'LOAN' && loanTransaction.to.datatype === 'OUTSIDE') {
         // Refund
+
+        // if refund is greater than total payments made then throw error
+        if (loanTransaction.amount > totalPaidPrincipal + totalPaidInterest + totalPaidFees - totalRefunded) {
+          throw new Error('Refund amount is greater than total payments made!');
+        }
         for (const investment of investments) {
           const refundAmountForInvestment =
             loanTransaction.amount * (investment.outstandingPrincipal / outstandingPrincipal);
