@@ -62,7 +62,7 @@ export interface ITransactionInterval {
 }
 
 interface IPaymentDetails {
-  budgetId: string;
+  budgetId?: string;
   amount: number;
 }
 

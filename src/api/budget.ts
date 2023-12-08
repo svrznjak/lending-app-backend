@@ -594,6 +594,13 @@ export default {
             $in: relatedLoansIds, // Same as above
           },
         },
+        {
+          'from.datatype': 'FEE',
+          'to.datatype': 'LOAN',
+          'to.addressId': {
+            $in: relatedLoansIds, // Same as above
+          },
+        },
       ],
     })
       .session(session)
@@ -922,8 +929,40 @@ export default {
         y++;
       } else if (transaction.from.datatype === 'FEE' && transaction.to.datatype === 'LOAN') {
         // manual interest / fee
-        // Not sure if there is anything to do here
-        console.log('x');
+        const relatedLoan = relatedLoans.find((loan) => loan._id.toString() === transaction.to.addressId.toString());
+        const transactionInLoan = relatedLoan.transactionList.find(
+          (loanTransaction) => loanTransaction._id.toString() === transaction._id.toString(),
+        );
+        const feePaidToThisBudget = transactionInLoan.feePaid.reduce((accumulator, currentValue) => {
+          if (currentValue.budgetId === budgetId) {
+            return paranoidCalculator.add(accumulator, currentValue.amount);
+          } else {
+            return accumulator;
+          }
+        }, 0);
+        if (feePaidToThisBudget > 0) {
+          TRANSACTION_LIST.push({
+            _id: transaction._id.toString(),
+            timestamp: transaction.transactionTimestamp,
+            description: transaction.description,
+            from: transaction.from,
+            to: transaction.to, // LOAN
+            amount: feePaidToThisBudget,
+            budgetStats: {
+              ...TRANSACTION_LIST[y - 1].budgetStats,
+              ...calculatedFields(transaction),
+              totalAvailableAmount: paranoidCalculator.add(
+                TRANSACTION_LIST[y - 1].budgetStats.totalAvailableAmount,
+                feePaidToThisBudget,
+              ),
+              currentlyEarnedFeesAmount: paranoidCalculator.add(
+                TRANSACTION_LIST[y - 1].budgetStats.currentlyEarnedFeesAmount,
+                feePaidToThisBudget,
+              ),
+            },
+          });
+          y++;
+        }
       } else {
         throw new Error('Should not happen');
       }

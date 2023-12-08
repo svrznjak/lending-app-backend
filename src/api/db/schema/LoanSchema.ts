@@ -26,7 +26,7 @@ const ExpectedPaymentSchema = new mongoose.Schema({
 });
 
 const PaymentDetailsSchema = new mongoose.Schema({
-  budgetId: { type: String, required: true },
+  budgetId: { type: String },
   amount: { type: Number, required: true },
 });
 

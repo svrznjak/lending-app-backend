@@ -1386,8 +1386,34 @@ const Loan = {
 
         transactionInformation.feeCharged = loanTransaction.amount;
         outstandingFees += loanTransaction.amount;
+
+        // in case there is available overpaid principal use it to pay off fees
+        if (outstandingPrincipal < 0) {
+          let remainingPaymentAmount = -outstandingPrincipal;
+          // first pay off fees in order of oldest to newest
+          for (const fee of fees) {
+            if (fee.outstandingAmount <= 0) continue;
+            if (remainingPaymentAmount <= 0) break;
+            if (remainingPaymentAmount < fee.outstandingAmount) {
+              fee.outstandingAmount -= remainingPaymentAmount;
+              outstandingFees -= remainingPaymentAmount;
+              transactionInformation.feePaid.push({ budgetId: fee.budgetId, amount: remainingPaymentAmount });
+              totalPaidFees += remainingPaymentAmount;
+              remainingPaymentAmount = 0;
+            } else {
+              transactionInformation.feePaid.push({ budgetId: fee.budgetId, amount: fee.outstandingAmount });
+              totalPaidFees += fee.outstandingAmount;
+              outstandingFees -= fee.outstandingAmount;
+              remainingPaymentAmount -= fee.outstandingAmount;
+              fee.outstandingAmount = 0;
+            }
+          }
+          const feesPaidFromOutstandingPrincipal = -outstandingPrincipal - remainingPaymentAmount;
+          totalPaidPrincipal -= feesPaidFromOutstandingPrincipal;
+          outstandingPrincipal = outstandingPrincipal + feesPaidFromOutstandingPrincipal;
+        }
       } else if (loanTransaction.from.datatype === 'OUTSIDE' && loanTransaction.to.datatype === 'LOAN') {
-        // in case loan is paid
+        //  loan payment
         let remainingPaymentAmount = loanTransaction.amount;
         // first pay off fees in order of oldest to newest
         for (const fee of fees) {
@@ -1400,7 +1426,7 @@ const Loan = {
             totalPaidFees += remainingPaymentAmount;
             remainingPaymentAmount = 0;
           } else {
-            transactionInformation.feePaid.push({ budgetId: fee.budgetId, amount: remainingPaymentAmount });
+            transactionInformation.feePaid.push({ budgetId: fee.budgetId, amount: fee.outstandingAmount });
             totalPaidFees += fee.outstandingAmount;
             outstandingFees -= fee.outstandingAmount;
             remainingPaymentAmount -= fee.outstandingAmount;
@@ -1468,17 +1494,11 @@ const Loan = {
         }
         // if there is any remaining payment amount left and loan is paid off then add principal to all investments according to their initial investment
         if (remainingPaymentAmount > 0) {
-          for (const investment of investments) {
-            const principalPaidToInvestment = remainingPaymentAmount * (investment.initialInvestment / totalInvested);
-            investment.outstandingPrincipal -= principalPaidToInvestment;
-            investment.totalPaidPrincipal += principalPaidToInvestment;
-            outstandingPrincipal -= principalPaidToInvestment;
-            totalPaidPrincipal += principalPaidToInvestment;
-            transactionInformation.principalPaid.push({
-              budgetId: investment.budgetId,
-              amount: principalPaidToInvestment,
-            });
-          }
+          outstandingPrincipal -= remainingPaymentAmount;
+          totalPaidPrincipal += remainingPaymentAmount;
+          transactionInformation.principalPaid.push({
+            amount: remainingPaymentAmount,
+          });
         }
       } else if (loanTransaction.from.datatype === 'LOAN' && loanTransaction.to.datatype === 'OUTSIDE') {
         // Refund
@@ -1487,12 +1507,40 @@ const Loan = {
         if (loanTransaction.amount > totalPaidPrincipal + totalPaidInterest + totalPaidFees - totalRefunded) {
           throw new Error('Refund amount is greater than total payments made!');
         }
+
+        let remainingRefundAmount = loanTransaction.amount;
+
+        if (outstandingPrincipal < 0) {
+          // first refund outstanding principal
+          if (remainingRefundAmount > outstandingPrincipal * -1) {
+            remainingRefundAmount -= outstandingPrincipal * -1;
+            totalPaidPrincipal -= outstandingPrincipal * -1;
+            totalRefunded += outstandingPrincipal * -1;
+            transactionInformation.refundedAmount.push({
+              amount: outstandingPrincipal * -1,
+            });
+            outstandingPrincipal = 0;
+          } else {
+            outstandingPrincipal += remainingRefundAmount;
+            totalPaidPrincipal -= remainingRefundAmount;
+            totalRefunded += remainingRefundAmount;
+            transactionInformation.refundedAmount.push({
+              amount: remainingRefundAmount,
+            });
+            remainingRefundAmount = 0;
+          }
+        }
+
+        const totalRefundedBeforeTransaction = totalRefunded;
         for (const investment of investments) {
           const refundAmountForInvestment =
-            loanTransaction.amount * (investment.outstandingPrincipal / outstandingPrincipal);
+            remainingRefundAmount *
+            ((investment.totalPaidPrincipal - investment.totalRefundedAmount) /
+              (totalPaidPrincipal - totalRefundedBeforeTransaction));
           investment.outstandingPrincipal += refundAmountForInvestment;
           investment.totalRefundedAmount += refundAmountForInvestment;
           outstandingPrincipal += refundAmountForInvestment;
+          totalPaidPrincipal -= refundAmountForInvestment;
           totalRefunded += refundAmountForInvestment;
           transactionInformation.refundedAmount.push({
             budgetId: investment.budgetId,
@@ -1513,6 +1561,7 @@ const Loan = {
           if (percentageOfTotalInterestOutstanding === 1) {
             investment.totalForgivenAmount += investment.outstandingInterest;
             totalForgiven += investment.outstandingInterest;
+            outstandingInterest -= investment.outstandingInterest;
             transactionInformation.forgivenAmount.push({
               budgetId: investment.budgetId,
               amount: investment.outstandingInterest,
@@ -1524,6 +1573,7 @@ const Loan = {
             investment.outstandingInterest -= interestForgivenToInvestment;
             investment.totalForgivenAmount += interestForgivenToInvestment;
             totalForgiven += interestForgivenToInvestment;
+            outstandingInterest -= interestForgivenToInvestment;
             transactionInformation.forgivenAmount.push({
               budgetId: investment.budgetId,
               amount: interestForgivenToInvestment,

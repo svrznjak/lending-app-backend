@@ -117,7 +117,7 @@ export const loanRelatedBudget = new GraphQLObjectType({
 const loanPaymentDetailsSchema = new GraphQLObjectType({
   name: 'LoanPaymentDetailsType',
   fields: (): any => ({
-    budgetId: { type: new GraphQLNonNull(GraphQLID) },
+    budgetId: { type: GraphQLID },
     amount: { type: new GraphQLNonNull(GraphQLFloat) },
   }),
 });
