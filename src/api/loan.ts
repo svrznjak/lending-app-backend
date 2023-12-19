@@ -265,7 +265,10 @@ const Loan = {
   },
   getFromUser: async function getLoans(
     { userId, loanId, status }: { userId: string; loanId?: string; status?: ILoan['status'][] },
-    { session = undefined }: { session?: ClientSession } = {},
+    {
+      session = undefined,
+      runUpdateBudgetTransactionList = true,
+    }: { session?: ClientSession; runUpdateBudgetTransactionList?: boolean } = {},
   ): Promise<ILoan[]> {
     if (userId === undefined) throw new Error('userId is required!');
     const query: any = {
@@ -279,24 +282,11 @@ const Loan = {
     const budgetsToUpdate: IBudget['_id'][] = [];
     for (let i = 0; i < LOANS.length; i++) {
       const LOAN_ID = LOANS[i]._id.toString();
-      if (LoanCache.getCachedItem({ itemId: LOAN_ID })) {
+      if (LoanCache.getCachedItem({ itemId: LOAN_ID }) && session === undefined) {
         returnValue.push(LoanCache.getCachedItem({ itemId: LOAN_ID }) as ILoan);
       } else {
         // Do not recalculate if session is provided, because changes to data will be made in the end of successful session
-        if (session !== undefined) {
-          returnValue.push(
-            loanHelpers.runtimeCast({
-              ...LOANS[i].toObject(),
-              _id: LOANS[i]._id.toString(),
-              userId: LOANS[i].userId.toString(),
-              notes: LOANS[i].notes.map((note: any) => ({
-                ...note.toObject(),
-                _id: note._id.toString(),
-              })),
-            }),
-          );
-          // Do not recalculate if loan is completed or defaulted, because no change to data will ever be made
-        } else if (LOANS[i].status.current === 'COMPLETED' || LOANS[i].status.current === 'DEFAULTED') {
+        if (LOANS[i].status.current === 'COMPLETED' || LOANS[i].status.current === 'DEFAULTED') {
           const LOAN = loanHelpers.runtimeCast({
             ...LOANS[i].toObject(),
             _id: LOANS[i]._id.toString(),
@@ -312,7 +302,7 @@ const Loan = {
           });
           returnValue.push(LOAN);
         } else {
-          const recalculatedLoan = await this.recalculateCalculatedValues(LOANS[i]);
+          const recalculatedLoan = await this.recalculateCalculatedValues(LOANS[i], session);
           returnValue.push(recalculatedLoan);
 
           // add recalculatedLoan calculatedRelatedBudgets to budgetsToUpdate if not already there
@@ -322,8 +312,10 @@ const Loan = {
         }
       }
     }
-    for (const budgetId of budgetsToUpdate) {
-      await Budget.updateTransactionList(budgetId);
+    if (runUpdateBudgetTransactionList) {
+      for (const budgetId of budgetsToUpdate) {
+        await Budget.updateTransactionList(budgetId);
+      }
     }
     return returnValue;
   },
@@ -1132,10 +1124,9 @@ const Loan = {
     MONGO_LOAN.calculatedPaidInterest = CALCULATED_VALUES_UNTIL_NOW.calculatedPaidInterest;
     MONGO_LOAN.calculatedTotalPaidPrincipal = CALCULATED_VALUES_UNTIL_NOW.calculatedTotalPaidPrincipal;
     MONGO_LOAN.calculatedTotalForgiven = CALCULATED_VALUES_UNTIL_NOW.calculatedTotalForgiven;
+    MONGO_LOAN.calculatedRelatedBudgets = CALCULATED_VALUES_UNTIL_NOW.calculatedRelatedBudgets;
     MONGO_LOAN.transactionList = CALCULATED_VALUES_UNTIL_NOW.transactionList;
     */
-    MONGO_LOAN.calculatedRelatedBudgets = CALCULATED_VALUES_UNTIL_NOW.calculatedRelatedBudgets;
-    MONGO_LOAN.markModified('calculatedRelatedBudgets');
     // Check if PAID
     if (
       _.round(CALCULATED_VALUES_UNTIL_NOW.calculatedOutstandingPrincipal, 2) <= 0 &&
@@ -1373,6 +1364,21 @@ const Loan = {
 
         transactionInformation.invested = loanTransaction.amount;
         totalInvested += loanTransaction.amount;
+
+        if (outstandingPrincipal < 0) {
+          const overpaidPrincipalToUseForNewInvestment =
+            loanTransaction.amount > -outstandingPrincipal ? -outstandingPrincipal : loanTransaction.amount;
+
+          transactionInformation.principalPaid.push({
+            amount: -overpaidPrincipalToUseForNewInvestment,
+          });
+          investments[investments.length - 1].outstandingPrincipal -= overpaidPrincipalToUseForNewInvestment;
+          investments[investments.length - 1].totalPaidPrincipal += overpaidPrincipalToUseForNewInvestment;
+          transactionInformation.principalPaid.push({
+            budgetId: investments[investments.length - 1].budgetId,
+            amount: overpaidPrincipalToUseForNewInvestment,
+          });
+        }
         outstandingPrincipal += loanTransaction.amount;
       } else if (loanTransaction.from.datatype === 'FEE') {
         // in case transaction is manual fee
@@ -1409,6 +1415,7 @@ const Loan = {
             }
           }
           const feesPaidFromOutstandingPrincipal = -outstandingPrincipal - remainingPaymentAmount;
+          transactionInformation.principalPaid.push({ amount: -feesPaidFromOutstandingPrincipal });
           totalPaidPrincipal -= feesPaidFromOutstandingPrincipal;
           outstandingPrincipal = outstandingPrincipal + feesPaidFromOutstandingPrincipal;
         }
@@ -1433,6 +1440,7 @@ const Loan = {
             fee.outstandingAmount = 0;
           }
         }
+        if (_.round(remainingPaymentAmount, 8) === 0) remainingPaymentAmount = 0;
         if (remainingPaymentAmount < 0) throw new Error('Remaining payment amount is negative, and should not be!');
 
         // then pay off interest of each investment in proportion of their outstanding principal
@@ -1466,22 +1474,31 @@ const Loan = {
               remainingPaymentAmount -= interestPaidToInvestment;
             }
           }
-
+        if (_.round(remainingPaymentAmount, 8) === 0) remainingPaymentAmount = 0;
         if (remainingPaymentAmount < 0) throw new Error('Remaining payment amount is negative, and should not be!');
 
         // then pay off principal of each investment in proportion of their outstanding principal
 
         // in case loan is not jet paid off
         if (remainingPaymentAmount > 0 && outstandingPrincipal > 0) {
-          const outstandingPrincipalBeforePayment = outstandingPrincipal;
+          const outstandingPrincipalOfUnpaidInvestments = investments.reduce((accumulator, currentValue) => {
+            if (currentValue.outstandingPrincipal > 0) {
+              return accumulator + currentValue.outstandingPrincipal;
+            } else {
+              return accumulator;
+            }
+          }, 0);
           let usableRemainingPaymentAmount = remainingPaymentAmount;
-          if (remainingPaymentAmount > outstandingPrincipal) usableRemainingPaymentAmount = outstandingPrincipal;
+          if (remainingPaymentAmount > outstandingPrincipalOfUnpaidInvestments) {
+            usableRemainingPaymentAmount = outstandingPrincipalOfUnpaidInvestments;
+          }
           remainingPaymentAmount -= usableRemainingPaymentAmount;
           for (const investment of investments) {
             if (investment.outstandingPrincipal <= 0) continue;
 
             const principalPaidToInvestment =
-              usableRemainingPaymentAmount * (investment.outstandingPrincipal / outstandingPrincipalBeforePayment);
+              usableRemainingPaymentAmount *
+              (investment.outstandingPrincipal / outstandingPrincipalOfUnpaidInvestments);
             investment.outstandingPrincipal -= principalPaidToInvestment;
             investment.totalPaidPrincipal += principalPaidToInvestment;
             outstandingPrincipal -= principalPaidToInvestment;
@@ -1492,7 +1509,7 @@ const Loan = {
             });
           }
         }
-        // if there is any remaining payment amount left and loan is paid off then add principal to all investments according to their initial investment
+        // if there is overpayment of principal
         if (remainingPaymentAmount > 0) {
           outstandingPrincipal -= remainingPaymentAmount;
           totalPaidPrincipal += remainingPaymentAmount;
@@ -1504,8 +1521,8 @@ const Loan = {
         // Refund
 
         // if refund is greater than total payments made then throw error
-        if (loanTransaction.amount > totalPaidPrincipal + totalPaidInterest + totalPaidFees - totalRefunded) {
-          throw new Error('Refund amount is greater than total payments made!');
+        if (loanTransaction.amount > totalPaidPrincipal) {
+          throw new Error('Refund amount is greater than total principal paid!');
         }
 
         let remainingRefundAmount = loanTransaction.amount;
@@ -1539,6 +1556,7 @@ const Loan = {
               (totalPaidPrincipal - totalRefundedBeforeTransaction));
           investment.outstandingPrincipal += refundAmountForInvestment;
           investment.totalRefundedAmount += refundAmountForInvestment;
+          investment.totalPaidPrincipal -= refundAmountForInvestment;
           outstandingPrincipal += refundAmountForInvestment;
           totalPaidPrincipal -= refundAmountForInvestment;
           totalRefunded += refundAmountForInvestment;
@@ -1582,18 +1600,27 @@ const Loan = {
           }
         }
 
-        if (remainingForgivenessAmount < 0)
+        if (_.round(remainingForgivenessAmount, 8) === 0) remainingForgivenessAmount = 0;
+        if (remainingForgivenessAmount < 0) {
           throw new Error('Remaining forgiveness amount is negative, and should not be!');
-
+        }
         // then forgive principal of each investment in proportion of their outstanding principal
+        if (remainingForgivenessAmount > 0) {
+          const outstandingPrincipalOfUnpaidInvestments = investments.reduce((accumulator, currentValue) => {
+            if (currentValue.outstandingPrincipal > 0) {
+              return accumulator + currentValue.outstandingPrincipal;
+            } else {
+              return accumulator;
+            }
+          }, 0);
 
-        if (remainingForgivenessAmount > 0)
           for (const investment of investments) {
             if (investment.outstandingPrincipal <= 0) continue;
 
             const principalForgivenToInvestment =
-              remainingForgivenessAmount * (investment.outstandingPrincipal / outstandingPrincipal);
+              remainingForgivenessAmount * (investment.outstandingPrincipal / outstandingPrincipalOfUnpaidInvestments);
             investment.outstandingPrincipal -= principalForgivenToInvestment;
+
             investment.totalForgivenAmount += principalForgivenToInvestment;
             outstandingPrincipal -= principalForgivenToInvestment;
             totalForgiven += principalForgivenToInvestment;
@@ -1602,6 +1629,7 @@ const Loan = {
               amount: principalForgivenToInvestment,
             });
           }
+        }
       }
 
       /**
@@ -1625,7 +1653,7 @@ const Loan = {
         outstandingPrincipal: outstandingPrincipal,
         outstandingInterest: outstandingInterest,
         outstandingFees: outstandingFees,
-        investmentStats: investments,
+        investmentStats: _.cloneDeep(investments),
       });
     }
     return listOfTransactions;

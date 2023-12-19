@@ -9,7 +9,6 @@ import paranoidCalculator from './utils/paranoidCalculator/paranoidCalculator.js
 import BudgetModel, { IBudgetDocument } from './db/model/BudgetModel.js';
 import { paymentFrequencyHelpers } from './types/paymentFrequency/paymentFrequencyHelpers.js';
 import TransactionModel from './db/model/TransactionModel.js';
-import LoanModel from './db/model/LoanModel.js';
 import Loan from './loan.js';
 import { ILoan } from './types/loan/loanInterface.js';
 import BudgetCache from './cache/budgetCache.js';
@@ -68,7 +67,7 @@ export default {
           {
             userId: userId,
             budgetId: newBudget._id.toString(),
-            transactionTimestamp: -1,
+            transactionTimestamp: new Date(new Date().getFullYear(), 0, 1).getTime(), //set transactionTimestamp to start of current year
             description: initialTransactionDescription,
             amount: inititalTransactionAmount,
           },
@@ -556,12 +555,21 @@ export default {
     const MONGO_BUDGET = typeof input === 'string' ? await BudgetModel.findOne({ _id: input }).session(session) : input;
 
     const budgetId = MONGO_BUDGET._id.toString();
-    const relatedLoansIds = await LoanModel.find({
+    /*const relatedLoansIds = await LoanModel.find({
       'calculatedRelatedBudgets.budgetId': budgetId,
     })
       .session(session)
       .select('_id')
-      .lean();
+      .lean();*/
+
+    const allLoans = await Loan.getFromUser(
+      { userId: MONGO_BUDGET.userId.toString() },
+      { session: session, runUpdateBudgetTransactionList: false },
+    );
+
+    const relatedLoansIds = allLoans
+      .filter((loan) => loan.calculatedRelatedBudgets.find((budget) => budget.budgetId === budgetId))
+      .map((loan) => loan._id);
 
     const transactions = await TransactionModel.find({
       $or: [
@@ -641,9 +649,9 @@ export default {
     }
 
     const relatedLoans: ILoan[] = await Promise.all(
-      relatedLoansIds.map(async (loan) => {
+      relatedLoansIds.map(async (loanId) => {
         return await Loan.getOneFromUser(
-          { userId: MONGO_BUDGET.userId.toString(), loanId: loan._id.toString() },
+          { userId: MONGO_BUDGET.userId.toString(), loanId: loanId.toString() },
           { session, runUpdateBudgetTransactionList: false },
         );
       }),

@@ -78,12 +78,7 @@ export default {
         try {
           session.startTransaction();
           const newTransactionInDB: any = await new TransactionModel(validatedTransaction).save({ session });
-          if (newTransactionInDB.from.datatype === 'BUDGET') {
-            await Budget.updateTransactionList(newTransactionInDB.from.addressId.toString(), session);
-          }
-          if (newTransactionInDB.to.datatype === 'BUDGET') {
-            await Budget.updateTransactionList(newTransactionInDB.to.addressId.toString(), session);
-          }
+
           if (newTransactionInDB.from.datatype === 'LOAN') {
             const recalculatedLoan: ILoan = await Loan.recalculateCalculatedValues(
               newTransactionInDB.from.addressId.toString(),
@@ -92,8 +87,7 @@ export default {
             for (const budget of recalculatedLoan.calculatedRelatedBudgets) {
               await Budget.updateTransactionList(budget.budgetId, session);
             }
-          }
-          if (newTransactionInDB.to.datatype === 'LOAN') {
+          } else if (newTransactionInDB.to.datatype === 'LOAN') {
             const recalculatedLoan: ILoan = await Loan.recalculateCalculatedValues(
               newTransactionInDB.to.addressId.toString(),
               session,
@@ -101,6 +95,10 @@ export default {
             for (const budget of recalculatedLoan.calculatedRelatedBudgets) {
               await Budget.updateTransactionList(budget.budgetId, session);
             }
+          } else if (newTransactionInDB.from.datatype === 'BUDGET') {
+            await Budget.updateTransactionList(newTransactionInDB.from.addressId.toString(), session);
+          } else if (newTransactionInDB.to.datatype === 'BUDGET') {
+            await Budget.updateTransactionList(newTransactionInDB.to.addressId.toString(), session);
           }
           await session.commitTransaction();
           return transactionHelpers.runtimeCast({
