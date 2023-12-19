@@ -1,5 +1,5 @@
 import { sanitizeEmail, sanitizeText } from './../../utils/inputSanitizer/inputSanitizer.js';
-import { IUser, IUserInitializeInfo, IUserRegistrationInfo, IUserUpdateInfo } from './userInterface.js';
+import { IUser, IUserInitializeInfo, IUserUpdateInfo } from './userInterface.js';
 import _ from 'lodash';
 import { subscriptionHelpers } from '../subscription/subscriptionHelpers.js';
 import {
@@ -28,6 +28,7 @@ export const userHelpers = {
     if (!_.isString(user.authId)) throw new Error('Type of User.authId must be a string!');
     if (!_.isString(user.currency)) throw new Error('Type of User.currency must be a string!');
     if (!_.isString(user.language)) throw new Error('Type of User.language must be a string!');
+    if (!_.isString(user.formattingLocale)) throw new Error('Type of User.formattingLocale must be a string!');
 
     subscriptionHelpers.runtimeCast(user.subscription);
 
@@ -45,64 +46,9 @@ export const userHelpers = {
       authId: user.authId,
       currency: user.currency,
       language: user.language,
+      formattingLocale: user.formattingLocale,
       subscription: user.subscription,
       notificationTokens: user.notificationTokens,
-    };
-  },
-};
-
-export const userRegistrationInfoHelpers = {
-  validateUserRegistrationInfo: function validateUserRegistrationInfo(
-    registrationInfo: IUserRegistrationInfo,
-  ): IUserRegistrationInfo {
-    if (
-      !isValidText({
-        text: registrationInfo.name,
-        validEmpty: false,
-        maxLength: 100,
-      })
-    )
-      throw new Error('(validation) Name should contain value!');
-    if (!isValidEmail({ email: registrationInfo.email }))
-      throw new Error('(validation) Email value does not contain email!');
-    if (
-      !isValidCurrency({
-        currency: registrationInfo.currency,
-        caseSensitive: true,
-      })
-    )
-      throw new Error('(validation) Name should be a currency value!');
-    if (
-      !isValidLanguage({
-        language: registrationInfo.language,
-        caseSensitive: true,
-      })
-    )
-      throw new Error('(validation) Language should be locale value!');
-
-    return registrationInfo;
-  },
-  sanitizeUserRegistrationInfo: function sanitizeUserRegistrationInfo(registrationInfo: IUserRegistrationInfo): void {
-    registrationInfo.name = sanitizeText({ text: registrationInfo.name });
-    registrationInfo.email = sanitizeEmail({ email: registrationInfo.email });
-    registrationInfo.currency = sanitizeText({ text: registrationInfo.currency });
-    registrationInfo.language = sanitizeText({ text: registrationInfo.language });
-  },
-  runtimeCast: function runtimeCast(registrationInfo: any): IUserRegistrationInfo {
-    if (typeof registrationInfo !== 'object' || registrationInfo === null)
-      throw new Error('Type of registrationInfo must be an object!');
-    if (!_.isString(registrationInfo.name)) throw new Error('Type of registrationInfo.name must be a string!');
-    if (!_.isString(registrationInfo.email)) throw new Error('Type of registrationInfo.email must be a string!');
-    if (!_.isString(registrationInfo.currency)) throw new Error('Type of registrationInfo.currency must be a string!');
-    if (!_.isString(registrationInfo.language)) throw new Error('Type of registrationInfo.language must be a string!');
-    if (!_.isString(registrationInfo.password)) throw new Error('Type of registrationInfo.password must be a string!');
-
-    return {
-      name: registrationInfo.name,
-      email: registrationInfo.email,
-      currency: registrationInfo.currency,
-      language: registrationInfo.language,
-      password: registrationInfo.password,
     };
   },
 };
@@ -133,6 +79,13 @@ export const userInitializeInfoHelpers = {
       })
     )
       throw new Error('(validation) Language should be locale value!');
+    if (
+      !isValidLanguage({
+        language: initializeInfo.formattingLocale,
+        caseSensitive: true,
+      })
+    )
+      throw new Error('(validation) Formatting locale should be locale value!');
 
     return initializeInfo;
   },
@@ -141,6 +94,7 @@ export const userInitializeInfoHelpers = {
     initializeInfo.email = sanitizeEmail({ email: initializeInfo.email });
     initializeInfo.currency = sanitizeText({ text: initializeInfo.currency });
     initializeInfo.language = sanitizeText({ text: initializeInfo.language });
+    initializeInfo.formattingLocale = sanitizeText({ text: initializeInfo.formattingLocale });
   },
   runtimeCast: function runtimeCast(initializeInfo: any): IUserInitializeInfo {
     if (typeof initializeInfo !== 'object' || initializeInfo === null)
@@ -150,6 +104,8 @@ export const userInitializeInfoHelpers = {
     if (!_.isString(initializeInfo.authId)) throw new Error('Type of initializeInfo.authId must be a string!');
     if (!_.isString(initializeInfo.currency)) throw new Error('Type of initializeInfo.currency must be a string!');
     if (!_.isString(initializeInfo.language)) throw new Error('Type of initializeInfo.language must be a string!');
+    if (!_.isString(initializeInfo.formattingLocale))
+      throw new Error('Type of initializeInfo.formattingLocale must be a string!');
 
     return {
       name: initializeInfo.name,
@@ -157,6 +113,7 @@ export const userInitializeInfoHelpers = {
       authId: initializeInfo.authId,
       currency: initializeInfo.currency,
       language: initializeInfo.language,
+      formattingLocale: initializeInfo.formattingLocale,
     };
   },
 };
@@ -188,12 +145,22 @@ export const userUpdateInfoHelpers = {
         })
       )
         throw new Error('(validation) Language should be locale value!');
+    if (updateInfo.formattingLocale !== undefined)
+      if (
+        !isValidLanguage({
+          language: updateInfo.formattingLocale,
+          caseSensitive: true,
+        })
+      )
+        throw new Error('(validation) Formatting locale should be locale value!');
     return updateInfo;
   },
   sanitizeUserUpdateInfo: function sanitizeUserUpdateInfo(updateInfo: IUserUpdateInfo): void {
     if (updateInfo.name !== undefined) updateInfo.name = sanitizeText({ text: updateInfo.name });
     if (updateInfo.currency !== undefined) updateInfo.currency = sanitizeText({ text: updateInfo.currency });
     if (updateInfo.language !== undefined) updateInfo.language = sanitizeText({ text: updateInfo.language });
+    if (updateInfo.formattingLocale !== undefined)
+      updateInfo.formattingLocale = sanitizeText({ text: updateInfo.formattingLocale });
   },
   runtimeCast: function runtimeCast(updateInfo: any): IUserUpdateInfo {
     if (typeof updateInfo !== 'object' || updateInfo === null)
@@ -204,11 +171,15 @@ export const userUpdateInfoHelpers = {
       if (!_.isString(updateInfo.currency)) throw new Error('Type of NewUserInput.currency must be a string!');
     if (updateInfo.language !== undefined)
       if (!_.isString(updateInfo.language)) throw new Error('Type of NewUserInput.language must be a string!');
+    if (updateInfo.formattingLocale !== undefined)
+      if (!_.isString(updateInfo.formattingLocale))
+        throw new Error('Type of NewUserInput.formattingLocale must be a string!');
 
     const returnObject = {};
     if (updateInfo.name !== undefined) returnObject['name'] = updateInfo.name;
     if (updateInfo.currency !== undefined) returnObject['currency'] = updateInfo.currency;
     if (updateInfo.language !== undefined) returnObject['language'] = updateInfo.language;
+    if (updateInfo.formattingLocale !== undefined) returnObject['formattingLocale'] = updateInfo.formattingLocale;
     return returnObject;
   },
 };

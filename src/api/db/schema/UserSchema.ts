@@ -21,6 +21,7 @@ export default new mongoose.Schema(
     authId: { type: String, required: true, index: true, unique: true },
     currency: { type: String, required: true },
     language: { type: String, required: true },
+    formattingLocale: { type: String, required: true },
     subscription: {
       type: SubscriptionSchema,
       default: {

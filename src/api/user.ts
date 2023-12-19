@@ -1,45 +1,7 @@
-import { IUser, IUserInitializeInfo, IUserRegistrationInfo, IUserUpdateInfo } from './types/user/userInterface.js';
-import {
-  userRegistrationInfoHelpers,
-  userHelpers,
-  userUpdateInfoHelpers,
-  userInitializeInfoHelpers,
-} from './types/user/userHelpers.js';
+import { IUser, IUserInitializeInfo, IUserUpdateInfo } from './types/user/userInterface.js';
+import { userHelpers, userUpdateInfoHelpers, userInitializeInfoHelpers } from './types/user/userHelpers.js';
 import UserModel from './db/model/UserModel.js';
-import auth from './auth.js';
 import Budget from './budget.js';
-import mongoose, { ClientSession } from 'mongoose';
-
-// As a lender, I want to create a user account, so that I can persist changes.
-export async function createUser(userRegistrationInfo: IUserRegistrationInfo): Promise<IUser> {
-  userRegistrationInfoHelpers.runtimeCast(userRegistrationInfo);
-  userRegistrationInfoHelpers.validateUserRegistrationInfo(userRegistrationInfo);
-  userRegistrationInfoHelpers.sanitizeUserRegistrationInfo(userRegistrationInfo);
-
-  try {
-    const newUserAuthId = await auth.createNewUserWithEmail(userRegistrationInfo.email, userRegistrationInfo.password);
-
-    try {
-      const newUser = await new UserModel({ ...userRegistrationInfo, authId: newUserAuthId }).save();
-      return userHelpers.runtimeCast({
-        _id: newUser._id.toString(),
-        name: newUser.name,
-        email: newUser.email,
-        authId: newUser.authId,
-        currency: newUser.currency,
-        language: newUser.language,
-        subscription: newUser.subscription,
-        notificationTokens: newUser.notificationTokens,
-      });
-    } catch (err) {
-      await auth.deleteUserByAuthId(newUserAuthId);
-      throw new Error('User saving failed... Reverting created firebase account.');
-    }
-  } catch (err: any) {
-    console.log(err);
-    throw new Error(err.message);
-  }
-}
 
 // As a lender, I want to create a user account, so that I can persist changes.
 export async function initializeUser(
@@ -53,10 +15,7 @@ export async function initializeUser(
   userInitializeInfoHelpers.validate(userInitializeInfo);
   userInitializeInfoHelpers.sanitize(userInitializeInfo);
 
-  const session: ClientSession = await mongoose.connection.startSession();
   try {
-    session.startTransaction();
-
     const newUser = await new UserModel(userInitializeInfo).save();
     await Budget.create(
       newUser._id.toString(),
@@ -80,7 +39,6 @@ export async function initializeUser(
       initialBudgetFunds,
       initiaTransactionDescription,
     );
-    await session.commitTransaction();
     return userHelpers.runtimeCast({
       _id: newUser._id.toString(),
       name: newUser.name,
@@ -88,14 +46,12 @@ export async function initializeUser(
       authId: newUser.authId,
       currency: newUser.currency,
       language: newUser.language,
+      formattingLocale: newUser.formattingLocale,
       subscription: newUser.subscription,
       notificationTokens: newUser.notificationTokens,
     });
   } catch (err) {
-    await session.abortTransaction();
     throw new Error('User saving failed...');
-  } finally {
-    session.endSession();
   }
 }
 
@@ -111,6 +67,7 @@ export async function getUserByAuthId(authId: string): Promise<IUser | undefined
       authId: user.authId,
       currency: user.currency,
       language: user.language,
+      formattingLocale: user.formattingLocale,
       subscription: user.subscription,
       notificationTokens: user.notificationTokens,
     });
