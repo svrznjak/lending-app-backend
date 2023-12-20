@@ -1328,6 +1328,11 @@ const Loan = {
           interest_per_day = normalizeInterestRateToDay(interestRate);
           interest_per_hour = interest_per_day / 24;
         }
+
+        if (IS_FIXED_AMOUNT_INTEREST) {
+          transactionInformation.interestCharged += interestRate.amount;
+          outstandingInterest += interestRate.amount;
+        }
         // add fixed amount interest to loan
         /* Deprecated: added in investment stats below
         if (IS_FIXED_AMOUNT_INTEREST) {

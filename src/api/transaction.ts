@@ -330,7 +330,7 @@ export default {
     // const transaction = await TransactionModel.findById(transactionId);
     // if (!transaction) throw new Error('Transaction you wanted to delete was not found!');
     const transaction: any = await TransactionModel.findById(transactionId);
-    if (transaction === null) throw new Error('Transaction you wanted to edit, does not exist.');
+    if (transaction === null) throw new Error('Transaction you wanted to delete, does not exist.');
 
     if (transaction.from.datatype === 'BUDGET' && transaction.to.datatype === 'LOAN') {
       throw new Error('Transaction from budget to loan can not be deleted');
