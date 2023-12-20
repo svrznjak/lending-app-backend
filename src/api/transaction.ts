@@ -424,10 +424,16 @@ export default {
       Budget.updateTransactionList(deletedTransaction.to.addressId);
     }
     if (deletedTransaction.from.datatype === 'LOAN') {
-      await Loan.recalculateCalculatedValues(deletedTransaction.from.addressId);
+      const recalculatedLoan = await Loan.recalculateCalculatedValues(deletedTransaction.from.addressId);
+      for (const budget of recalculatedLoan.calculatedRelatedBudgets) {
+        await Budget.updateTransactionList(budget.budgetId);
+      }
     }
     if (deletedTransaction.to.datatype === 'LOAN') {
-      await Loan.recalculateCalculatedValues(deletedTransaction.to.addressId);
+      const recalculatedLoan = await Loan.recalculateCalculatedValues(deletedTransaction.to.addressId);
+      for (const budget of recalculatedLoan.calculatedRelatedBudgets) {
+        await Budget.updateTransactionList(budget.budgetId);
+      }
     }
     return deletedTransaction;
   },

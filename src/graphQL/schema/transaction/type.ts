@@ -3,6 +3,7 @@ import {
   GraphQLEnumType,
   GraphQLFloat,
   GraphQLID,
+  GraphQLList,
   GraphQLNonNull,
   GraphQLObjectType,
   GraphQLString,
@@ -29,13 +30,30 @@ export const transactionType = new GraphQLObjectType({
     relatedBudgetId: { type: GraphQLID },
     amount: { type: new GraphQLNonNull(GraphQLFloat) },
     entryTimestamp: { type: new GraphQLNonNull(GraphQLFloat) },
-    affectedBudget: {
-      type: budgetsType,
-      resolve: async (parent: ITransaction): Promise<IBudget | undefined> => {
+    affectedBudgets: {
+      type: new GraphQLList(budgetsType),
+      resolve: async (parent: ITransaction): Promise<IBudget[] | undefined> => {
         if (parent.from.datatype === 'BUDGET')
-          return await Budgets.getOneFromUser({ userId: parent.userId, budgetId: parent.from.addressId });
+          return [await Budgets.getOneFromUser({ userId: parent.userId, budgetId: parent.from.addressId })];
         else if (parent.to.datatype === 'BUDGET')
-          return await Budgets.getOneFromUser({ userId: parent.userId, budgetId: parent.to.addressId });
+          return [await Budgets.getOneFromUser({ userId: parent.userId, budgetId: parent.to.addressId })];
+        else if (parent.from.datatype === 'LOAN') {
+          const loan = await Loans.getOneFromUser({ userId: parent.userId, loanId: parent.from.addressId });
+          const relatedBudgets = [];
+          for (const relatedBudget of loan.calculatedRelatedBudgets) {
+            const budget = await Budgets.getOneFromUser({ userId: parent.userId, budgetId: relatedBudget.budgetId });
+            if (budget) relatedBudgets.push(budget);
+          }
+          return relatedBudgets;
+        } else if (parent.to.datatype === 'LOAN') {
+          const loan = await Loans.getOneFromUser({ userId: parent.userId, loanId: parent.to.addressId });
+          const relatedBudgets = [];
+          for (const relatedBudget of loan.calculatedRelatedBudgets) {
+            const budget = await Budgets.getOneFromUser({ userId: parent.userId, budgetId: relatedBudget.budgetId });
+            if (budget) relatedBudgets.push(budget);
+          }
+          return relatedBudgets;
+        }
         return undefined;
       },
     },
