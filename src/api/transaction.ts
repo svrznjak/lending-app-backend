@@ -458,7 +458,7 @@ export default {
       ],
     })
       .session(session)
-      .sort({ transactionTimestamp: -1 })
+      .sort({ transactionTimestamp: -1, entryTimestamp: -1 })
       .skip(pageSize * pageNumber)
       .limit(pageSize)
       .lean()
