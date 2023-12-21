@@ -13,6 +13,10 @@ import { interestRateInputType, interestRateType } from '../interestRate/type.js
 import { paymentFrequencyType } from '../paymentFrequency/type.js';
 import { noteType } from '../note/type.js';
 import { transactionAddressType } from '../transaction/type.js';
+import { customerType } from '../customer/type.js';
+import { ILoan } from '../../../api/types/loan/loanInterface.js';
+import Customer from '../../../api/customer.js';
+import { ICustomer } from '../../../api/types/customer/customerInterface.js';
 
 export const loanType = new GraphQLObjectType({
   name: 'LoanType',
@@ -21,7 +25,18 @@ export const loanType = new GraphQLObjectType({
     userId: { type: new GraphQLNonNull(GraphQLID) },
     name: { type: new GraphQLNonNull(GraphQLString) },
     description: { type: new GraphQLNonNull(GraphQLString) },
-    customerId: { type: GraphQLID },
+    customer: {
+      type: customerType,
+      resolve: async (parent: ILoan): Promise<ICustomer | undefined> => {
+        if (parent.customerId === undefined) {
+          return undefined;
+        }
+        return await Customer.getOneFromUser({
+          userId: parent.userId,
+          customerId: parent.customerId.toString(),
+        });
+      },
+    },
     notes: { type: new GraphQLList(noteType) },
     openedTimestamp: { type: new GraphQLNonNull(GraphQLFloat) },
     closesTimestamp: { type: new GraphQLNonNull(GraphQLFloat) },
