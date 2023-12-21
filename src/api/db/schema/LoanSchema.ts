@@ -73,7 +73,6 @@ export const LoanSchema = new mongoose.Schema(
     calculatedPaidInterest: { type: Number },
     calculatedPaidFees: { type: Number },
     calculatedTotalForgiven: { type: Number },
-    calculatedTotalRefunded: { type: Number },
     calculatedLastTransactionTimestamp: { type: Number },
     calculatedRelatedBudgets: {
       type: [
@@ -103,7 +102,6 @@ export const LoanSchema = new mongoose.Schema(
           totalPaidPrincipal: { type: Number },
           totalPaidInterest: { type: Number },
           totalPaidFees: { type: Number },
-          totalRefunded: { type: Number },
           totalForgiven: { type: Number },
           from: {
             type: {
@@ -147,7 +145,6 @@ export const LoanSchema = new mongoose.Schema(
                 totalPaidPrincipal: { type: Number, required: true },
                 outstandingInterest: { type: Number, required: true },
                 totalPaidInterest: { type: Number, required: true },
-                totalRefundedAmount: { type: Number, required: true },
                 totalForgivenAmount: { type: Number, required: true },
                 interestRate: {
                   type: LoanInterestRateSchema,

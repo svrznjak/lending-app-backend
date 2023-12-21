@@ -246,7 +246,6 @@ export const loanHelpers = {
       calculatedPaidInterest: loan.calculatedPaidInterest,
       calculatedPaidFees: loan.calculatedPaidFees,
       calculatedTotalForgiven: loan.calculatedTotalForgiven,
-      calculatedTotalRefunded: loan.calculatedTotalRefunded,
       calculatedLastTransactionTimestamp: loan.calculatedLastTransactionTimestamp,
       calculatedRelatedBudgets: loan.calculatedRelatedBudgets,
       transactionList: loan.transactionList,

@@ -80,7 +80,6 @@ const Loan = {
       calculatedPaidInterest: 0,
       calculatedPaidFees: 0,
       calculatedTotalForgiven: 0,
-      calculatedTotalRefunded: 0,
       calculatedLastTransactionTimestamp: input.openedTimestamp,
       calculatedRelatedBudgets: [],
       transactionList: [],
@@ -901,7 +900,6 @@ const Loan = {
       MONGO_LOAN.calculatedPaidInterest = RECALCULATED_LOAN.calculatedPaidInterest;
       MONGO_LOAN.calculatedPaidFees = RECALCULATED_LOAN.calculatedPaidFees;
       MONGO_LOAN.calculatedTotalForgiven = RECALCULATED_LOAN.calculatedTotalForgiven;
-      MONGO_LOAN.calculatedTotalRefunded = RECALCULATED_LOAN.calculatedTotalRefunded;
       MONGO_LOAN.calculatedRelatedBudgets = RECALCULATED_LOAN.calculatedRelatedBudgets;
       MONGO_LOAN.calculatedLastTransactionTimestamp = RECALCULATED_LOAN.calculatedLastTransactionTimestamp;
       MONGO_LOAN.transactionList = RECALCULATED_LOAN.transactionList;
@@ -1017,7 +1015,6 @@ const Loan = {
       | 'calculatedPaidInterest'
       | 'calculatedPaidFees'
       | 'calculatedTotalForgiven'
-      | 'calculatedTotalRefunded'
       | 'calculatedLastTransactionTimestamp'
       | 'calculatedRelatedBudgets'
       | 'transactionList'
@@ -1031,7 +1028,6 @@ const Loan = {
     let calculatedPaidInterest = 0;
     let calculatedPaidFees = 0;
     let calculatedTotalForgiven = 0;
-    let calculatedTotalRefunded = 0;
     let calculatedLastTransactionTimestamp = 0;
     const calculatedRelatedBudgets = {};
     // get all transactions
@@ -1079,7 +1075,6 @@ const Loan = {
       calculatedTotalPaidPrincipal = TRANSACTIONS_LIST[TRANSACTIONS_LIST.length - 1].totalPaidPrincipal;
       calculatedOutstandingPrincipal = TRANSACTIONS_LIST[TRANSACTIONS_LIST.length - 1].outstandingPrincipal;
       calculatedTotalForgiven = TRANSACTIONS_LIST[TRANSACTIONS_LIST.length - 1].totalForgiven;
-      calculatedTotalRefunded = TRANSACTIONS_LIST[TRANSACTIONS_LIST.length - 1].totalRefunded;
     }
     return {
       calculatedInvestedAmount,
@@ -1090,7 +1085,6 @@ const Loan = {
       calculatedPaidFees,
       calculatedTotalPaidPrincipal,
       calculatedTotalForgiven,
-      calculatedTotalRefunded,
       calculatedLastTransactionTimestamp,
       calculatedRelatedBudgets: Object.keys(calculatedRelatedBudgets).map((key) => {
         return {
@@ -1232,7 +1226,6 @@ const Loan = {
     let totalPaidPrincipal = 0;
     let totalPaidInterest = 0;
     let totalPaidFees = 0;
-    let totalRefunded = 0;
     let totalForgiven = 0;
     let outstandingPrincipal = 0;
     let outstandingInterest = 0;
@@ -1360,7 +1353,6 @@ const Loan = {
           totalPaidPrincipal: 0,
           outstandingInterest: IS_FIXED_AMOUNT_INTEREST ? interestRate.amount : 0,
           totalPaidInterest: 0,
-          totalRefundedAmount: 0,
           totalForgivenAmount: 0,
           interestRate: interestRate,
           calculatedInterestPerHour: !IS_FIXED_AMOUNT_INTEREST ? interest_per_hour : undefined,
@@ -1537,7 +1529,6 @@ const Loan = {
           if (remainingRefundAmount > outstandingPrincipal * -1) {
             remainingRefundAmount -= outstandingPrincipal * -1;
             totalPaidPrincipal -= outstandingPrincipal * -1;
-            totalRefunded += outstandingPrincipal * -1;
             transactionInformation.refundedAmount.push({
               amount: outstandingPrincipal * -1,
             });
@@ -1545,7 +1536,6 @@ const Loan = {
           } else {
             outstandingPrincipal += remainingRefundAmount;
             totalPaidPrincipal -= remainingRefundAmount;
-            totalRefunded += remainingRefundAmount;
             transactionInformation.refundedAmount.push({
               amount: remainingRefundAmount,
             });
@@ -1553,18 +1543,13 @@ const Loan = {
           }
         }
 
-        const totalRefundedBeforeTransaction = totalRefunded;
         for (const investment of investments) {
           const refundAmountForInvestment =
-            remainingRefundAmount *
-            ((investment.totalPaidPrincipal - investment.totalRefundedAmount) /
-              (totalPaidPrincipal - totalRefundedBeforeTransaction));
+            remainingRefundAmount * (investment.totalPaidPrincipal / totalPaidPrincipal);
           investment.outstandingPrincipal += refundAmountForInvestment;
-          investment.totalRefundedAmount += refundAmountForInvestment;
           investment.totalPaidPrincipal -= refundAmountForInvestment;
           outstandingPrincipal += refundAmountForInvestment;
           totalPaidPrincipal -= refundAmountForInvestment;
-          totalRefunded += refundAmountForInvestment;
           transactionInformation.refundedAmount.push({
             budgetId: investment.budgetId,
             amount: refundAmountForInvestment,
@@ -1653,7 +1638,6 @@ const Loan = {
         totalPaidPrincipal: totalPaidPrincipal,
         totalPaidInterest: totalPaidInterest,
         totalPaidFees: totalPaidFees,
-        totalRefunded: totalRefunded,
         totalForgiven: totalForgiven,
         outstandingPrincipal: outstandingPrincipal,
         outstandingInterest: outstandingInterest,
