@@ -612,7 +612,7 @@ export default {
       ],
     })
       .session(session)
-      .sort({ transactionTimestamp: 1 })
+      .sort({ transactionTimestamp: 1, entryTimestamp: 1 })
       .lean()
       .exec();
 
