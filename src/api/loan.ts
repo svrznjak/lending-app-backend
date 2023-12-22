@@ -764,7 +764,7 @@ const Loan = {
       const statusesArray: ILoanStatus[] = [];
       let unWrappedStatus: ILoanStatus = statuses;
       do {
-        statusesArray.push({ current: unWrappedStatus.current, timestamp: unWrappedStatus.timestamp });
+        statusesArray.unshift({ current: unWrappedStatus.current, timestamp: unWrappedStatus.timestamp });
         unWrappedStatus = unWrappedStatus.previous;
       } while (unWrappedStatus !== undefined);
       return statusesArray;

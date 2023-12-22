@@ -844,10 +844,6 @@ export default {
                 TRANSACTION_LIST[y - 1].budgetStats.currentlyEarnedFeesAmount,
                 feePaymentToThisBudget,
               ),
-              currentlyLendedPrincipalToLiveLoansAmount: paranoidCalculator.subtract(
-                TRANSACTION_LIST[y - 1].budgetStats.currentlyLendedPrincipalToLiveLoansAmount,
-                principalPaymentToThisBudget,
-              ),
             },
           });
           y++;
@@ -912,6 +908,16 @@ export default {
         const transactionInLoan = relatedLoan.transactionList.find(
           (loanTransaction) => loanTransaction._id.toString() === transaction._id.toString(),
         );
+        const totalForgivenForThisBudget = transactionInLoan.forgivenAmount.reduce((accumulator, currentValue) => {
+          if (currentValue.budgetId === budgetId) {
+            return paranoidCalculator.add(accumulator, currentValue.amount);
+          }
+          return accumulator;
+        }, 0);
+        currentLoanStats[transaction.from.addressId].amountPaidBack = paranoidCalculator.add(
+          currentLoanStats[transaction.from.addressId].amountPaidBack,
+          totalForgivenForThisBudget,
+        );
 
         TRANSACTION_LIST.push({
           _id: transaction._id.toString(),
@@ -925,12 +931,7 @@ export default {
             ...calculatedFields(transaction),
             totalForgivenAmount: paranoidCalculator.add(
               TRANSACTION_LIST[y - 1].budgetStats.totalForgivenAmount,
-              transactionInLoan.forgivenAmount.reduce((accumulator, currentValue) => {
-                if (currentValue.budgetId === budgetId) {
-                  return paranoidCalculator.add(accumulator, currentValue.amount);
-                }
-                return accumulator;
-              }, 0),
+              totalForgivenForThisBudget,
             ),
           },
         });
@@ -1035,7 +1036,10 @@ export default {
           currentLoanStats[loanId].status === 'PAUSED' ||
           currentLoanStats[loanId].status === 'PAID'
         ) {
-          return paranoidCalculator.add(acc, currentLoanStats[loanId].amountLent);
+          return paranoidCalculator.add(
+            acc,
+            paranoidCalculator.subtract(currentLoanStats[loanId].amountLent, currentLoanStats[loanId].amountPaidBack),
+          );
         }
         return acc;
       }, 0);
