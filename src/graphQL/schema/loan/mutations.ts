@@ -342,7 +342,6 @@ export default new GraphQLObjectType({
       type: loanType,
       args: {
         loanId: { type: new GraphQLNonNull(GraphQLID) },
-        defaultTransactionDescription: { type: new GraphQLNonNull(GraphQLString) },
       },
       async resolve(_parent: any, args: any, context: any): Promise<ILoan> {
         const userAuthId = await context.getCurrentUserAuthIdOrThrowValidationError();
@@ -352,7 +351,7 @@ export default new GraphQLObjectType({
         await Loan.getOneFromUser({ userId: user._id, loanId: args.loanId });
 
         try {
-          return await Loan.default(args.loanId, args.defaultTransactionDescription);
+          return await Loan.default(args.loanId);
         } catch (err: any) {
           console.log(err.message);
           throw new Error(err.message);
