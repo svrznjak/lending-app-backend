@@ -51,6 +51,8 @@ export default {
     // Runtime check numbers
     preCheck(n1, n2);
 
+    if (n2 === 0) throw new Error(`Divide by zero! This should not happen. n1: ${n1} , n2: ${n2}`);
+
     // Calculate twice and check results
     const result1 = parseFloat((n1 / n2).toPrecision(15));
     const result2 = parseFloat((n1 / n2).toPrecision(15));

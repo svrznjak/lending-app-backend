@@ -849,7 +849,7 @@ const Loan = {
     )
       throw new Error('Loan can not be closed if it is not balanced.');
 
-    await this.changeStatus(MONGO_LOAN, 'COMPLETED', Date.now());
+    await this.changeStatus(MONGO_LOAN, 'COMPLETED', CALCULATED_VALUES.calculatedLastTransactionTimestamp);
     MONGO_LOAN.calculatedInvestedAmount = CALCULATED_VALUES.calculatedInvestedAmount;
     MONGO_LOAN.calculatedLastTransactionTimestamp = CALCULATED_VALUES.calculatedLastTransactionTimestamp;
     MONGO_LOAN.calculatedOutstandingInterest = CALCULATED_VALUES.calculatedOutstandingInterest;
@@ -874,10 +874,7 @@ const Loan = {
     }
     return recalculatedLoan2;
   },
-  default: async function defaultLoan(
-    input: string | ILoanDocument,
-    defaultTransactionDescription: string,
-  ): Promise<ILoan> {
+  default: async function defaultLoan(input: string | ILoanDocument): Promise<ILoan> {
     const MONGO_LOAN = typeof input === 'string' ? await LoanModel.findOne({ _id: input }) : input;
 
     // recalculate values just in case
@@ -889,10 +886,8 @@ const Loan = {
     )
       throw new Error('Only active and paused loans can be DEFAULTED!');
 
-    transactionHelpers.validate.description(defaultTransactionDescription);
-    defaultTransactionDescription = transactionHelpers.sanitize.description(defaultTransactionDescription);
     try {
-      await this.changeStatus(MONGO_LOAN, 'DEFAULTED', Date.now());
+      await this.changeStatus(MONGO_LOAN, 'DEFAULTED', RECALCULATED_LOAN.calculatedLastTransactionTimestamp);
       MONGO_LOAN.calculatedInvestedAmount = RECALCULATED_LOAN.calculatedInvestedAmount;
       MONGO_LOAN.calculatedTotalPaidPrincipal = RECALCULATED_LOAN.calculatedTotalPaidPrincipal;
       MONGO_LOAN.calculatedOutstandingInterest = RECALCULATED_LOAN.calculatedOutstandingInterest;
@@ -1323,8 +1318,11 @@ const Loan = {
         }
 
         if (IS_FIXED_AMOUNT_INTEREST) {
-          transactionInformation.interestCharged += interestRate.amount;
-          outstandingInterest += interestRate.amount;
+          transactionInformation.interestCharged = paranoidCalculator.add(
+            interestRate.amount,
+            transactionInformation.interestCharged,
+          );
+          outstandingInterest = paranoidCalculator.add(interestRate.amount, outstandingInterest);
         }
         // add fixed amount interest to loan
         /* Deprecated: added in investment stats below
@@ -1360,7 +1358,7 @@ const Loan = {
         });
 
         transactionInformation.invested = loanTransaction.amount;
-        totalInvested += loanTransaction.amount;
+        totalInvested = paranoidCalculator.add(loanTransaction.amount, totalInvested);
 
         if (outstandingPrincipal < 0) {
           const overpaidPrincipalToUseForNewInvestment =
@@ -1369,14 +1367,20 @@ const Loan = {
           transactionInformation.principalPaid.push({
             amount: -overpaidPrincipalToUseForNewInvestment,
           });
-          investments[investments.length - 1].outstandingPrincipal -= overpaidPrincipalToUseForNewInvestment;
-          investments[investments.length - 1].totalPaidPrincipal += overpaidPrincipalToUseForNewInvestment;
+          investments[investments.length - 1].outstandingPrincipal = paranoidCalculator.subtract(
+            investments[investments.length - 1].outstandingInterest,
+            overpaidPrincipalToUseForNewInvestment,
+          );
+          investments[investments.length - 1].totalPaidPrincipal = paranoidCalculator.add(
+            overpaidPrincipalToUseForNewInvestment,
+            investments[investments.length - 1].totalPaidPrincipal,
+          );
           transactionInformation.principalPaid.push({
             budgetId: investments[investments.length - 1].budgetId,
             amount: overpaidPrincipalToUseForNewInvestment,
           });
         }
-        outstandingPrincipal += loanTransaction.amount;
+        outstandingPrincipal = paranoidCalculator.add(loanTransaction.amount, outstandingPrincipal);
       } else if (loanTransaction.from.datatype === 'FEE') {
         // in case transaction is manual fee
         if (loanTransaction.relatedBudgetId === undefined) {
@@ -1388,7 +1392,7 @@ const Loan = {
         });
 
         transactionInformation.feeCharged = loanTransaction.amount;
-        outstandingFees += loanTransaction.amount;
+        outstandingFees = paranoidCalculator.add(loanTransaction.amount, outstandingFees);
 
         // in case there is available overpaid principal use it to pay off fees
         if (outstandingPrincipal < 0) {
@@ -1398,23 +1402,26 @@ const Loan = {
             if (fee.outstandingAmount <= 0) continue;
             if (remainingPaymentAmount <= 0) break;
             if (remainingPaymentAmount < fee.outstandingAmount) {
-              fee.outstandingAmount -= remainingPaymentAmount;
-              outstandingFees -= remainingPaymentAmount;
+              fee.outstandingAmount = paranoidCalculator.subtract(fee.outstandingAmount, remainingPaymentAmount);
+              outstandingFees = paranoidCalculator.subtract(outstandingFees, remainingPaymentAmount);
               transactionInformation.feePaid.push({ budgetId: fee.budgetId, amount: remainingPaymentAmount });
-              totalPaidFees += remainingPaymentAmount;
+              totalPaidFees = paranoidCalculator.add(totalPaidFees, remainingPaymentAmount);
               remainingPaymentAmount = 0;
             } else {
               transactionInformation.feePaid.push({ budgetId: fee.budgetId, amount: fee.outstandingAmount });
-              totalPaidFees += fee.outstandingAmount;
-              outstandingFees -= fee.outstandingAmount;
-              remainingPaymentAmount -= fee.outstandingAmount;
+              totalPaidFees = paranoidCalculator.add(totalPaidFees, fee.outstandingAmount);
+              outstandingFees = paranoidCalculator.subtract(outstandingFees, fee.outstandingAmount);
+              remainingPaymentAmount = paranoidCalculator.subtract(remainingPaymentAmount, fee.outstandingAmount);
               fee.outstandingAmount = 0;
             }
           }
-          const feesPaidFromOutstandingPrincipal = -outstandingPrincipal - remainingPaymentAmount;
+          const feesPaidFromOutstandingPrincipal = paranoidCalculator.subtract(
+            -outstandingPrincipal,
+            remainingPaymentAmount,
+          );
           transactionInformation.principalPaid.push({ amount: -feesPaidFromOutstandingPrincipal });
-          totalPaidPrincipal -= feesPaidFromOutstandingPrincipal;
-          outstandingPrincipal = outstandingPrincipal + feesPaidFromOutstandingPrincipal;
+          totalPaidPrincipal = paranoidCalculator.subtract(totalPaidPrincipal, feesPaidFromOutstandingPrincipal);
+          outstandingPrincipal = paranoidCalculator.add(outstandingPrincipal, feesPaidFromOutstandingPrincipal);
         }
       } else if (loanTransaction.from.datatype === 'OUTSIDE' && loanTransaction.to.datatype === 'LOAN') {
         //  loan payment
@@ -1424,16 +1431,16 @@ const Loan = {
           if (fee.outstandingAmount <= 0) continue;
           if (remainingPaymentAmount <= 0) break;
           if (remainingPaymentAmount < fee.outstandingAmount) {
-            fee.outstandingAmount -= remainingPaymentAmount;
-            outstandingFees -= remainingPaymentAmount;
+            fee.outstandingAmount = paranoidCalculator.subtract(fee.outstandingAmount, remainingPaymentAmount);
+            outstandingFees = paranoidCalculator.subtract(outstandingFees, remainingPaymentAmount);
             transactionInformation.feePaid.push({ budgetId: fee.budgetId, amount: remainingPaymentAmount });
-            totalPaidFees += remainingPaymentAmount;
+            totalPaidFees = paranoidCalculator.add(totalPaidFees, remainingPaymentAmount);
             remainingPaymentAmount = 0;
           } else {
             transactionInformation.feePaid.push({ budgetId: fee.budgetId, amount: fee.outstandingAmount });
-            totalPaidFees += fee.outstandingAmount;
-            outstandingFees -= fee.outstandingAmount;
-            remainingPaymentAmount -= fee.outstandingAmount;
+            totalPaidFees = paranoidCalculator.add(totalPaidFees, fee.outstandingAmount);
+            outstandingFees = paranoidCalculator.subtract(outstandingFees, fee.outstandingAmount);
+            remainingPaymentAmount = paranoidCalculator.subtract(remainingPaymentAmount, fee.outstandingAmount);
             fee.outstandingAmount = 0;
           }
         }
@@ -1441,7 +1448,8 @@ const Loan = {
         if (remainingPaymentAmount < 0) throw new Error('Remaining payment amount is negative, and should not be!');
 
         // then pay off interest of each investment in proportion of their outstanding principal
-        let percentageOfTotalInterestPaid = remainingPaymentAmount / outstandingInterest;
+        let percentageOfTotalInterestPaid =
+          outstandingInterest === 0 ? 0 : paranoidCalculator.divide(remainingPaymentAmount, outstandingInterest);
         if (percentageOfTotalInterestPaid > 1) percentageOfTotalInterestPaid = 1;
 
         if (remainingPaymentAmount > 0)
@@ -1449,26 +1457,41 @@ const Loan = {
             if (investment.outstandingPrincipal <= 0) continue;
 
             if (percentageOfTotalInterestPaid === 1) {
-              investment.totalPaidInterest += investment.outstandingInterest;
-              totalPaidInterest += investment.outstandingInterest;
-              outstandingInterest -= investment.outstandingInterest;
+              investment.totalPaidInterest = paranoidCalculator.add(
+                investment.totalPaidInterest,
+                investment.outstandingInterest,
+              );
+              totalPaidInterest = paranoidCalculator.add(totalPaidInterest, investment.outstandingInterest);
+              outstandingInterest = paranoidCalculator.subtract(outstandingInterest, investment.outstandingInterest);
               transactionInformation.interestPaid.push({
                 budgetId: investment.budgetId,
                 amount: investment.outstandingInterest,
               });
-              remainingPaymentAmount -= investment.outstandingInterest;
+              remainingPaymentAmount = paranoidCalculator.subtract(
+                remainingPaymentAmount,
+                investment.outstandingInterest,
+              );
               investment.outstandingInterest = 0;
             } else {
-              const interestPaidToInvestment = investment.outstandingInterest * percentageOfTotalInterestPaid;
-              investment.outstandingInterest -= interestPaidToInvestment;
-              investment.totalPaidInterest += interestPaidToInvestment;
-              totalPaidInterest += interestPaidToInvestment;
-              outstandingInterest -= interestPaidToInvestment;
+              const interestPaidToInvestment = paranoidCalculator.multiply(
+                investment.outstandingInterest,
+                percentageOfTotalInterestPaid,
+              );
+              investment.outstandingInterest = paranoidCalculator.subtract(
+                investment.outstandingInterest,
+                interestPaidToInvestment,
+              );
+              investment.totalPaidInterest = paranoidCalculator.add(
+                investment.totalPaidInterest,
+                interestPaidToInvestment,
+              );
+              totalPaidInterest = paranoidCalculator.add(totalPaidInterest, interestPaidToInvestment);
+              outstandingInterest = paranoidCalculator.subtract(outstandingInterest, interestPaidToInvestment);
               transactionInformation.interestPaid.push({
                 budgetId: investment.budgetId,
                 amount: interestPaidToInvestment,
               });
-              remainingPaymentAmount -= interestPaidToInvestment;
+              remainingPaymentAmount = paranoidCalculator.subtract(remainingPaymentAmount, interestPaidToInvestment);
             }
           }
         if (_.round(remainingPaymentAmount, 8) === 0) remainingPaymentAmount = 0;
@@ -1480,7 +1503,7 @@ const Loan = {
         if (remainingPaymentAmount > 0 && outstandingPrincipal > 0) {
           const outstandingPrincipalOfUnpaidInvestments = investments.reduce((accumulator, currentValue) => {
             if (currentValue.outstandingPrincipal > 0) {
-              return accumulator + currentValue.outstandingPrincipal;
+              return paranoidCalculator.add(accumulator, currentValue.outstandingPrincipal);
             } else {
               return accumulator;
             }
@@ -1489,17 +1512,23 @@ const Loan = {
           if (remainingPaymentAmount > outstandingPrincipalOfUnpaidInvestments) {
             usableRemainingPaymentAmount = outstandingPrincipalOfUnpaidInvestments;
           }
-          remainingPaymentAmount -= usableRemainingPaymentAmount;
+          remainingPaymentAmount = paranoidCalculator.subtract(remainingPaymentAmount, usableRemainingPaymentAmount);
           for (const investment of investments) {
             if (investment.outstandingPrincipal <= 0) continue;
 
             const principalPaidToInvestment =
               usableRemainingPaymentAmount *
               (investment.outstandingPrincipal / outstandingPrincipalOfUnpaidInvestments);
-            investment.outstandingPrincipal -= principalPaidToInvestment;
-            investment.totalPaidPrincipal += principalPaidToInvestment;
-            outstandingPrincipal -= principalPaidToInvestment;
-            totalPaidPrincipal += principalPaidToInvestment;
+            investment.outstandingPrincipal = paranoidCalculator.subtract(
+              investment.outstandingPrincipal,
+              principalPaidToInvestment,
+            );
+            investment.totalPaidPrincipal = paranoidCalculator.add(
+              investment.totalPaidPrincipal,
+              principalPaidToInvestment,
+            );
+            outstandingPrincipal = paranoidCalculator.subtract(outstandingPrincipal, principalPaidToInvestment);
+            totalPaidPrincipal = paranoidCalculator.add(totalPaidPrincipal, principalPaidToInvestment);
             transactionInformation.principalPaid.push({
               budgetId: investment.budgetId,
               amount: principalPaidToInvestment,
@@ -1508,8 +1537,8 @@ const Loan = {
         }
         // if there is overpayment of principal
         if (remainingPaymentAmount > 0) {
-          outstandingPrincipal -= remainingPaymentAmount;
-          totalPaidPrincipal += remainingPaymentAmount;
+          outstandingPrincipal = paranoidCalculator.subtract(outstandingPrincipal, remainingPaymentAmount);
+          totalPaidPrincipal = paranoidCalculator.add(totalPaidPrincipal, remainingPaymentAmount);
           transactionInformation.principalPaid.push({
             amount: remainingPaymentAmount,
           });

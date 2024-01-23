@@ -34,6 +34,7 @@
     "deploy:prod": "rsync -avz -e 'ssh -p 19193' dist/app.js moneylender@money-lender.app:/home/moneylender/backend_api",
     "lint": "eslint . --ext .ts --ext .mts",
     "test": "jest",
+    "testuserjourney": "jest src/api/userJourney.test.ts --forceExit",
     "prettier": "prettier --config .prettierrc --write .",
     "test:watch": "jest --watch"
   },

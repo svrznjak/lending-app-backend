@@ -662,6 +662,7 @@ export default {
       currentLoanStats[loan._id.toString()] = {
         amountLent: 0,
         amountPaidBack: 0,
+        amountPaidBackPrincipal: 0,
         amountForgiven: 0,
         status: undefined,
       };
@@ -813,6 +814,11 @@ export default {
           currentLoanStats[transaction.to.addressId].amountPaidBack = paranoidCalculator.add(
             currentLoanStats[transaction.to.addressId].amountPaidBack,
             totalPaidToThisBudget,
+          );
+
+          currentLoanStats[transaction.to.addressId].amountPaidBackPrincipal = paranoidCalculator.add(
+            currentLoanStats[transaction.to.addressId].amountPaidBackPrincipal,
+            principalPaymentToThisBudget,
           );
 
           TRANSACTION_LIST.push({
@@ -1038,7 +1044,10 @@ export default {
         ) {
           return paranoidCalculator.add(
             acc,
-            paranoidCalculator.subtract(currentLoanStats[loanId].amountLent, currentLoanStats[loanId].amountPaidBack),
+            paranoidCalculator.subtract(
+              currentLoanStats[loanId].amountLent,
+              currentLoanStats[loanId].amountPaidBackPrincipal,
+            ),
           );
         }
         return acc;
@@ -1066,7 +1075,7 @@ export default {
         if (currentLoanStats[loanId].status === 'COMPLETED' || currentLoanStats[loanId].status === 'DEFAULTED') {
           const lossOnLoan = paranoidCalculator.subtract(
             currentLoanStats[loanId].amountLent,
-            currentLoanStats[loanId].amountPaidBack,
+            currentLoanStats[loanId].amountPaidBackPrincipal,
           );
           if (lossOnLoan > 0) {
             return lossOnLoan + acc;
