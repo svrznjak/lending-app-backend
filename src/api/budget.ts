@@ -920,8 +920,8 @@ export default {
           }
           return accumulator;
         }, 0);
-        currentLoanStats[transaction.from.addressId].amountPaidBack = paranoidCalculator.add(
-          currentLoanStats[transaction.from.addressId].amountPaidBack,
+        currentLoanStats[transaction.from.addressId].amountForgiven = paranoidCalculator.add(
+          currentLoanStats[transaction.from.addressId].amountForgiven,
           totalForgivenForThisBudget,
         );
 
@@ -956,6 +956,10 @@ export default {
           }
         }, 0);
         if (feePaidToThisBudget > 0) {
+          currentLoanStats[transaction.from.addressId].amountPaidBack = paranoidCalculator.add(
+            currentLoanStats[transaction.from.addressId].amountPaidBack,
+            feePaidToThisBudget,
+          );
           TRANSACTION_LIST.push({
             _id: transaction._id.toString(),
             timestamp: transaction.transactionTimestamp,
