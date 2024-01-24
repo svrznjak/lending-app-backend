@@ -430,7 +430,7 @@ describe('Manual tests', () => {
           totalAvailableAmount: investingBudgetStats.totalAvailableAmount + 5,
           currentlyLendedPrincipalToLiveLoansAmount: investingBudgetStats.currentlyLendedPrincipalToLiveLoansAmount,
           currentlyEarnedInterestAmount: investingBudgetStats.currentlyEarnedInterestAmount + 5,
-          totalGains: 5,
+          totalGainsOrLossesOnEndedLoans: 5,
           totalAssociatedLiveLoans: 0,
           totalAssociatedLoans: 1,
         },
@@ -581,10 +581,10 @@ describe('Manual tests', () => {
         currentStats: {
           currentlyLendedPrincipalToLiveLoansAmount: investingBudgetStats1.currentlyLendedPrincipalToLiveLoansAmount,
           currentlyEarnedInterestAmount: investingBudgetStats1.currentlyEarnedInterestAmount + 5,
-          totalGains: 5,
+          totalGainsOrLossesOnEndedLoans: 5,
           totalAssociatedLiveLoans: 0,
           totalAssociatedLoans: 2,
-          totalLostPrincipalToCompletedAndDefaultedLoansAmount: paranoidCalculator.subtract(
+          totalDefaultedPrincipal: paranoidCalculator.subtract(
             paranoidCalculator.add(investingBudgetStats1.currentlyLendedPrincipalToLiveLoansAmount, 100),
             paranoidCalculator.divide(expectedPaidPrincipal, 6),
           ),

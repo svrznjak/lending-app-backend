@@ -122,7 +122,7 @@ const Loan = {
             relatedBudgetId: funds[i].budgetId,
             entryTimestamp: transactionHelpers.validate.entryTimestamp(new Date().getTime()),
           },
-          { session: session },
+          { session: session, runChecks: false },
         );
       }
       const recalculatedLoan: ILoan = await this.recalculateCalculatedValues(Mongo_Loan, session);
@@ -751,10 +751,10 @@ const Loan = {
     const STATUS: ILoanStatus = loan.status;
     const arrayOfStatuses = unWrapStatuses(STATUS);
 
-    // get status that of which the timestamp is closest greater than the given timestamp
+    // get latest viable status
     let closestStatus: ILoanStatus = arrayOfStatuses[0];
     for (let i = 1; i < arrayOfStatuses.length; i++) {
-      if (arrayOfStatuses[i].timestamp <= timestamp && arrayOfStatuses[i].timestamp > closestStatus.timestamp) {
+      if (arrayOfStatuses[i].timestamp <= timestamp) {
         closestStatus = arrayOfStatuses[i];
       }
     }
@@ -854,6 +854,9 @@ const Loan = {
     MONGO_LOAN.calculatedLastTransactionTimestamp = CALCULATED_VALUES.calculatedLastTransactionTimestamp;
     MONGO_LOAN.calculatedOutstandingInterest = CALCULATED_VALUES.calculatedOutstandingInterest;
     MONGO_LOAN.calculatedPaidInterest = CALCULATED_VALUES.calculatedPaidInterest;
+    MONGO_LOAN.calculatedOutstandingFees = CALCULATED_VALUES.outstandingFees;
+    MONGO_LOAN.calculatedPaidFees = CALCULATED_VALUES.totalPaidFees;
+    MONGO_LOAN.calculatedTotalForgiven = CALCULATED_VALUES.totalForgiven;
     MONGO_LOAN.calculatedRelatedBudgets = CALCULATED_VALUES.calculatedRelatedBudgets;
     MONGO_LOAN.calculatedTotalPaidPrincipal = CALCULATED_VALUES.calculatedTotalPaidPrincipal;
     MONGO_LOAN.transactionList = CALCULATED_VALUES.transactionList;
@@ -1123,14 +1126,14 @@ const Loan = {
       _.round(CALCULATED_VALUES_UNTIL_NOW.calculatedOutstandingFees, 2) === 0 &&
       MONGO_LOAN.status.current === 'ACTIVE'
     ) {
-      await this.changeStatus(MONGO_LOAN, 'PAID', Date.now());
+      await this.changeStatus(MONGO_LOAN, 'PAID', CALCULATED_VALUES_UNTIL_NOW.calculatedLastTransactionTimestamp);
     } else if (
       _.round(CALCULATED_VALUES_UNTIL_NOW.calculatedOutstandingPrincipal, 2) > 0 ||
       _.round(CALCULATED_VALUES_UNTIL_NOW.calculatedOutstandingInterest, 2) > 0 ||
       _.round(CALCULATED_VALUES_UNTIL_NOW.calculatedOutstandingFees, 2) > 0
     ) {
       if (MONGO_LOAN.status.current === 'PAID') {
-        await this.changeStatus(MONGO_LOAN, 'ACTIVE', Date.now());
+        await this.changeStatus(MONGO_LOAN, 'ACTIVE', CALCULATED_VALUES_UNTIL_NOW.calculatedLastTransactionTimestamp);
       }
     }
 

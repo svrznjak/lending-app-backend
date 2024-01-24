@@ -44,8 +44,8 @@ export default {
         currentlyLendedPrincipalToLiveLoansAmount: 0,
         currentlyEarnedFeesAmount: 0,
         currentlyEarnedInterestAmount: 0,
-        totalLostPrincipalToCompletedAndDefaultedLoansAmount: 0,
-        totalGains: 0,
+        totalDefaultedPrincipal: 0,
+        totalGainsOrLossesOnEndedLoans: 0,
         totalForgivenAmount: 0,
         totalLentAmount: 0,
         totalAssociatedLoans: 0,
@@ -630,8 +630,8 @@ export default {
           currentlyEarnedInterestAmount: 0,
           currentlyEarnedFeesAmount: 0,
           currentlyLendedPrincipalToLiveLoansAmount: 0,
-          totalLostPrincipalToCompletedAndDefaultedLoansAmount: 0,
-          totalGains: 0,
+          totalDefaultedPrincipal: 0,
+          totalGainsOrLossesOnEndedLoans: 0,
           totalForgivenAmount: 0,
           totalLentAmount: 0,
           totalAssociatedLoans: 0,
@@ -695,8 +695,8 @@ export default {
             currentlyEarnedInterestAmount: 0,
             currentlyEarnedFeesAmount: 0,
             currentlyLendedPrincipalToLiveLoansAmount: 0,
-            totalLostPrincipalToCompletedAndDefaultedLoansAmount: 0,
-            totalGains: 0,
+            totalDefaultedPrincipal: 0,
+            totalGainsOrLossesOnEndedLoans: 0,
             totalForgivenAmount: 0,
             totalLentAmount: 0,
             totalAssociatedLoans: 0,
@@ -811,13 +811,13 @@ export default {
         );
 
         if (totalPaidToThisBudget > 0) {
-          currentLoanStats[transaction.to.addressId].amountPaidBack = paranoidCalculator.add(
-            currentLoanStats[transaction.to.addressId].amountPaidBack,
+          currentLoanStats[transaction.to.addressId.toString()].amountPaidBack = paranoidCalculator.add(
+            currentLoanStats[transaction.to.addressId.toString()].amountPaidBack,
             totalPaidToThisBudget,
           );
 
-          currentLoanStats[transaction.to.addressId].amountPaidBackPrincipal = paranoidCalculator.add(
-            currentLoanStats[transaction.to.addressId].amountPaidBackPrincipal,
+          currentLoanStats[transaction.to.addressId.toString()].amountPaidBackPrincipal = paranoidCalculator.add(
+            currentLoanStats[transaction.to.addressId.toString()].amountPaidBackPrincipal,
             principalPaymentToThisBudget,
           );
 
@@ -885,6 +885,10 @@ export default {
             currentLoanStats[transaction.from.addressId.toString()].amountPaidBack,
             refundedFromThisBudget,
           );
+          currentLoanStats[transaction.from.addressId.toString()].amountPaidBackPrincipal = paranoidCalculator.subtract(
+            currentLoanStats[transaction.from.addressId.toString()].amountPaidBackPrincipal,
+            refundedFromThisBudget,
+          );
 
           TRANSACTION_LIST.push({
             _id: transaction._id.toString(),
@@ -901,6 +905,10 @@ export default {
               ...calculatedFields(transaction),
               totalAvailableAmount: paranoidCalculator.subtract(
                 TRANSACTION_LIST[y - 1].budgetStats.totalAvailableAmount,
+                refundedFromThisBudget,
+              ),
+              currentlyPaidBackPrincipalAmount: paranoidCalculator.subtract(
+                TRANSACTION_LIST[y - 1].budgetStats.currentlyPaidBackPrincipalAmount,
                 refundedFromThisBudget,
               ),
             },
@@ -1020,8 +1028,8 @@ export default {
     ): Pick<
       IBudgetStats,
       | 'currentlyLendedPrincipalToLiveLoansAmount'
-      | 'totalGains'
-      | 'totalLostPrincipalToCompletedAndDefaultedLoansAmount'
+      | 'totalGainsOrLossesOnEndedLoans'
+      | 'totalDefaultedPrincipal'
       | 'totalLentAmount'
       | 'totalAssociatedLoans'
       | 'totalAssociatedLiveLoans'
@@ -1030,8 +1038,8 @@ export default {
     > {
       return {
         currentlyLendedPrincipalToLiveLoansAmount: currentlyLendedPrincipalToLiveLoansAmount(),
-        totalGains: totalGains(),
-        totalLostPrincipalToCompletedAndDefaultedLoansAmount: totalLostOnCompletedAndDefaultedLoans(),
+        totalGainsOrLossesOnEndedLoans: totalGainsOrLossesOnEndedLoans(),
+        totalDefaultedPrincipal: totalDefaultedPrincipal(),
         totalLentAmount: totalLentAmount(),
         totalAssociatedLoans: totalAssociatedLoans(),
         totalAssociatedLiveLoans: totalAssociatedLiveLoans(),
@@ -1057,7 +1065,7 @@ export default {
         return acc;
       }, 0);
     }
-    function totalGains(): number {
+    function totalGainsOrLossesOnEndedLoans(): number {
       // Total gains are defined as sum of all currentLoanStats.amountPaidBack - currentLoanStats.amountLent on all completed or defaulted loans.
 
       return Object.keys(currentLoanStats).reduce((acc, loanId) => {
@@ -1066,17 +1074,13 @@ export default {
             currentLoanStats[loanId].amountPaidBack,
             currentLoanStats[loanId].amountLent,
           );
-          if (gainOnLoan > 0) {
-            return paranoidCalculator.add(gainOnLoan, acc);
-          } else {
-            return acc;
-          }
+          return paranoidCalculator.add(gainOnLoan, acc);
         } else return acc;
       }, 0);
     }
-    function totalLostOnCompletedAndDefaultedLoans(): number {
+    function totalDefaultedPrincipal(): number {
       return Object.keys(currentLoanStats).reduce((acc, loanId) => {
-        if (currentLoanStats[loanId].status === 'COMPLETED' || currentLoanStats[loanId].status === 'DEFAULTED') {
+        if (currentLoanStats[loanId].status === 'DEFAULTED') {
           const lossOnLoan = paranoidCalculator.subtract(
             currentLoanStats[loanId].amountLent,
             currentLoanStats[loanId].amountPaidBackPrincipal,
@@ -1098,21 +1102,26 @@ export default {
     }
     function totalAssociatedLoans(): number {
       return Object.keys(currentLoanStats).filter((loanId) => {
-        return currentLoanStats[loanId].status !== undefined;
+        return currentLoanStats[loanId].status !== undefined && currentLoanStats[loanId].amountLent !== 0;
       }).length;
     }
     function totalAssociatedLiveLoans(): number {
       return Object.keys(currentLoanStats).filter((loanId) => {
         return (
-          currentLoanStats[loanId].status === 'ACTIVE' ||
-          currentLoanStats[loanId].status === 'PAUSED' ||
-          currentLoanStats[loanId].status === 'PAID'
+          (currentLoanStats[loanId].status === 'ACTIVE' ||
+            currentLoanStats[loanId].status === 'PAUSED' ||
+            currentLoanStats[loanId].status === 'PAID') &&
+          currentLoanStats[loanId].amountLent > 0
         );
       }).length;
     }
     function avarageLoanAmount(transaction): number {
       return relatedLoans.reduce((acc, loan) => {
-        if (currentLoanStats[loan._id.toString()].status === undefined) return acc;
+        if (
+          currentLoanStats[loan._id.toString()].status === undefined ||
+          currentLoanStats[loan._id.toString()].amountLent === 0
+        )
+          return acc;
         if (
           loan.transactionList.find((loanTransaction) => loanTransaction._id === transaction._id.toString()) ===
           undefined
@@ -1135,7 +1144,11 @@ export default {
     }
     function avarageLoanDuration(): number {
       return relatedLoans.reduce((acc, loan) => {
-        if (currentLoanStats[loan._id.toString()].status === undefined) return acc;
+        if (
+          currentLoanStats[loan._id.toString()].status === undefined ||
+          currentLoanStats[loan._id.toString()].amountLent === 0
+        )
+          return acc;
 
         if (acc === 0) return loan.closesTimestamp - loan.openedTimestamp;
         else return (loan.closesTimestamp - loan.openedTimestamp + acc) / 2;
@@ -1160,9 +1173,9 @@ export default {
     MONGO_BUDGET.calculatedCurrentlyLendedPrincipalToLiveLoansAmount =
       CALCULATED_VALUES.calculatedCurrentlyLendedPrincipalToLiveLoansAmount;
     MONGO_BUDGET.calculatedCurrentlyEarnedInterestAmount = CALCULATED_VALUES.calculatedCurrentlyEarnedInterestAmount;
-    MONGO_BUDGET.calculatedTotalLostPrincipalToCompletedAndDefaultedLoansAmount =
-      CALCULATED_VALUES.calculatedTotalLostPrincipalToCompletedAndDefaultedLoansAmount;
-    MONGO_BUDGET.calculatedTotalGains = CALCULATED_VALUES.calculatedTotalGains;
+    MONGO_BUDGET.calculatedtotalDefaultedPrincipal =
+      CALCULATED_VALUES.calculatedtotalDefaultedPrincipal;
+    MONGO_BUDGET.calculatedtotalGainsOrLossesOnEndedLoans = CALCULATED_VALUES.calculatedtotalGainsOrLossesOnEndedLoans;
     MONGO_BUDGET.calculatedTotalLentAmount = CALCULATED_VALUES.calculatedTotalLentAmount;
     MONGO_BUDGET.calculatedTotalAssociatedLoans = CALCULATED_VALUES.calculatedTotalAssociatedLoans;
     MONGO_BUDGET.calculatedTotalAssociatedLiveLoans = CALCULATED_VALUES.calculatedTotalAssociatedLiveLoans;
