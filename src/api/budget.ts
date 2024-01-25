@@ -777,7 +777,11 @@ export default {
           },
         });
         y++;
-      } else if (transaction.from.datatype === 'OUTSIDE' && transaction.to.datatype === 'LOAN') {
+      }
+      if (
+        (transaction.from.datatype === 'OUTSIDE' && transaction.to.datatype === 'LOAN') ||
+        (transaction.from.datatype === 'BUDGET' && transaction.to.datatype === 'LOAN')
+      ) {
         const relatedLoan = relatedLoans.find((loan) => loan._id.toString() === transaction.to.addressId.toString());
         const transactionInLoan = relatedLoan.transactionList.find(
           (loanTransaction) => loanTransaction._id.toString() === transaction._id.toString(),
@@ -990,8 +994,6 @@ export default {
           });
           y++;
         }
-      } else {
-        throw new Error('Should not happen');
       }
       if (TRANSACTION_LIST[y - 1].budgetStats['totalAvailableAmount'] < 0) {
         throw new Error('Budget funds cannot be negative!');

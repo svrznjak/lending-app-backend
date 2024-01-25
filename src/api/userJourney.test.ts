@@ -68,7 +68,7 @@ describe('Manual tests', () => {
       });
 
       budgetId = usersBudget[0]._id;
-    });
+    }, 600000);
 
     /**
      * Test if we can create a new loan
@@ -581,13 +581,283 @@ describe('Manual tests', () => {
         currentStats: {
           currentlyLendedPrincipalToLiveLoansAmount: investingBudgetStats1.currentlyLendedPrincipalToLiveLoansAmount,
           currentlyEarnedInterestAmount: investingBudgetStats1.currentlyEarnedInterestAmount + 5,
-          totalGainsOrLossesOnEndedLoans: 5,
+          totalGainsOrLossesOnEndedLoans:
+            investingBudgetStats1.currentlyEarnedInterestAmount +
+            5 -
+            paranoidCalculator.subtract(
+              paranoidCalculator.add(investingBudgetStats1.currentlyLendedPrincipalToLiveLoansAmount, 100),
+              paranoidCalculator.divide(expectedPaidPrincipal, 6),
+            ),
           totalAssociatedLiveLoans: 0,
           totalAssociatedLoans: 2,
           totalDefaultedPrincipal: paranoidCalculator.subtract(
             paranoidCalculator.add(investingBudgetStats1.currentlyLendedPrincipalToLiveLoansAmount, 100),
             paranoidCalculator.divide(expectedPaidPrincipal, 6),
           ),
+        },
+      });
+
+      await checkBudget(budgetIds[1], {
+        currentStats: {
+          currentlyLendedPrincipalToLiveLoansAmount: investingBudgetStats2.currentlyLendedPrincipalToLiveLoansAmount,
+          currentlyEarnedInterestAmount: investingBudgetStats2.currentlyEarnedInterestAmount + 5,
+          totalGainsOrLossesOnEndedLoans:
+            investingBudgetStats2.currentlyEarnedInterestAmount +
+            5 -
+            parseFloat(
+              (
+                investingBudgetStats2.currentlyLendedPrincipalToLiveLoansAmount +
+                200 -
+                expectedPaidPrincipal / 3
+              ).toPrecision(15),
+            ),
+          totalAssociatedLiveLoans: 0,
+          totalAssociatedLoans: 1,
+          totalDefaultedPrincipal: parseFloat(
+            (
+              investingBudgetStats2.currentlyLendedPrincipalToLiveLoansAmount +
+              200 -
+              expectedPaidPrincipal / 3
+            ).toPrecision(15),
+          ),
+        },
+      });
+
+      await checkBudget(budgetIds[2], {
+        currentStats: {
+          currentlyLendedPrincipalToLiveLoansAmount: investingBudgetStats3.currentlyLendedPrincipalToLiveLoansAmount,
+          currentlyEarnedInterestAmount: investingBudgetStats3.currentlyEarnedInterestAmount + 0.246575342465753,
+          totalGainsOrLossesOnEndedLoans: roundTo15Digits(
+            investingBudgetStats3.currentlyEarnedInterestAmount +
+              0.246575342465753 -
+              roundTo15Digits(
+                investingBudgetStats3.currentlyLendedPrincipalToLiveLoansAmount + 300 - expectedPaidPrincipal / 2,
+              ),
+          ),
+          totalAssociatedLiveLoans: 0,
+          totalAssociatedLoans: 1,
+          totalDefaultedPrincipal: parseFloat(
+            (
+              investingBudgetStats3.currentlyLendedPrincipalToLiveLoansAmount +
+              300 -
+              expectedPaidPrincipal / 2
+            ).toPrecision(15),
+          ),
+        },
+      });
+    }, 20000);
+    test('Payment to two investing budgets if one is added later and one is added after first two are paid', async () => {
+      const investingBudgetStats1 = await getBudgetStats(budgetIds[0]);
+      const investingBudgetStats2 = await getBudgetStats(budgetIds[1]);
+      const investingBudgetStats3 = await getBudgetStats(budgetIds[2]);
+
+      const testingLoan = await createSimpleLoan(
+        Date.now() - 3600 * 24 * 20 * 1000,
+        Date.now() + 3600 * 24 * 30 * 1000,
+        [
+          {
+            budgetId: budgetIds[0],
+            amount: 100,
+            interestRate: {
+              type: 'PERCENTAGE_PER_DURATION',
+              duration: 'MONTH',
+              amount: 10,
+              isCompounding: false,
+              entryTimestamp: Date.now(),
+            },
+          },
+        ],
+      );
+
+      await checkBudget(budgetIds[0], {
+        currentStats: {
+          totalAvailableAmount: investingBudgetStats1.totalAvailableAmount - 100,
+          currentlyLendedPrincipalToLiveLoansAmount:
+            investingBudgetStats1.currentlyLendedPrincipalToLiveLoansAmount + 100,
+          totalLentAmount: investingBudgetStats1.totalLentAmount + 100,
+        },
+      });
+
+      await loan.addPayment({
+        userId,
+        loanId: testingLoan._id,
+        transactionTimestamp: Date.now() - 3600 * 24 * 5 * 1000,
+        description: 'payment',
+        amount: 50,
+      });
+
+      await checkBudget(budgetIds[0], {
+        currentStats: {
+          totalAvailableAmount: investingBudgetStats1.totalAvailableAmount - 50,
+          currentlyLendedPrincipalToLiveLoansAmount:
+            investingBudgetStats1.currentlyLendedPrincipalToLiveLoansAmount + 55,
+          totalLentAmount: investingBudgetStats1.totalLentAmount + 100,
+          currentlyPaidBackPrincipalAmount: investingBudgetStats1.currentlyPaidBackPrincipalAmount + 45,
+          currentlyEarnedInterestAmount: investingBudgetStats1.currentlyEarnedInterestAmount + 5,
+        },
+      });
+
+      await loan.addFunds({
+        userId,
+        budgetId: budgetIds[1],
+        loanId: testingLoan._id,
+        transactionTimestamp: Date.now() - 3600 * 24 * 5 * 1000,
+        description: 'add funds',
+        amount: 200,
+        interestRate: {
+          type: 'PERCENTAGE_PER_DURATION',
+          duration: 'MONTH',
+          amount: 10,
+          isCompounding: true,
+          entryTimestamp: Date.now(),
+        },
+      });
+
+      await checkLoan(testingLoan._id, {
+        calculatedInvestedAmount: 300,
+        calculatedOutstandingPrincipal: 255,
+        calculatedTotalPaidPrincipal: 45,
+        calculatedPaidInterest: 5,
+      });
+
+      await checkBudget(budgetIds[1], {
+        currentStats: {
+          totalAvailableAmount: investingBudgetStats2.totalAvailableAmount - 200,
+          currentlyLendedPrincipalToLiveLoansAmount:
+            investingBudgetStats2.currentlyLendedPrincipalToLiveLoansAmount + 200,
+          totalLentAmount: investingBudgetStats2.totalLentAmount + 200,
+        },
+      });
+
+      await loan.addPayment({
+        userId,
+        loanId: testingLoan._id,
+        transactionTimestamp: Date.now() - 3600 * 24 * 3 * 1000,
+        description: 'payment',
+        amount: 100,
+      });
+
+      await checkLoan(testingLoan._id, {
+        calculatedInvestedAmount: 300,
+        calculatedOutstandingPrincipal: roundTo15Digits(156.704361134183),
+        calculatedTotalPaidPrincipal: roundTo15Digits(45 + 21.2010201475291 + 77.0946187182877),
+        calculatedPaidInterest: roundTo15Digits(5 + 0.366666666666667 + 1.33769446751654),
+      });
+
+      await checkBudget(budgetIds[0], {
+        currentStats: {
+          totalAvailableAmount: roundTo15Digits(
+            investingBudgetStats1.totalAvailableAmount - 100 + 50 + 21.5676868141958,
+          ),
+          currentlyLendedPrincipalToLiveLoansAmount: roundTo15Digits(
+            investingBudgetStats1.currentlyLendedPrincipalToLiveLoansAmount + 100 - 45 - 21.2010201475291,
+          ),
+          totalLentAmount: investingBudgetStats1.totalLentAmount + 100,
+          currentlyPaidBackPrincipalAmount: roundTo15Digits(
+            investingBudgetStats1.currentlyPaidBackPrincipalAmount + 45 + 21.2010201475291,
+          ),
+          currentlyEarnedInterestAmount: roundTo15Digits(
+            investingBudgetStats1.currentlyEarnedInterestAmount + 5 + 0.366666666666667,
+          ),
+        },
+      });
+
+      await checkBudget(budgetIds[1], {
+        currentStats: {
+          totalAvailableAmount: roundTo15Digits(investingBudgetStats2.totalAvailableAmount - 200 + 78.4323131858042),
+          currentlyLendedPrincipalToLiveLoansAmount: roundTo15Digits(
+            investingBudgetStats2.currentlyLendedPrincipalToLiveLoansAmount + 200 - 77.0946187182877,
+          ),
+          totalLentAmount: investingBudgetStats2.totalLentAmount + 200,
+          currentlyPaidBackPrincipalAmount: roundTo15Digits(
+            investingBudgetStats2.currentlyPaidBackPrincipalAmount + 77.0946187182877,
+          ),
+          currentlyEarnedInterestAmount: roundTo15Digits(
+            investingBudgetStats2.currentlyEarnedInterestAmount + 1.33769446751654,
+          ),
+        },
+      });
+
+      await loan.addPayment({
+        userId,
+        loanId: testingLoan._id,
+        transactionTimestamp: Date.now() - 3600 * 24 * 1 * 1000,
+        description: 'payment',
+        amount: 160,
+      });
+
+      await checkLoan(testingLoan._id, {
+        calculatedInvestedAmount: 300,
+        calculatedOutstandingPrincipal: roundTo15Digits(-2.24826309062402),
+        calculatedTotalPaidPrincipal: roundTo15Digits(45 + 21.2010201475291 + 77.0946187182877 + 158.952624224807),
+        calculatedPaidInterest: roundTo15Digits(5 + 0.366666666666667 + 1.33769446751654 + 1.04737577519259),
+      });
+
+      await checkBudget(budgetIds[0], {
+        currentStats: {
+          totalAvailableAmount: roundTo15Digits(
+            investingBudgetStats1.totalAvailableAmount + 5 + 0.366666666666667 + 0.225326532349806 + 0.0000000000001,
+          ),
+          currentlyLendedPrincipalToLiveLoansAmount: roundTo15Digits(
+            investingBudgetStats1.currentlyLendedPrincipalToLiveLoansAmount,
+          ),
+          totalLentAmount: investingBudgetStats1.totalLentAmount + 100,
+          currentlyPaidBackPrincipalAmount: roundTo15Digits(
+            investingBudgetStats1.currentlyPaidBackPrincipalAmount + 100,
+          ),
+          currentlyEarnedInterestAmount: roundTo15Digits(
+            investingBudgetStats1.currentlyEarnedInterestAmount + 5 + 0.366666666666667 + 0.225326532349806,
+          ),
+        },
+      });
+
+      await checkBudget(budgetIds[1], {
+        currentStats: {
+          totalAvailableAmount: roundTo15Digits(
+            investingBudgetStats2.totalAvailableAmount + 1.33769446751654 + 0.822049242842784,
+          ),
+          currentlyLendedPrincipalToLiveLoansAmount: roundTo15Digits(
+            investingBudgetStats2.currentlyLendedPrincipalToLiveLoansAmount,
+          ),
+          totalLentAmount: investingBudgetStats2.totalLentAmount + 200,
+          currentlyPaidBackPrincipalAmount: roundTo15Digits(
+            investingBudgetStats2.currentlyPaidBackPrincipalAmount + 200,
+          ),
+          currentlyEarnedInterestAmount: roundTo15Digits(
+            investingBudgetStats2.currentlyEarnedInterestAmount + 1.33769446751654 + 0.822049242842784,
+          ),
+        },
+      });
+
+      // add additional investment from budget 3
+      await loan.addFunds({
+        userId,
+        budgetId: budgetIds[2],
+        loanId: testingLoan._id,
+        transactionTimestamp: Date.now() - 3600 * 24 * 1 * 1000,
+        description: 'add funds',
+        amount: 2.24826309062402,
+        interestRate: {
+          type: 'PERCENTAGE_PER_DURATION',
+          duration: 'MONTH',
+          amount: 10,
+          isCompounding: true,
+          entryTimestamp: Date.now(),
+        },
+      });
+
+      await checkLoan(testingLoan._id, {
+        calculatedInvestedAmount: 300 + 2.24826309062402,
+        calculatedOutstandingPrincipal: 0,
+        calculatedTotalPaidPrincipal: roundTo15Digits(45 + 21.2010201475291 + 77.0946187182877 + 158.952624224807),
+        calculatedPaidInterest: roundTo15Digits(5 + 0.366666666666667 + 1.33769446751654 + 1.04737577519259),
+      });
+
+      await checkBudget(budgetIds[2], {
+        currentStats: {
+          totalAvailableAmount: investingBudgetStats3.totalAvailableAmount,
+          currentlyLendedPrincipalToLiveLoansAmount: investingBudgetStats3.currentlyLendedPrincipalToLiveLoansAmount,
+          totalLentAmount: investingBudgetStats3.totalLentAmount + 2.24826309062402,
         },
       });
     }, 20000);
@@ -642,4 +912,8 @@ async function createSimpleLoan(openedTimestamp: number, closesTimestamp, funds:
     funds,
     'Initial investment',
   );
+}
+
+function roundTo15Digits(num: number): number {
+  return parseFloat(num.toPrecision(15));
 }
