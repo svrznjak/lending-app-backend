@@ -860,6 +860,24 @@ describe('Manual tests', () => {
           totalLentAmount: investingBudgetStats3.totalLentAmount + 2.24826309062402,
         },
       });
+
+      await loan.complete(testingLoan._id);
+
+      await checkBudget(budgetIds[0], {
+        currentStats: {
+          totalAssociatedLiveLoans: investingBudgetStats1.totalAssociatedLiveLoans,
+        },
+      });
+      await checkBudget(budgetIds[1], {
+        currentStats: {
+          totalAssociatedLiveLoans: investingBudgetStats2.totalAssociatedLiveLoans,
+        },
+      });
+      await checkBudget(budgetIds[2], {
+        currentStats: {
+          totalAssociatedLiveLoans: investingBudgetStats3.totalAssociatedLiveLoans,
+        },
+      });
     }, 20000);
   });
 });

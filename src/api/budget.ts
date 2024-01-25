@@ -1006,7 +1006,61 @@ export default {
       _id: MONGO_BUDGET._id.toString(),
       userId: MONGO_BUDGET.userId.toString(),
       transactionList: TRANSACTION_LIST,
-      currentStats: TRANSACTION_LIST[0].budgetStats,
+      currentStats: {
+        ...TRANSACTION_LIST[0].budgetStats,
+        currentlyLendedPrincipalToLiveLoansAmount: Object.keys(currentLoanStats).reduce((acc, loanId) => {
+          const relatedLoan = relatedLoans.find((loan) => loan._id.toString() === loanId);
+          if (
+            relatedLoan.status.current === 'ACTIVE' ||
+            relatedLoan.status.current === 'PAUSED' ||
+            relatedLoan.status.current === 'PAID'
+          ) {
+            return paranoidCalculator.add(
+              acc,
+              paranoidCalculator.subtract(
+                currentLoanStats[loanId].amountLent,
+                currentLoanStats[loanId].amountPaidBackPrincipal,
+              ),
+            );
+          }
+          return acc;
+        }, 0),
+        totalGainsOrLossesOnEndedLoans:
+          // Total gains are defined as sum of all currentLoanStats.amountPaidBack - currentLoanStats.amountLent on all completed or defaulted loans.
+          Object.keys(currentLoanStats).reduce((acc, loanId) => {
+            const relatedLoan = relatedLoans.find((loan) => loan._id.toString() === loanId);
+            if (relatedLoan.status.current === 'COMPLETED' || relatedLoan.status.current === 'DEFAULTED') {
+              const gainOnLoan = paranoidCalculator.subtract(
+                currentLoanStats[loanId].amountPaidBack,
+                currentLoanStats[loanId].amountLent,
+              );
+              return paranoidCalculator.add(gainOnLoan, acc);
+            } else return acc;
+          }, 0),
+        totalDefaultedPrincipal: Object.keys(currentLoanStats).reduce((acc, loanId) => {
+          const relatedLoan = relatedLoans.find((loan) => loan._id.toString() === loanId);
+          if (relatedLoan.status.current === 'DEFAULTED') {
+            const lossOnLoan = paranoidCalculator.subtract(
+              currentLoanStats[loanId].amountLent,
+              currentLoanStats[loanId].amountPaidBackPrincipal,
+            );
+            if (lossOnLoan > 0) {
+              return lossOnLoan + acc;
+            } else {
+              return acc;
+            }
+          } else return acc;
+        }, 0),
+        totalAssociatedLiveLoans: Object.keys(currentLoanStats).filter((loanId) => {
+          const relatedLoan = relatedLoans.find((loan) => loan._id.toString() === loanId);
+          return (
+            (relatedLoan.status.current === 'ACTIVE' ||
+              relatedLoan.status.current === 'PAUSED' ||
+              relatedLoan.status.current === 'PAID') &&
+            currentLoanStats[loanId].amountLent > 0
+          );
+        }).length,
+      },
     });
     if (session === undefined) {
       BudgetCache.addBudgetToUsersCache({

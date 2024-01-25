@@ -855,7 +855,7 @@ const Loan = {
     MONGO_LOAN.calculatedOutstandingInterest = CALCULATED_VALUES.calculatedOutstandingInterest;
     MONGO_LOAN.calculatedPaidInterest = CALCULATED_VALUES.calculatedPaidInterest;
     MONGO_LOAN.calculatedOutstandingFees = CALCULATED_VALUES.calculatedOutstandingFees;
-    MONGO_LOAN.calculatedPaidFees = CALCULATED_VALUES.calculatedTotalPaidFees;
+    MONGO_LOAN.calculatedPaidFees = CALCULATED_VALUES.calculatedPaidFees;
     MONGO_LOAN.calculatedTotalForgiven = CALCULATED_VALUES.calculatedTotalForgiven;
     MONGO_LOAN.calculatedRelatedBudgets = CALCULATED_VALUES.calculatedRelatedBudgets;
     MONGO_LOAN.calculatedTotalPaidPrincipal = CALCULATED_VALUES.calculatedTotalPaidPrincipal;
@@ -1371,7 +1371,7 @@ const Loan = {
             amount: -overpaidPrincipalToUseForNewInvestment,
           });
           investments[investments.length - 1].outstandingPrincipal = paranoidCalculator.subtract(
-            investments[investments.length - 1].outstandingInterest,
+            investments[investments.length - 1].outstandingPrincipal,
             overpaidPrincipalToUseForNewInvestment,
           );
           investments[investments.length - 1].totalPaidPrincipal = paranoidCalculator.add(
