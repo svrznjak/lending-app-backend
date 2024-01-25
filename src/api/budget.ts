@@ -1170,7 +1170,7 @@ export default {
         );
       }).length;
     }
-    function avarageLoanAmount(transaction): number {
+    function avarageLoanAmount(): number {
       return Object.keys(currentLoanStats)
         .filter((loanId) => {
           return currentLoanStats[loanId].status !== undefined && currentLoanStats[loanId].amountLent > 0;
