@@ -716,7 +716,7 @@ export default {
           amount: transaction.amount,
           budgetStats: {
             ...TRANSACTION_LIST[y - 1].budgetStats,
-            ...calculatedFields(transaction),
+            ...calculatedFields(),
             totalInvestedAmount: paranoidCalculator.add(
               TRANSACTION_LIST[y - 1].budgetStats.totalInvestedAmount,
               transaction.amount,
@@ -738,7 +738,7 @@ export default {
           amount: transaction.amount,
           budgetStats: {
             ...TRANSACTION_LIST[y - 1].budgetStats,
-            ...calculatedFields(transaction),
+            ...calculatedFields(),
             totalWithdrawnAmount: paranoidCalculator.add(
               TRANSACTION_LIST[y - 1].budgetStats.totalWithdrawnAmount,
               transaction.amount,
@@ -765,7 +765,7 @@ export default {
           amount: transaction.amount,
           budgetStats: {
             ...TRANSACTION_LIST[y - 1].budgetStats,
-            ...calculatedFields(transaction),
+            ...calculatedFields(),
             totalLentAmount: paranoidCalculator.add(
               TRANSACTION_LIST[y - 1].budgetStats.totalLentAmount,
               transaction.amount,
@@ -837,7 +837,7 @@ export default {
             amount: totalPaidToThisBudget,
             budgetStats: {
               ...TRANSACTION_LIST[y - 1].budgetStats,
-              ...calculatedFields(transaction),
+              ...calculatedFields(),
               totalAvailableAmount: paranoidCalculator.add(
                 TRANSACTION_LIST[y - 1].budgetStats.totalAvailableAmount,
                 totalPaidToThisBudget,
@@ -905,7 +905,7 @@ export default {
             amount: refundedFromThisBudget,
             budgetStats: {
               ...TRANSACTION_LIST[y - 1].budgetStats,
-              ...calculatedFields(transaction),
+              ...calculatedFields(),
               totalAvailableAmount: paranoidCalculator.subtract(
                 TRANSACTION_LIST[y - 1].budgetStats.totalAvailableAmount,
                 refundedFromThisBudget,
@@ -945,7 +945,7 @@ export default {
           amount: 0,
           budgetStats: {
             ...TRANSACTION_LIST[y - 1].budgetStats,
-            ...calculatedFields(transaction),
+            ...calculatedFields(),
             totalForgivenAmount: paranoidCalculator.add(
               TRANSACTION_LIST[y - 1].budgetStats.totalForgivenAmount,
               totalForgivenForThisBudget,
@@ -980,7 +980,7 @@ export default {
             amount: feePaidToThisBudget,
             budgetStats: {
               ...TRANSACTION_LIST[y - 1].budgetStats,
-              ...calculatedFields(transaction),
+              ...calculatedFields(),
               totalAvailableAmount: paranoidCalculator.add(
                 TRANSACTION_LIST[y - 1].budgetStats.totalAvailableAmount,
                 feePaidToThisBudget,
@@ -1078,9 +1078,7 @@ export default {
       });
     }
 
-    function calculatedFields(
-      transaction,
-    ): Pick<
+    function calculatedFields(): Pick<
       IBudgetStats,
       | 'currentlyLendedPrincipalToLiveLoansAmount'
       | 'totalGainsOrLossesOnEndedLoans'
