@@ -893,7 +893,6 @@ export default {
             currentLoanStats[transaction.from.addressId.toString()].amountPaidBackPrincipal,
             refundedFromThisBudget,
           );
-
           TRANSACTION_LIST.push({
             _id: transaction._id.toString(),
             timestamp: transaction.transactionTimestamp,
@@ -1172,31 +1171,14 @@ export default {
       }).length;
     }
     function avarageLoanAmount(transaction): number {
-      return relatedLoans.reduce((acc, loan) => {
-        if (
-          currentLoanStats[loan._id.toString()].status === undefined ||
-          currentLoanStats[loan._id.toString()].amountLent === 0
-        )
-          return acc;
-        if (
-          loan.transactionList.find((loanTransaction) => loanTransaction._id === transaction._id.toString()) ===
-          undefined
-        )
-          return acc;
-
-        if (acc === 0)
-          return loan.transactionList.find((loanTransaction) => loanTransaction._id === transaction._id.toString())
-            .totalInvested;
-        else
-          return paranoidCalculator.divide(
-            paranoidCalculator.add(
-              loan.transactionList.find((loanTransaction) => loanTransaction._id === transaction._id.toString())
-                .totalInvested,
-              acc,
-            ),
-            2,
-          );
-      }, 0);
+      return Object.keys(currentLoanStats)
+        .filter((loanId) => {
+          return currentLoanStats[loanId].status !== undefined && currentLoanStats[loanId].amountLent > 0;
+        })
+        .reduce((acc, loanId) => {
+          if (acc === 0) return currentLoanStats[loanId].amountLent;
+          else return paranoidCalculator.divide(paranoidCalculator.add(currentLoanStats[loanId].amountLent, acc), 2);
+        }, 0);
     }
     function avarageLoanDuration(): number {
       return relatedLoans.reduce((acc, loan) => {
