@@ -1099,7 +1099,7 @@ export default {
         totalAssociatedLoans: totalAssociatedLoans(),
         totalAssociatedLiveLoans: totalAssociatedLiveLoans(),
         avarageAssociatedLoanDuration: avarageLoanDuration(),
-        avarageAssociatedLoanAmount: avarageLoanAmount(transaction),
+        avarageAssociatedLoanAmount: avarageLoanAmount(),
       };
     }
     function currentlyLendedPrincipalToLiveLoansAmount(): number {
