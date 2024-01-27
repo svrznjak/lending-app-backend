@@ -1,11 +1,8 @@
 import 'dotenv/config';
 import mongoose from 'mongoose';
-import cors from 'cors';
-import { graphqlHTTP } from 'express-graphql';
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import firebaseApp from './firebase/firebaseApp.js';
-import express, { Application } from 'express';
 import context from './graphQL/context.js';
 import schema from './graphQL/mergedSchema.js';
 console.log('Firebase project id: ' + firebaseApp);
@@ -17,21 +14,31 @@ try {
   throw new Error('Failed to connect to MongoDB');
 }
 
-const app: Application = express();
-app.use(express.json());
-app.use(cors());
-app.use(
+/* moving from express-graphql to graphql-http on fastify */
+import Fastify from 'fastify'; // yarn add fastify
+import { createHandler } from 'graphql-http/lib/use/fastify';
+import fastcors from '@fastify/cors';
+
+// Create a fastify instance serving all methods on `/graphql`
+// where the GraphQL over HTTP fastify request handler is
+const fastify = Fastify();
+// allow localhost client to connect
+await fastify.register(fastcors, {
+  origin: '*', // TODO SECURITY
+});
+
+// mount the GraphQL over HTTP fastify request handler on `/graphql` and inlude the schema and context
+fastify.all(
   '/graphql',
-  graphqlHTTP(async (req, res) => {
-    return {
-      schema: schema,
-      graphiql: true,
-      context: await context(req, res),
-    };
+  createHandler({
+    schema,
+    context: (req) => ({
+      ...context(req),
+    }),
   }),
 );
 
-app.listen(process.env.PORT || 9000);
+fastify.listen({ port: parseInt(process.env.PORT) || 9000 });
 
 process.stdin.resume(); //so the program will not close instantly
 

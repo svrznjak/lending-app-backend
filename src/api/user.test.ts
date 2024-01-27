@@ -21,7 +21,7 @@ describe('getUserById', () => {
         revenuecatId: '',
       },
       toObject: function () {
-        const { toObject, ...rest } = this;
+        const { ...rest } = this;
         return rest;
       },
     };

@@ -1,6 +1,6 @@
 import auth from '../api/auth.js';
 
-export default async (req: any, _res: any): Promise<object> => {
+export default (req: any): object => {
   return {
     authHeader: req.headers.authorization || '',
     getCurrentUserAuthIdOrThrowValidationError: async (): Promise<string> => {

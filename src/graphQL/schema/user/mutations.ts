@@ -20,7 +20,7 @@ export default new GraphQLObjectType({
         initialBudgetFunds: { type: new GraphQLNonNull(GraphQLFloat) },
         initiaTransactionDescription: { type: new GraphQLNonNull(GraphQLString) },
       },
-      async resolve(_parent: any, args: any, _context: any): Promise<IUser> {
+      async resolve(_parent: any, args: any): Promise<IUser> {
         try {
           const initializeInfo: IUserInitializeInfo = {
             name: args.name,
