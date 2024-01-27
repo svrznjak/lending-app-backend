@@ -24,7 +24,7 @@ import fastcors from '@fastify/cors';
 const fastify = Fastify();
 // allow localhost client to connect
 await fastify.register(fastcors, {
-  origin: '*', // TODO SECURITY
+  origin: ['*', 'http://localhost:5173/'], // TODO SECURITY
 });
 
 // mount the GraphQL over HTTP fastify request handler on `/graphql` and inlude the schema and context
