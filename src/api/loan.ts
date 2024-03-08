@@ -1272,7 +1272,9 @@ const Loan = {
         fromDateTimestamp = loanTransactions[i + 1].transactionTimestamp;
       }
       // for calculating interest daily const differenceInDays = differenceInCalendarDays(new Date(toDateTimestamp), new Date(fromDateTimestamp));
-      const DIFFERENCE_IN_HOURS = differenceInHours(new Date(toDateTimestamp), new Date(fromDateTimestamp));
+      const DIFFERENCE_IN_HOURS = differenceInHours(new Date(toDateTimestamp), new Date(fromDateTimestamp), {
+        roundingMethod: 'round',
+      });
 
       /**
        * If outstandingPrincipal is 0 or less
@@ -1557,7 +1559,7 @@ const Loan = {
         let remainingRefundAmount = loanTransaction.amount;
 
         if (outstandingPrincipal < 0) {
-          // first refund outstanding principal
+          // first refund overpaid principal
           if (remainingRefundAmount > outstandingPrincipal * -1) {
             remainingRefundAmount -= outstandingPrincipal * -1;
             totalPaidPrincipal -= outstandingPrincipal * -1;
@@ -1575,9 +1577,10 @@ const Loan = {
           }
         }
 
+        const totalPaidPrincipalBeforeRefund = totalPaidPrincipal;
         for (const investment of investments) {
           const refundAmountForInvestment =
-            remainingRefundAmount * (investment.totalPaidPrincipal / totalPaidPrincipal);
+            remainingRefundAmount * (investment.totalPaidPrincipal / totalPaidPrincipalBeforeRefund);
           investment.outstandingPrincipal += refundAmountForInvestment;
           investment.totalPaidPrincipal -= refundAmountForInvestment;
           outstandingPrincipal += refundAmountForInvestment;

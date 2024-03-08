@@ -920,7 +920,6 @@ export default {
         }
       } else if (transaction.from.datatype === 'LOAN' && transaction.to.datatype === 'FORGIVENESS') {
         // forgiveness of loan
-
         const relatedLoan = relatedLoans.find((loan) => loan._id.toString() === transaction.from.addressId.toString());
         const transactionInLoan = relatedLoan.transactionList.find(
           (loanTransaction) => loanTransaction._id.toString() === transaction._id.toString(),
@@ -967,8 +966,8 @@ export default {
           }
         }, 0);
         if (feePaidToThisBudget > 0) {
-          currentLoanStats[transaction.from.addressId].amountPaidBack = paranoidCalculator.add(
-            currentLoanStats[transaction.from.addressId].amountPaidBack,
+          currentLoanStats[transaction.to.addressId.toString()].amountPaidBack = paranoidCalculator.add(
+            currentLoanStats[transaction.to.addressId.toString()].amountPaidBack,
             feePaidToThisBudget,
           );
           TRANSACTION_LIST.push({
