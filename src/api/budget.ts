@@ -1017,7 +1017,10 @@ export default {
               acc,
               paranoidCalculator.subtract(
                 currentLoanStats[loanId].amountLent,
-                currentLoanStats[loanId].amountPaidBackPrincipal,
+                paranoidCalculator.add(
+                  currentLoanStats[loanId].amountPaidBackPrincipal,
+                  currentLoanStats[loanId].amountForgiven,
+                ),
               ),
             );
           }
@@ -1110,7 +1113,10 @@ export default {
             acc,
             paranoidCalculator.subtract(
               currentLoanStats[loanId].amountLent,
-              currentLoanStats[loanId].amountPaidBackPrincipal,
+              paranoidCalculator.add(
+                currentLoanStats[loanId].amountPaidBackPrincipal,
+                currentLoanStats[loanId].amountForgiven,
+              ),
             ),
           );
         }

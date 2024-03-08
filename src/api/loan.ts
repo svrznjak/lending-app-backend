@@ -1592,10 +1592,33 @@ const Loan = {
         }
       } else if (loanTransaction.from.datatype === 'LOAN' && loanTransaction.to.datatype === 'FORGIVENESS') {
         //  Forgiveness
-        // First forgive interest
         let remainingForgivenessAmount = loanTransaction.amount;
 
-        let percentageOfTotalInterestOutstanding = remainingForgivenessAmount / outstandingInterest;
+        // first pay off fees in order of oldest to newest
+        for (const fee of fees) {
+          if (fee.outstandingAmount <= 0) continue;
+          if (remainingForgivenessAmount <= 0) break;
+          if (remainingForgivenessAmount < fee.outstandingAmount) {
+            fee.outstandingAmount = paranoidCalculator.subtract(fee.outstandingAmount, remainingForgivenessAmount);
+            outstandingFees = paranoidCalculator.subtract(outstandingFees, remainingForgivenessAmount);
+            transactionInformation.feePaid.push({ budgetId: fee.budgetId, amount: remainingForgivenessAmount });
+            totalPaidFees = paranoidCalculator.add(totalPaidFees, remainingForgivenessAmount);
+            remainingForgivenessAmount = 0;
+          } else {
+            transactionInformation.feePaid.push({ budgetId: fee.budgetId, amount: fee.outstandingAmount });
+            totalPaidFees = paranoidCalculator.add(totalPaidFees, fee.outstandingAmount);
+            outstandingFees = paranoidCalculator.subtract(outstandingFees, fee.outstandingAmount);
+            remainingForgivenessAmount = paranoidCalculator.subtract(remainingForgivenessAmount, fee.outstandingAmount);
+            fee.outstandingAmount = 0;
+          }
+        }
+        if (_.round(remainingForgivenessAmount, 8) === 0) remainingForgivenessAmount = 0;
+        if (remainingForgivenessAmount < 0)
+          throw new Error('Remaining forgiveness amount is negative, and should not be!');
+
+        // Then forgive interest
+        let percentageOfTotalInterestOutstanding =
+          outstandingInterest === 0 ? 0 : paranoidCalculator.divide(remainingForgivenessAmount, outstandingInterest);
         if (percentageOfTotalInterestOutstanding > 1) percentageOfTotalInterestOutstanding = 1;
 
         for (const investment of investments) {
