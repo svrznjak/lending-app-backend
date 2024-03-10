@@ -113,8 +113,12 @@ function checkBudgetStats(budgetStats: any): void {
     throw new Error('Type of budget.calculatedtotalDefaultedPrincipal must be a number!');
   if (!Number.isFinite(budgetStats.totalGainsOrLossesOnEndedLoans))
     throw new Error('Type of budget.calculatedtotalGainsOrLossesOnEndedLoans must be a number!');
-  if (!Number.isFinite(budgetStats.totalForgivenAmount))
-    throw new Error('Type of budget.calculatedTotalForgivenAmount must be a number!');
+  if (!Number.isFinite(budgetStats.totalForgivenPrincipal))
+    throw new Error('Type of budget.totalForgivenPrincipal must be a number!');
+  if (!Number.isFinite(budgetStats.totalForgivenInterest))
+    throw new Error('Type of budget.totalForgivenInterest must be a number!');
+  if (!Number.isFinite(budgetStats.totalForgivenFees))
+    throw new Error('Type of budget.totalForgivenFees must be a number!');
   if (!Number.isFinite(budgetStats.totalLentAmount))
     throw new Error('Type of budget.calculatedTotalLentAmount must be a number!');
   if (!Number.isFinite(budgetStats.totalAssociatedLoans))

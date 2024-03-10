@@ -46,7 +46,9 @@ export default {
         currentlyEarnedInterestAmount: 0,
         totalDefaultedPrincipal: 0,
         totalGainsOrLossesOnEndedLoans: 0,
-        totalForgivenAmount: 0,
+        totalForgivenPrincipal: 0,
+        totalForgivenInterest: 0,
+        totalForgivenFees: 0,
         totalLentAmount: 0,
         totalAssociatedLoans: 0,
         totalAssociatedLiveLoans: 0,
@@ -663,7 +665,9 @@ export default {
         amountLent: 0,
         amountPaidBack: 0,
         amountPaidBackPrincipal: 0,
-        amountForgiven: 0,
+        amountForgivenPrincipal: 0,
+        amountForgivenInterest: 0,
+        amountForgivenFees: 0,
         status: undefined,
       };
     });
@@ -697,7 +701,9 @@ export default {
             currentlyLendedPrincipalToLiveLoansAmount: 0,
             totalDefaultedPrincipal: 0,
             totalGainsOrLossesOnEndedLoans: 0,
-            totalForgivenAmount: 0,
+            totalForgivenPrincipal: 0,
+            totalForgivenInterest: 0,
+            totalForgivenFees: 0,
             totalLentAmount: 0,
             totalAssociatedLoans: 0,
             totalAssociatedLiveLoans: 0,
@@ -924,15 +930,42 @@ export default {
         const transactionInLoan = relatedLoan.transactionList.find(
           (loanTransaction) => loanTransaction._id.toString() === transaction._id.toString(),
         );
-        const totalForgivenForThisBudget = transactionInLoan.forgivenAmount.reduce((accumulator, currentValue) => {
+        const totalForgivenPrincipalForThisBudget = transactionInLoan.principalForgiven.reduce(
+          (accumulator, currentValue) => {
+            if (currentValue.budgetId === budgetId) {
+              return paranoidCalculator.add(accumulator, currentValue.amount);
+            }
+            return accumulator;
+          },
+          0,
+        );
+        const totalForgivenInterestForThisBudget = transactionInLoan.interestForgiven.reduce(
+          (accumulator, currentValue) => {
+            if (currentValue.budgetId === budgetId) {
+              return paranoidCalculator.add(accumulator, currentValue.amount);
+            }
+            return accumulator;
+          },
+          0,
+        );
+        const totalForgivenFeesForThisBudget = transactionInLoan.feeForgiven.reduce((accumulator, currentValue) => {
           if (currentValue.budgetId === budgetId) {
             return paranoidCalculator.add(accumulator, currentValue.amount);
           }
           return accumulator;
         }, 0);
-        currentLoanStats[transaction.from.addressId].amountForgiven = paranoidCalculator.add(
-          currentLoanStats[transaction.from.addressId].amountForgiven,
-          totalForgivenForThisBudget,
+
+        currentLoanStats[transaction.from.addressId].amountForgivenPrincipal = paranoidCalculator.add(
+          currentLoanStats[transaction.from.addressId].amountForgivenPrincipal,
+          totalForgivenPrincipalForThisBudget,
+        );
+        currentLoanStats[transaction.from.addressId].amountForgivenInterest = paranoidCalculator.add(
+          currentLoanStats[transaction.from.addressId].amountForgivenInterest,
+          totalForgivenInterestForThisBudget,
+        );
+        currentLoanStats[transaction.from.addressId].amountForgivenFees = paranoidCalculator.add(
+          currentLoanStats[transaction.from.addressId].amountForgivenFees,
+          totalForgivenFeesForThisBudget,
         );
 
         TRANSACTION_LIST.push({
@@ -945,9 +978,17 @@ export default {
           budgetStats: {
             ...TRANSACTION_LIST[y - 1].budgetStats,
             ...calculatedFields(),
-            totalForgivenAmount: paranoidCalculator.add(
-              TRANSACTION_LIST[y - 1].budgetStats.totalForgivenAmount,
-              totalForgivenForThisBudget,
+            totalForgivenPrincipal: paranoidCalculator.add(
+              TRANSACTION_LIST[y - 1].budgetStats.totalForgivenPrincipal,
+              totalForgivenPrincipalForThisBudget,
+            ),
+            totalForgivenInterest: paranoidCalculator.add(
+              TRANSACTION_LIST[y - 1].budgetStats.totalForgivenInterest,
+              totalForgivenInterestForThisBudget,
+            ),
+            totalForgivenFees: paranoidCalculator.add(
+              TRANSACTION_LIST[y - 1].budgetStats.totalForgivenFees,
+              totalForgivenFeesForThisBudget,
             ),
           },
         });
@@ -1019,7 +1060,7 @@ export default {
                 currentLoanStats[loanId].amountLent,
                 paranoidCalculator.add(
                   currentLoanStats[loanId].amountPaidBackPrincipal,
-                  currentLoanStats[loanId].amountForgiven,
+                  currentLoanStats[loanId].amountForgivenPrincipal,
                 ),
               ),
             );
@@ -1115,7 +1156,7 @@ export default {
               currentLoanStats[loanId].amountLent,
               paranoidCalculator.add(
                 currentLoanStats[loanId].amountPaidBackPrincipal,
-                currentLoanStats[loanId].amountForgiven,
+                currentLoanStats[loanId].amountForgivenPrincipal,
               ),
             ),
           );

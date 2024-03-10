@@ -9,6 +9,7 @@ import loan from './loan.js';
 import { ILoan } from './types/loan/loanInterface.js';
 import transaction from './transaction.js';
 import { IInterestRate } from './types/interestRate/interestRateInterface.js';
+import paranoidCalculator from './utils/paranoidCalculator/paranoidCalculator.js';
 //import paranoidCalculator from './utils/paranoidCalculator/paranoidCalculator.js';
 let userId: string;
 describe('Manual tests', () => {
@@ -342,7 +343,7 @@ describe('Manual tests', () => {
 
       expect(budgetIds).toHaveLength(3);
     });
-    /*test('Payment of loan with single investing budget', async () => {
+    test('Payment of loan with single investing budget', async () => {
       const investingBudgetStats = await getBudgetStats(budgetIds[0]);
 
       const testingLoan = await createSimpleLoan(
@@ -2251,12 +2252,15 @@ describe('Manual tests', () => {
       await checkBudget(budgetIds[0], {
         currentStats: {
           totalAvailableAmount: investingBudgetStats1.totalAvailableAmount - 100 + 40 + 50,
-          currentlyLendedPrincipalToLiveLoansAmount:
+          currentlyLendedPrincipalToLiveLoansAmount: roundTo15Digits(
             investingBudgetStats1.currentlyLendedPrincipalToLiveLoansAmount + 60,
+          ),
           totalLentAmount: investingBudgetStats1.totalLentAmount + 100,
           currentlyEarnedInterestAmount: investingBudgetStats1.currentlyEarnedInterestAmount + 50,
           currentlyEarnedFeesAmount: investingBudgetStats1.currentlyEarnedFeesAmount,
-          currentlyPaidBackPrincipalAmount: investingBudgetStats1.currentlyPaidBackPrincipalAmount + 40,
+          currentlyPaidBackPrincipalAmount: roundTo15Digits(
+            investingBudgetStats1.currentlyPaidBackPrincipalAmount + 40 - 0.00000000001,
+          ),
         },
       });
 
@@ -2290,12 +2294,15 @@ describe('Manual tests', () => {
       await checkBudget(budgetIds[0], {
         currentStats: {
           totalAvailableAmount: roundTo15Digits(investingBudgetStats1.totalAvailableAmount - 100 + 40 + 50 - 50),
-          currentlyLendedPrincipalToLiveLoansAmount:
+          currentlyLendedPrincipalToLiveLoansAmount: roundTo15Digits(
             investingBudgetStats1.currentlyLendedPrincipalToLiveLoansAmount + 60 + 50,
+          ),
           totalLentAmount: investingBudgetStats1.totalLentAmount + 100 + 50,
           currentlyEarnedInterestAmount: investingBudgetStats1.currentlyEarnedInterestAmount + 50,
           currentlyEarnedFeesAmount: investingBudgetStats1.currentlyEarnedFeesAmount,
-          currentlyPaidBackPrincipalAmount: investingBudgetStats1.currentlyPaidBackPrincipalAmount + 40,
+          currentlyPaidBackPrincipalAmount: roundTo15Digits(
+            investingBudgetStats1.currentlyPaidBackPrincipalAmount + 40 - 0.00000000001,
+          ),
         },
       });
 
@@ -2321,12 +2328,15 @@ describe('Manual tests', () => {
       await checkBudget(budgetIds[0], {
         currentStats: {
           totalAvailableAmount: roundTo15Digits(investingBudgetStats1.totalAvailableAmount - 100 + 40 + 50 - 50 - 10),
-          currentlyLendedPrincipalToLiveLoansAmount:
+          currentlyLendedPrincipalToLiveLoansAmount: roundTo15Digits(
             investingBudgetStats1.currentlyLendedPrincipalToLiveLoansAmount + 60 + 50 + 10,
+          ),
           totalLentAmount: investingBudgetStats1.totalLentAmount + 100 + 50,
           currentlyEarnedInterestAmount: investingBudgetStats1.currentlyEarnedInterestAmount + 50,
           currentlyEarnedFeesAmount: investingBudgetStats1.currentlyEarnedFeesAmount,
-          currentlyPaidBackPrincipalAmount: investingBudgetStats1.currentlyPaidBackPrincipalAmount + 40 - 10,
+          currentlyPaidBackPrincipalAmount: roundTo15Digits(
+            investingBudgetStats1.currentlyPaidBackPrincipalAmount + 40 - 10 - 0.00000000001,
+          ),
         },
       });
 
@@ -2353,12 +2363,15 @@ describe('Manual tests', () => {
           totalAvailableAmount: roundTo15Digits(
             investingBudgetStats1.totalAvailableAmount - 100 + 40 + 50 - 50 + 60 + 75,
           ),
-          currentlyLendedPrincipalToLiveLoansAmount:
+          currentlyLendedPrincipalToLiveLoansAmount: roundTo15Digits(
             investingBudgetStats1.currentlyLendedPrincipalToLiveLoansAmount + 60 + 50 - 60,
+          ),
           totalLentAmount: investingBudgetStats1.totalLentAmount + 100 + 50,
           currentlyEarnedInterestAmount: investingBudgetStats1.currentlyEarnedInterestAmount + 50 + 75,
           currentlyEarnedFeesAmount: investingBudgetStats1.currentlyEarnedFeesAmount,
-          currentlyPaidBackPrincipalAmount: investingBudgetStats1.currentlyPaidBackPrincipalAmount + 40 + 60,
+          currentlyPaidBackPrincipalAmount: roundTo15Digits(
+            investingBudgetStats1.currentlyPaidBackPrincipalAmount + 40 + 60 - 0.00000000001,
+          ),
         },
       });
       await loan.default(testingLoan1._id);
@@ -2424,10 +2437,69 @@ describe('Manual tests', () => {
           totalAvailableAmount: roundTo15Digits(investingBudgetStats1.totalAvailableAmount - 10 + 5 - 3),
         },
       });
-    }, 500000);*/
+    }, 500000);
 
+    test('Refund when loan is overpaid', async () => {
+      const investingBudgetStats1 = await getBudgetStats(budgetIds[0]);
+
+      const testingLoan1 = await createSimpleLoan(
+        Date.now() + 3600 * 24 * 10 * 1000,
+        Date.now() + 3600 * 24 * 30 * 1000,
+        [
+          {
+            budgetId: budgetIds[0],
+            amount: 10,
+            interestRate: {
+              type: 'FIXED_PER_DURATION',
+              duration: 'DAY',
+              amount: 0,
+              isCompounding: false,
+              entryTimestamp: Date.now(),
+            },
+          },
+        ],
+      );
+
+      await loan.addPayment({
+        userId,
+        loanId: testingLoan1._id,
+        transactionTimestamp: Date.now() + 3600 * 24 * 10 * 1000,
+        description: 'payment',
+        amount: 15, // (principal)
+      });
+
+      await loan.addRefund({
+        userId,
+        loanId: testingLoan1._id,
+        transactionTimestamp: Date.now() + 3600 * 24 * 20 * 1000,
+        description: 'refund',
+        amount: 5,
+      });
+      await checkLoan(testingLoan1._id, {
+        calculatedInvestedAmount: 10,
+        calculatedOutstandingPrincipal: 0,
+        calculatedTotalPaidPrincipal: 15 - 5,
+        calculatedOutstandingFees: 0,
+        calculatedPaidFees: 0,
+        calculatedOutstandingInterest: 0,
+        calculatedPaidInterest: 0,
+      });
+
+      await checkBudget(budgetIds[0], {
+        currentStats: {
+          totalAvailableAmount: roundTo15Digits(investingBudgetStats1.totalAvailableAmount - 10 + 15 - 5),
+          currentlyLendedPrincipalToLiveLoansAmount: investingBudgetStats1.currentlyLendedPrincipalToLiveLoansAmount,
+          totalLentAmount: investingBudgetStats1.totalLentAmount + 10,
+          currentlyEarnedInterestAmount: investingBudgetStats1.currentlyEarnedInterestAmount,
+          currentlyEarnedFeesAmount: investingBudgetStats1.currentlyEarnedFeesAmount,
+          currentlyPaidBackPrincipalAmount: investingBudgetStats1.currentlyPaidBackPrincipalAmount + 15 - 5,
+        },
+      });
+      await loan.complete(testingLoan1._id);
+    }, 500000);
     test('Forgiveness on start of single investing budget loan', async () => {
       const investingBudgetStats1 = await getBudgetStats(budgetIds[0]);
+      const investingBudgetStats2 = await getBudgetStats(budgetIds[1]);
 
       const testingLoan1 = await createSimpleLoan(
         Date.now() + 3600 * 24 * 10 * 1000,
@@ -2446,7 +2518,7 @@ describe('Manual tests', () => {
           },
         ],
       );
-
+      // Loan forgiveness on start of single investing budget loan
       await loan.addForgiveness({
         userId,
         loanId: testingLoan1._id,
@@ -2459,7 +2531,8 @@ describe('Manual tests', () => {
         calculatedInvestedAmount: 100,
         calculatedOutstandingPrincipal: 91,
         calculatedTotalPaidPrincipal: 0,
-        calculatedTotalForgiven: 10,
+        calculatedTotalForgivenPrincipal: 9,
+        calculatedTotalForgivenInterest: 1,
         calculatedOutstandingFees: 0,
         calculatedPaidFees: 0,
         calculatedPaidInterest: 0,
@@ -2468,15 +2541,308 @@ describe('Manual tests', () => {
       await checkBudget(budgetIds[0], {
         currentStats: {
           totalAvailableAmount: roundTo15Digits(investingBudgetStats1.totalAvailableAmount - 100),
-          currentlyLendedPrincipalToLiveLoansAmount:
+          currentlyLendedPrincipalToLiveLoansAmount: roundTo15Digits(
             investingBudgetStats1.currentlyLendedPrincipalToLiveLoansAmount + 91,
+          ),
           totalLentAmount: investingBudgetStats1.totalLentAmount + 100,
           currentlyEarnedInterestAmount: investingBudgetStats1.currentlyEarnedInterestAmount,
           currentlyEarnedFeesAmount: investingBudgetStats1.currentlyEarnedFeesAmount,
           currentlyPaidBackPrincipalAmount: investingBudgetStats1.currentlyPaidBackPrincipalAmount,
-          totalForgivenAmount: investingBudgetStats1.totalForgivenAmount + 10,
+          totalForgivenPrincipal: investingBudgetStats1.totalForgivenPrincipal + 9,
+          totalForgivenInterest: investingBudgetStats1.totalForgivenInterest + 1,
         },
       });
+
+      // add more funds from same budget
+      await loan.addFunds({
+        userId,
+        budgetId: budgetIds[0],
+        loanId: testingLoan1._id,
+        transactionTimestamp: Date.now() + 3600 * 24 * 15 * 1000,
+        description: 'funds',
+        amount: 100,
+        interestRate: {
+          type: 'FIXED_PER_DURATION',
+          duration: 'DAY',
+          amount: 1,
+          isCompounding: false,
+          entryTimestamp: Date.now(),
+        },
+      });
+
+      // Loan forgiveness when more funds are added from same budget
+      await loan.addForgiveness({
+        userId,
+        loanId: testingLoan1._id,
+        transactionTimestamp: Date.now() + 3600 * 24 * 16 * 1000,
+        description: 'forgiveness',
+        amount: 20,
+      });
+
+      await checkLoan(testingLoan1._id, {
+        calculatedInvestedAmount: 200,
+        calculatedOutstandingPrincipal: 100 - 9 + 100 - 14,
+        calculatedTotalPaidPrincipal: 0,
+        calculatedTotalForgivenPrincipal: 9 + 14,
+        calculatedTotalForgivenInterest: 1 + 6,
+        calculatedOutstandingFees: 0,
+        calculatedPaidFees: 0,
+        calculatedPaidInterest: 0,
+      });
+
+      await checkBudget(budgetIds[0], {
+        currentStats: {
+          totalAvailableAmount: roundTo15Digits(investingBudgetStats1.totalAvailableAmount - 100 - 100),
+          currentlyLendedPrincipalToLiveLoansAmount: roundTo15Digits(
+            investingBudgetStats1.currentlyLendedPrincipalToLiveLoansAmount + 100 - 9 + 100 - 14,
+          ),
+          totalLentAmount: investingBudgetStats1.totalLentAmount + 100 + 100,
+          currentlyEarnedInterestAmount: investingBudgetStats1.currentlyEarnedInterestAmount,
+          currentlyEarnedFeesAmount: investingBudgetStats1.currentlyEarnedFeesAmount,
+          currentlyPaidBackPrincipalAmount: investingBudgetStats1.currentlyPaidBackPrincipalAmount,
+          totalForgivenPrincipal: investingBudgetStats1.totalForgivenPrincipal + 9 + 14,
+          totalForgivenInterest: investingBudgetStats1.totalForgivenInterest + 1 + 6,
+        },
+      });
+
+      await loan.addFunds({
+        userId,
+        budgetId: budgetIds[1],
+        loanId: testingLoan1._id,
+        transactionTimestamp: Date.now() + 3600 * 24 * 20 * 1000,
+        description: 'funds',
+        amount: 80,
+        interestRate: {
+          type: 'FIXED_PER_DURATION',
+          duration: 'DAY',
+          amount: 0,
+          isCompounding: false,
+          entryTimestamp: Date.now(),
+        },
+      });
+
+      // If there are funds from another budget added and forgiveness is before those funds were added, then forgiveness should not affect the other budget.
+      await loan.addForgiveness({
+        userId,
+        loanId: testingLoan1._id,
+        transactionTimestamp: Date.now() + 3600 * 24 * 19 * 1000,
+        description: 'forgiveness',
+        amount: 23,
+      });
+
+      await checkLoan(testingLoan1._id, {
+        calculatedInvestedAmount: 280,
+        calculatedOutstandingPrincipal: 100 - 9 + 100 - 14 + 80 - 17,
+        calculatedTotalPaidPrincipal: 0,
+        calculatedTotalForgivenPrincipal: 9 + 14 + 17,
+        calculatedTotalForgivenInterest: 1 + 6 + 6,
+        calculatedOutstandingFees: 0,
+        calculatedPaidFees: 0,
+        calculatedPaidInterest: 0,
+      });
+
+      await checkBudget(budgetIds[0], {
+        currentStats: {
+          totalAvailableAmount: roundTo15Digits(investingBudgetStats1.totalAvailableAmount - 100 - 100),
+          currentlyLendedPrincipalToLiveLoansAmount: roundTo15Digits(
+            investingBudgetStats1.currentlyLendedPrincipalToLiveLoansAmount + 100 - 9 + 100 - 14 - 17,
+          ),
+          totalLentAmount: investingBudgetStats1.totalLentAmount + 100 + 100,
+          currentlyEarnedInterestAmount: investingBudgetStats1.currentlyEarnedInterestAmount,
+          currentlyEarnedFeesAmount: investingBudgetStats1.currentlyEarnedFeesAmount,
+          currentlyPaidBackPrincipalAmount: investingBudgetStats1.currentlyPaidBackPrincipalAmount,
+          totalForgivenPrincipal: investingBudgetStats1.totalForgivenPrincipal + 9 + 14 + 17,
+          totalForgivenInterest: investingBudgetStats1.totalForgivenInterest + 1 + 6 + 6,
+        },
+      });
+      await checkBudget(budgetIds[1], {
+        currentStats: {
+          totalAvailableAmount: roundTo15Digits(investingBudgetStats2.totalAvailableAmount - 80),
+          currentlyLendedPrincipalToLiveLoansAmount: roundTo15Digits(
+            investingBudgetStats2.currentlyLendedPrincipalToLiveLoansAmount + 80,
+          ),
+          totalLentAmount: investingBudgetStats2.totalLentAmount + 80,
+          currentlyEarnedInterestAmount: investingBudgetStats2.currentlyEarnedInterestAmount,
+          currentlyEarnedFeesAmount: investingBudgetStats2.currentlyEarnedFeesAmount,
+          currentlyPaidBackPrincipalAmount: investingBudgetStats2.currentlyPaidBackPrincipalAmount,
+          totalForgivenPrincipal: investingBudgetStats2.totalForgivenPrincipal,
+          totalForgivenInterest: investingBudgetStats2.totalForgivenInterest,
+        },
+      });
+
+      // If there is one investing budget and then investment from another budget, then forgiveness should be proportional
+      await loan.addForgiveness({
+        userId,
+        loanId: testingLoan1._id,
+        transactionTimestamp: Date.now() + 3600 * 24 * 21 * 1000,
+        description: 'forgiveness',
+        amount: 34,
+      });
+
+      await checkLoan(testingLoan1._id, {
+        calculatedInvestedAmount: 280,
+        calculatedOutstandingPrincipal: 100 - 9 + 100 - 14 + 80 - 17 - 30,
+        calculatedTotalPaidPrincipal: 0,
+        calculatedTotalForgivenPrincipal: 9 + 14 + 17 + 30,
+        calculatedTotalForgivenInterest: 1 + 6 + 6 + 4,
+        calculatedOutstandingFees: 0,
+        calculatedPaidFees: 0,
+        calculatedPaidInterest: 0,
+      });
+
+      await checkBudget(budgetIds[0], {
+        currentStats: {
+          totalAvailableAmount: roundTo15Digits(investingBudgetStats1.totalAvailableAmount - 100 - 100),
+          currentlyLendedPrincipalToLiveLoansAmount: roundTo15Digits(
+            investingBudgetStats1.currentlyLendedPrincipalToLiveLoansAmount + 100 - 9 + 100 - 14 - 17 - 20,
+          ),
+          totalLentAmount: investingBudgetStats1.totalLentAmount + 100 + 100,
+          currentlyEarnedInterestAmount: investingBudgetStats1.currentlyEarnedInterestAmount,
+          currentlyEarnedFeesAmount: investingBudgetStats1.currentlyEarnedFeesAmount,
+          currentlyPaidBackPrincipalAmount: investingBudgetStats1.currentlyPaidBackPrincipalAmount,
+          totalForgivenPrincipal: investingBudgetStats1.totalForgivenPrincipal + 9 + 14 + 17 + 20,
+          totalForgivenInterest: investingBudgetStats1.totalForgivenInterest + 1 + 6 + 6 + 4,
+        },
+      });
+      await checkBudget(budgetIds[1], {
+        currentStats: {
+          totalAvailableAmount: roundTo15Digits(investingBudgetStats2.totalAvailableAmount - 80),
+          currentlyLendedPrincipalToLiveLoansAmount: roundTo15Digits(
+            investingBudgetStats2.currentlyLendedPrincipalToLiveLoansAmount + 80 - 10,
+          ),
+          totalLentAmount: investingBudgetStats2.totalLentAmount + 80,
+          currentlyEarnedInterestAmount: investingBudgetStats2.currentlyEarnedInterestAmount,
+          currentlyEarnedFeesAmount: investingBudgetStats2.currentlyEarnedFeesAmount,
+          currentlyPaidBackPrincipalAmount: investingBudgetStats2.currentlyPaidBackPrincipalAmount,
+          totalForgivenPrincipal: investingBudgetStats2.totalForgivenPrincipal + 10,
+          totalForgivenInterest: investingBudgetStats2.totalForgivenInterest,
+        },
+      });
+
+      // Loan forgiveness works when there is no interest or fee (just principal)
+      await loan.addForgiveness({
+        userId,
+        loanId: testingLoan1._id,
+        transactionTimestamp: Date.now() + 3600 * 24 * 21 * 1000,
+        description: 'forgiveness',
+        amount: 15,
+      });
+
+      await checkLoan(testingLoan1._id, {
+        calculatedInvestedAmount: 280,
+        calculatedOutstandingPrincipal: 100 - 9 + 100 - 14 + 80 - 17 - 30 - 15,
+        calculatedTotalPaidPrincipal: 0,
+        calculatedTotalForgivenPrincipal: 9 + 14 + 17 + 30 + 15,
+        calculatedTotalForgivenInterest: 1 + 6 + 6 + 4,
+        calculatedOutstandingFees: 0,
+        calculatedPaidFees: 0,
+        calculatedPaidInterest: 0,
+      });
+
+      await checkBudget(budgetIds[0], {
+        currentStats: {
+          totalAvailableAmount: roundTo15Digits(investingBudgetStats1.totalAvailableAmount - 100 - 100),
+          currentlyLendedPrincipalToLiveLoansAmount: roundTo15Digits(
+            investingBudgetStats1.currentlyLendedPrincipalToLiveLoansAmount + 100 - 9 + 100 - 14 - 17 - 20 - 10,
+          ),
+          totalLentAmount: investingBudgetStats1.totalLentAmount + 100 + 100,
+          currentlyEarnedInterestAmount: investingBudgetStats1.currentlyEarnedInterestAmount,
+          currentlyEarnedFeesAmount: investingBudgetStats1.currentlyEarnedFeesAmount,
+          currentlyPaidBackPrincipalAmount: investingBudgetStats1.currentlyPaidBackPrincipalAmount,
+          totalForgivenPrincipal: investingBudgetStats1.totalForgivenPrincipal + 9 + 14 + 17 + 20 + 10,
+          totalForgivenInterest: investingBudgetStats1.totalForgivenInterest + 1 + 6 + 6 + 4,
+        },
+      });
+      await checkBudget(budgetIds[1], {
+        currentStats: {
+          totalAvailableAmount: roundTo15Digits(investingBudgetStats2.totalAvailableAmount - 80),
+          currentlyLendedPrincipalToLiveLoansAmount: roundTo15Digits(
+            investingBudgetStats2.currentlyLendedPrincipalToLiveLoansAmount + 80 - 10 - 5,
+          ),
+          totalLentAmount: investingBudgetStats2.totalLentAmount + 80,
+          currentlyEarnedInterestAmount: investingBudgetStats2.currentlyEarnedInterestAmount,
+          currentlyEarnedFeesAmount: investingBudgetStats2.currentlyEarnedFeesAmount,
+          currentlyPaidBackPrincipalAmount: investingBudgetStats2.currentlyPaidBackPrincipalAmount,
+          totalForgivenPrincipal: investingBudgetStats2.totalForgivenPrincipal + 10 + 5,
+          totalForgivenInterest: investingBudgetStats2.totalForgivenInterest,
+        },
+      });
+
+      // When loan forgiveness is greater than principal + interest + fee
+      await loan.addManualInterest({
+        userId,
+        budgetId: budgetIds[0],
+        loanId: testingLoan1._id,
+        transactionTimestamp: Date.now() + 3600 * 24 * 22 * 1000,
+        description: 'manual interest',
+        amount: 10,
+      });
+
+      // forgiveness throws if it is greater than principal+interest+fee
+      let error1 = undefined;
+      try {
+        await loan.addForgiveness({
+          userId,
+          loanId: testingLoan1._id,
+          transactionTimestamp: Date.now() + 3600 * 24 * 22 * 1000,
+          description: 'forgiveness',
+          amount: 195 + 2 + 10 + 100, // principal + interest + fee + overforgiveness
+        });
+      } catch (err) {
+        error1 = err.message;
+      }
+      expect(error1).toBeDefined();
+
+      await loan.addForgiveness({
+        userId,
+        loanId: testingLoan1._id,
+        transactionTimestamp: Date.now() + 3600 * 24 * 22 * 1000,
+        description: 'forgiveness',
+        amount: 195 + 2 + 10, // principal + interest + fee
+      });
+
+      await checkLoan(testingLoan1._id, {
+        calculatedInvestedAmount: 280,
+        calculatedOutstandingPrincipal: 100 - 9 + 100 - 14 + 80 - 17 - 30 - 15 - 195,
+        calculatedTotalPaidPrincipal: 0,
+        calculatedTotalForgivenPrincipal: 9 + 14 + 17 + 30 + 15 + 195,
+        calculatedTotalForgivenInterest: 1 + 6 + 6 + 4 + 2,
+        calculatedTotalForgivenFees: 10,
+        calculatedOutstandingFees: 0,
+        calculatedPaidFees: 0,
+        calculatedPaidInterest: 0,
+      });
+
+      await checkBudget(budgetIds[0], {
+        currentStats: {
+          totalAvailableAmount: roundTo15Digits(investingBudgetStats1.totalAvailableAmount - 100 - 100),
+          currentlyLendedPrincipalToLiveLoansAmount: roundTo15Digits(
+            investingBudgetStats1.currentlyLendedPrincipalToLiveLoansAmount + 100 - 9 + 100 - 14 - 17 - 20 - 10 - 130,
+          ),
+          totalLentAmount: investingBudgetStats1.totalLentAmount + 100 + 100,
+          currentlyEarnedInterestAmount: investingBudgetStats1.currentlyEarnedInterestAmount,
+          currentlyEarnedFeesAmount: investingBudgetStats1.currentlyEarnedFeesAmount,
+          currentlyPaidBackPrincipalAmount: investingBudgetStats1.currentlyPaidBackPrincipalAmount,
+          totalForgivenPrincipal: investingBudgetStats1.totalForgivenPrincipal + 9 + 14 + 17 + 20 + 10 + 130,
+          totalForgivenInterest: investingBudgetStats1.totalForgivenInterest + 1 + 6 + 6 + 4 + 2,
+          totalForgivenFees: investingBudgetStats1.totalForgivenFees + 10,
+        },
+      });
+      await checkBudget(budgetIds[1], {
+        currentStats: {
+          totalAvailableAmount: roundTo15Digits(investingBudgetStats2.totalAvailableAmount - 80),
+          currentlyLendedPrincipalToLiveLoansAmount: roundTo15Digits(
+            investingBudgetStats2.currentlyLendedPrincipalToLiveLoansAmount + 80 - 10 - 5 - 65,
+          ),
+          totalLentAmount: investingBudgetStats2.totalLentAmount + 80,
+          currentlyEarnedInterestAmount: investingBudgetStats2.currentlyEarnedInterestAmount,
+          currentlyEarnedFeesAmount: investingBudgetStats2.currentlyEarnedFeesAmount,
+          currentlyPaidBackPrincipalAmount: investingBudgetStats2.currentlyPaidBackPrincipalAmount,
+          totalForgivenPrincipal: investingBudgetStats2.totalForgivenPrincipal + 10 + 5 + 65,
+        },
+      });
+
+      await loan.complete(testingLoan1._id);
     }, 500000);
   });
 });

@@ -34,7 +34,9 @@ export interface IBudgetStats {
   currentlyLendedPrincipalToLiveLoansAmount: number;
   totalDefaultedPrincipal: number;
   totalGainsOrLossesOnEndedLoans: number;
-  totalForgivenAmount: number;
+  totalForgivenPrincipal: number;
+  totalForgivenInterest: number;
+  totalForgivenFees: number;
   totalLentAmount: number;
   totalAssociatedLoans: number;
   totalAssociatedLiveLoans: number;

@@ -72,7 +72,9 @@ export const LoanSchema = new mongoose.Schema(
     calculatedOutstandingFees: { type: Number },
     calculatedPaidInterest: { type: Number },
     calculatedPaidFees: { type: Number },
-    calculatedTotalForgiven: { type: Number },
+    calculatedTotalForgivenPrincipal: { type: Number },
+    calculatedTotalForgivenInterest: { type: Number },
+    calculatedTotalForgivenFees: { type: Number },
     calculatedLastTransactionTimestamp: { type: Number },
     calculatedRelatedBudgets: {
       type: [
@@ -102,7 +104,9 @@ export const LoanSchema = new mongoose.Schema(
           totalPaidPrincipal: { type: Number },
           totalPaidInterest: { type: Number },
           totalPaidFees: { type: Number },
-          totalForgiven: { type: Number },
+          totalForgivenPrincipal: { type: Number },
+          totalForgivenInterest: { type: Number },
+          totalForgivenFees: { type: Number },
           from: {
             type: {
               datatype: {
@@ -129,10 +133,12 @@ export const LoanSchema = new mongoose.Schema(
           feeCharged: { type: Number },
           interestCharged: { type: Number },
           principalPaid: { type: [PaymentDetailsSchema], default: [] },
+          principalForgiven: { type: [PaymentDetailsSchema], default: [] },
           interestPaid: { type: [PaymentDetailsSchema], default: [] },
+          interestForgiven: { type: [PaymentDetailsSchema], default: [] },
           feePaid: { type: [PaymentDetailsSchema], default: [] },
+          feeForgiven: { type: [PaymentDetailsSchema], default: [] },
           refundedAmount: { type: [PaymentDetailsSchema], default: [] },
-          forgivenAmount: { type: [PaymentDetailsSchema], default: [] },
           outstandingPrincipal: { type: Number },
           outstandingInterest: { type: Number },
           outstandingFees: { type: Number },
@@ -143,9 +149,10 @@ export const LoanSchema = new mongoose.Schema(
                 initialInvestment: { type: Number, required: true },
                 outstandingPrincipal: { type: Number, required: true },
                 totalPaidPrincipal: { type: Number, required: true },
+                totalForgivenPrincipal: { type: Number, required: true },
                 outstandingInterest: { type: Number, required: true },
                 totalPaidInterest: { type: Number, required: true },
-                totalForgivenAmount: { type: Number, required: true },
+                totalForgivenInterest: { type: Number, required: true },
                 interestRate: {
                   type: LoanInterestRateSchema,
                   required: true,

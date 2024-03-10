@@ -79,7 +79,9 @@ const Loan = {
       calculatedOutstandingFees: 0,
       calculatedPaidInterest: 0,
       calculatedPaidFees: 0,
-      calculatedTotalForgiven: 0,
+      calculatedTotalForgivenPrincipal: 0,
+      calculatedTotalForgivenInterest: 0,
+      calculatedTotalForgivenFees: 0,
       calculatedLastTransactionTimestamp: input.openedTimestamp,
       calculatedRelatedBudgets: [],
       transactionList: [],
@@ -842,7 +844,7 @@ const Loan = {
       _.round(
         paranoidCalculator.add(
           CALCULATED_VALUES.calculatedTotalPaidPrincipal,
-          CALCULATED_VALUES.calculatedTotalForgiven,
+          CALCULATED_VALUES.calculatedTotalForgivenPrincipal,
         ),
         2,
       )
@@ -856,7 +858,9 @@ const Loan = {
     MONGO_LOAN.calculatedPaidInterest = CALCULATED_VALUES.calculatedPaidInterest;
     MONGO_LOAN.calculatedOutstandingFees = CALCULATED_VALUES.calculatedOutstandingFees;
     MONGO_LOAN.calculatedPaidFees = CALCULATED_VALUES.calculatedPaidFees;
-    MONGO_LOAN.calculatedTotalForgiven = CALCULATED_VALUES.calculatedTotalForgiven;
+    MONGO_LOAN.calculatedTotalForgivenPrincipal = CALCULATED_VALUES.calculatedTotalForgivenPrincipal;
+    MONGO_LOAN.calculatedTotalForgivenInterest = CALCULATED_VALUES.calculatedTotalForgivenInterest;
+    MONGO_LOAN.calculatedTotalForgivenFees = CALCULATED_VALUES.calculatedTotalForgivenFees;
     MONGO_LOAN.calculatedRelatedBudgets = CALCULATED_VALUES.calculatedRelatedBudgets;
     MONGO_LOAN.calculatedTotalPaidPrincipal = CALCULATED_VALUES.calculatedTotalPaidPrincipal;
     MONGO_LOAN.transactionList = CALCULATED_VALUES.transactionList;
@@ -897,7 +901,9 @@ const Loan = {
       MONGO_LOAN.calculatedOutstandingFees = RECALCULATED_LOAN.calculatedOutstandingFees;
       MONGO_LOAN.calculatedPaidInterest = RECALCULATED_LOAN.calculatedPaidInterest;
       MONGO_LOAN.calculatedPaidFees = RECALCULATED_LOAN.calculatedPaidFees;
-      MONGO_LOAN.calculatedTotalForgiven = RECALCULATED_LOAN.calculatedTotalForgiven;
+      MONGO_LOAN.calculatedTotalForgivenPrincipal = RECALCULATED_LOAN.calculatedTotalForgivenPrincipal;
+      MONGO_LOAN.calculatedTotalForgivenInterest = RECALCULATED_LOAN.calculatedTotalForgivenInterest;
+      MONGO_LOAN.calculatedTotalForgivenFees = RECALCULATED_LOAN.calculatedTotalForgivenFees;
       MONGO_LOAN.calculatedRelatedBudgets = RECALCULATED_LOAN.calculatedRelatedBudgets;
       MONGO_LOAN.calculatedLastTransactionTimestamp = RECALCULATED_LOAN.calculatedLastTransactionTimestamp;
       MONGO_LOAN.transactionList = RECALCULATED_LOAN.transactionList;
@@ -1012,7 +1018,9 @@ const Loan = {
       | 'calculatedOutstandingFees'
       | 'calculatedPaidInterest'
       | 'calculatedPaidFees'
-      | 'calculatedTotalForgiven'
+      | 'calculatedTotalForgivenPrincipal'
+      | 'calculatedTotalForgivenInterest'
+      | 'calculatedTotalForgivenFees'
       | 'calculatedLastTransactionTimestamp'
       | 'calculatedRelatedBudgets'
       | 'transactionList'
@@ -1025,7 +1033,9 @@ const Loan = {
     let calculatedOutstandingFees = 0;
     let calculatedPaidInterest = 0;
     let calculatedPaidFees = 0;
-    let calculatedTotalForgiven = 0;
+    let calculatedTotalForgivenPrincipal = 0;
+    let calculatedTotalForgivenInterest = 0;
+    let calculatedTotalForgivenFees = 0;
     let calculatedLastTransactionTimestamp = 0;
     const calculatedRelatedBudgets = {};
     // get all transactions
@@ -1072,7 +1082,9 @@ const Loan = {
       calculatedPaidFees = TRANSACTIONS_LIST[TRANSACTIONS_LIST.length - 1].totalPaidFees;
       calculatedTotalPaidPrincipal = TRANSACTIONS_LIST[TRANSACTIONS_LIST.length - 1].totalPaidPrincipal;
       calculatedOutstandingPrincipal = TRANSACTIONS_LIST[TRANSACTIONS_LIST.length - 1].outstandingPrincipal;
-      calculatedTotalForgiven = TRANSACTIONS_LIST[TRANSACTIONS_LIST.length - 1].totalForgiven;
+      calculatedTotalForgivenPrincipal = TRANSACTIONS_LIST[TRANSACTIONS_LIST.length - 1].totalForgivenPrincipal;
+      calculatedTotalForgivenInterest = TRANSACTIONS_LIST[TRANSACTIONS_LIST.length - 1].totalForgivenInterest;
+      calculatedTotalForgivenFees = TRANSACTIONS_LIST[TRANSACTIONS_LIST.length - 1].totalForgivenFees;
     }
     return {
       calculatedInvestedAmount,
@@ -1082,7 +1094,9 @@ const Loan = {
       calculatedOutstandingFees,
       calculatedPaidFees,
       calculatedTotalPaidPrincipal,
-      calculatedTotalForgiven,
+      calculatedTotalForgivenPrincipal,
+      calculatedTotalForgivenInterest,
+      calculatedTotalForgivenFees,
       calculatedLastTransactionTimestamp,
       calculatedRelatedBudgets: Object.keys(calculatedRelatedBudgets).map((key) => {
         return {
@@ -1224,7 +1238,9 @@ const Loan = {
     let totalPaidPrincipal = 0;
     let totalPaidInterest = 0;
     let totalPaidFees = 0;
-    let totalForgiven = 0;
+    let totalForgivenPrincipal = 0;
+    let totalForgivenInterest = 0;
+    let totalForgivenFees = 0;
     let outstandingPrincipal = 0;
     let outstandingInterest = 0;
     let outstandingFees = 0;
@@ -1242,10 +1258,12 @@ const Loan = {
         | 'interestCharged'
         | 'feeCharged'
         | 'principalPaid'
+        | 'principalForgiven'
         | 'interestPaid'
+        | 'interestForgiven'
         | 'feePaid'
+        | 'feeForgiven'
         | 'refundedAmount'
-        | 'forgivenAmount'
       > = {
         _id: loanTransaction._id.toString(),
         timestamp: loanTransaction.transactionTimestamp,
@@ -1256,10 +1274,12 @@ const Loan = {
         interestCharged: 0,
         feeCharged: 0,
         principalPaid: [],
+        principalForgiven: [],
         interestPaid: [],
+        interestForgiven: [],
         feePaid: [],
+        feeForgiven: [],
         refundedAmount: [],
-        forgivenAmount: [],
       };
 
       //
@@ -1354,9 +1374,10 @@ const Loan = {
           initialInvestment: loanTransaction.amount,
           outstandingPrincipal: loanTransaction.amount,
           totalPaidPrincipal: 0,
+          totalForgivenPrincipal: 0,
           outstandingInterest: IS_FIXED_AMOUNT_INTEREST ? interestRate.amount : 0,
           totalPaidInterest: 0,
-          totalForgivenAmount: 0,
+          totalForgivenInterest: 0,
           interestRate: interestRate,
           calculatedInterestPerHour: !IS_FIXED_AMOUNT_INTEREST ? interest_per_hour : undefined,
           fixedAmountInterest: IS_FIXED_AMOUNT_INTEREST ? interestRate.amount : undefined,
@@ -1592,6 +1613,11 @@ const Loan = {
         }
       } else if (loanTransaction.from.datatype === 'LOAN' && loanTransaction.to.datatype === 'FORGIVENESS') {
         //  Forgiveness
+
+        if (loanTransaction.amount > outstandingPrincipal + outstandingInterest + outstandingFees) {
+          throw new Error('Forgiveness amount is greater than total principal, interest and fees paid!');
+        }
+
         let remainingForgivenessAmount = loanTransaction.amount;
 
         // first pay off fees in order of oldest to newest
@@ -1601,12 +1627,12 @@ const Loan = {
           if (remainingForgivenessAmount < fee.outstandingAmount) {
             fee.outstandingAmount = paranoidCalculator.subtract(fee.outstandingAmount, remainingForgivenessAmount);
             outstandingFees = paranoidCalculator.subtract(outstandingFees, remainingForgivenessAmount);
-            transactionInformation.feePaid.push({ budgetId: fee.budgetId, amount: remainingForgivenessAmount });
-            totalPaidFees = paranoidCalculator.add(totalPaidFees, remainingForgivenessAmount);
+            transactionInformation.feeForgiven.push({ budgetId: fee.budgetId, amount: remainingForgivenessAmount });
+            totalForgivenFees = paranoidCalculator.add(totalForgivenFees, remainingForgivenessAmount);
             remainingForgivenessAmount = 0;
           } else {
-            transactionInformation.feePaid.push({ budgetId: fee.budgetId, amount: fee.outstandingAmount });
-            totalPaidFees = paranoidCalculator.add(totalPaidFees, fee.outstandingAmount);
+            transactionInformation.feeForgiven.push({ budgetId: fee.budgetId, amount: fee.outstandingAmount });
+            totalForgivenFees = paranoidCalculator.add(totalForgivenFees, fee.outstandingAmount);
             outstandingFees = paranoidCalculator.subtract(outstandingFees, fee.outstandingAmount);
             remainingForgivenessAmount = paranoidCalculator.subtract(remainingForgivenessAmount, fee.outstandingAmount);
             fee.outstandingAmount = 0;
@@ -1625,10 +1651,10 @@ const Loan = {
           if (investment.outstandingPrincipal <= 0) continue;
 
           if (percentageOfTotalInterestOutstanding === 1) {
-            investment.totalForgivenAmount += investment.outstandingInterest;
-            totalForgiven += investment.outstandingInterest;
+            investment.totalForgivenInterest += investment.outstandingInterest;
+            totalForgivenInterest += investment.outstandingInterest;
             outstandingInterest -= investment.outstandingInterest;
-            transactionInformation.forgivenAmount.push({
+            transactionInformation.interestForgiven.push({
               budgetId: investment.budgetId,
               amount: investment.outstandingInterest,
             });
@@ -1637,10 +1663,10 @@ const Loan = {
           } else {
             const interestForgivenToInvestment = investment.outstandingInterest * percentageOfTotalInterestOutstanding;
             investment.outstandingInterest -= interestForgivenToInvestment;
-            investment.totalForgivenAmount += interestForgivenToInvestment;
-            totalForgiven += interestForgivenToInvestment;
+            investment.totalForgivenInterest += interestForgivenToInvestment;
+            totalForgivenInterest += interestForgivenToInvestment;
             outstandingInterest -= interestForgivenToInvestment;
-            transactionInformation.forgivenAmount.push({
+            transactionInformation.interestForgiven.push({
               budgetId: investment.budgetId,
               amount: interestForgivenToInvestment,
             });
@@ -1669,10 +1695,10 @@ const Loan = {
               remainingForgivenessAmount * (investment.outstandingPrincipal / outstandingPrincipalOfUnpaidInvestments);
             investment.outstandingPrincipal -= principalForgivenToInvestment;
 
-            investment.totalForgivenAmount += principalForgivenToInvestment;
+            investment.totalForgivenPrincipal += principalForgivenToInvestment;
             outstandingPrincipal -= principalForgivenToInvestment;
-            totalForgiven += principalForgivenToInvestment;
-            transactionInformation.forgivenAmount.push({
+            totalForgivenPrincipal += principalForgivenToInvestment;
+            transactionInformation.principalForgiven.push({
               budgetId: investment.budgetId,
               amount: principalForgivenToInvestment,
             });
@@ -1696,7 +1722,9 @@ const Loan = {
         totalPaidPrincipal: totalPaidPrincipal,
         totalPaidInterest: totalPaidInterest,
         totalPaidFees: totalPaidFees,
-        totalForgiven: totalForgiven,
+        totalForgivenPrincipal: totalForgivenPrincipal,
+        totalForgivenInterest: totalForgivenInterest,
+        totalForgivenFees: totalForgivenFees,
         outstandingPrincipal: outstandingPrincipal,
         outstandingInterest: outstandingInterest,
         outstandingFees: outstandingFees,

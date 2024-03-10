@@ -18,6 +18,7 @@ try {
 import Fastify from 'fastify'; // yarn add fastify
 import { createHandler } from 'graphql-http/lib/use/fastify';
 import fastcors from '@fastify/cors';
+import budget from './api/budget.js';
 
 // Create a fastify instance serving all methods on `/graphql`
 // where the GraphQL over HTTP fastify request handler is
@@ -37,6 +38,12 @@ fastify.all(
     }),
   }),
 );
+
+fastify.get('/', async (req, reply) => {
+  if (req.headers.etag === 'TESTINGETAG1231231') return reply.status(304).send();
+  const fullBudgets = await budget.getAllFromUser({ userId: '65aa7ada1b66cbd4c5d44e68' });
+  return fullBudgets;
+});
 
 fastify.listen({ port: parseInt(process.env.PORT) || 9000 });
 
