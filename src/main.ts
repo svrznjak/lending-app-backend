@@ -25,9 +25,12 @@ import budget from './api/budget.js';
 const fastify = Fastify();
 // allow localhost client to connect
 await fastify.register(fastcors, {
-  origin: ['https://money-lender.app', 'http://localhost:5173'],
+  origin: ['https://money-lender.app', 'http://localhost:5173'], // ensure these are the correct origins
   methods: 'GET,HEAD,PUT,PATCH,OPTIONS,POST,DELETE',
   allowedHeaders: 'Content-Type, Authorization',
+  //credentials: true, // add this line if your request needs credentials
+  preflightContinue: false, // add this line to respond to preflight requests
+  optionsSuccessStatus: 204, // add this line for legacy browser support
 });
 
 // mount the GraphQL over HTTP fastify request handler on `/graphql` and inlude the schema and context
