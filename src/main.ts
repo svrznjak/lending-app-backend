@@ -47,7 +47,7 @@ fastify.get('/', async (req, reply) => {
   return fullBudgets;
 });
 
-fastify.listen({ port: parseInt(process.env.PORT) || 9000 });
+fastify.listen({ port: parseInt(process.env.PORT) || 9000, host: '0.0.0.0' });
 
 process.stdin.resume(); //so the program will not close instantly
 
