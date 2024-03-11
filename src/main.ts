@@ -25,7 +25,7 @@ import budget from './api/budget.js';
 const fastify = Fastify();
 // allow localhost client to connect
 await fastify.register(fastcors, {
-  origin: ['https://money-lender.app', 'http://localhost:5173'], // ensure these are the correct origins
+  origin: ['https://money-lender.app', 'http://localhost:5173', 'https://money-lender-eu-1f90f976b99f.herokuapp.com'], // ensure these are the correct origins
   methods: '*', // allow all methods
   allowedHeaders: '*', // allow all headers
   //credentials: true, // add this line if your request needs credentials
