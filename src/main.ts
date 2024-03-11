@@ -25,7 +25,13 @@ const fastify = Fastify();
 // simple cors allowing all origins
 fastify.addHook('preHandler', (req, reply, done) => {
   reply.header('Access-Control-Allow-Origin', '*');
+
+  const isPreflight = /options/i.test(req.method);
+  if (isPreflight) {
+    return reply.send();
+  }
   done();
+  return undefined;
 });
 
 // mount the GraphQL over HTTP fastify request handler on `/graphql` and inlude the schema and context
