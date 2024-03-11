@@ -31,9 +31,7 @@ export default {
 
     try {
       const newCustomer = await new CustomerModel(newCustomerData).save();
-      customerCache.addCustomerToUsersCache({ userId, customer: newCustomer });
-
-      return customerHelpers.runtimeCast({
+      const castedCustomer = customerHelpers.runtimeCast({
         ...newCustomer.toObject(),
         _id: newCustomer._id.toString(),
         userId: newCustomer.userId.toString(),
@@ -42,6 +40,9 @@ export default {
           _id: note._id.toString(),
         })),
       });
+      customerCache.addCustomerToUsersCache({ userId, customer: castedCustomer });
+
+      return castedCustomer;
     } catch (err) {
       console.log(err);
       throw new Error(err);
