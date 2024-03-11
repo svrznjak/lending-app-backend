@@ -26,8 +26,8 @@ const fastify = Fastify();
 // allow localhost client to connect
 await fastify.register(fastcors, {
   origin: ['https://money-lender.app', 'http://localhost:5173'], // ensure these are the correct origins
-  methods: 'GET,HEAD,PUT,PATCH,OPTIONS,POST,DELETE',
-  allowedHeaders: 'Content-Type, Authorization',
+  methods: '*', // allow all methods
+  allowedHeaders: '*', // allow all headers
   //credentials: true, // add this line if your request needs credentials
   preflightContinue: false, // add this line to respond to preflight requests
   optionsSuccessStatus: 204, // add this line for legacy browser support
