@@ -27,7 +27,6 @@ const fastify = Fastify();
 await fastify.register(fastcors, {
   origin: ['https://money-lender.app', 'http://localhost:5173'],
   methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-  credentials: true,
 });
 
 // mount the GraphQL over HTTP fastify request handler on `/graphql` and inlude the schema and context
