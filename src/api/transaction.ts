@@ -150,7 +150,7 @@ export default {
       }
     } catch (err) {
       console.log(err);
-      throw new Error('Transaction creation failed!');
+      throw new Error(err.message);
     }
   },
   edit: async function editTransaction(
