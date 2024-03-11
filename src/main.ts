@@ -17,21 +17,17 @@ try {
 /* moving from express-graphql to graphql-http on fastify */
 import Fastify from 'fastify'; // yarn add fastify
 import { createHandler } from 'graphql-http/lib/use/fastify';
+import fastcors from '@fastify/cors';
 import budget from './api/budget.js';
 
 // Create a fastify instance serving all methods on `/graphql`
 // where the GraphQL over HTTP fastify request handler is
 const fastify = Fastify();
-// simple cors allowing all origins
-fastify.addHook('preHandler', (req, reply, done) => {
-  reply.header('Access-Control-Allow-Origin', '*');
-
-  const isPreflight = /options/i.test(req.method);
-  if (isPreflight) {
-    return reply.send();
-  }
-  done();
-  return undefined;
+// allow localhost client to connect
+await fastify.register(fastcors, {
+  origin: ['https://money-lender.app', 'http://localhost:5173'],
+  methods: 'GET,HEAD,PUT,PATCH,OPTIONS,POST,DELETE',
+  allowedHeaders: 'Content-Type, Authorization',
 });
 
 // mount the GraphQL over HTTP fastify request handler on `/graphql` and inlude the schema and context
