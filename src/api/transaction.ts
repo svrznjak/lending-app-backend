@@ -35,7 +35,7 @@ export default {
       });
     } catch (err) {
       console.log(err);
-      throw new Error('Transaction could not be fetchet from db!');
+      throw new Error('Transaction could not be retrieved from db!');
     }
   },
   add: async function addTransaction(
@@ -168,7 +168,7 @@ export default {
     if (transaction === null) throw new Error('Transaction you wanted to edit, does not exist.');
 
     if (transaction.from.datatype === 'BUDGET' && transaction.to.datatype === 'LOAN') {
-      throw new Error('Transaction from budget to loan can not be edited');
+      throw new Error('Transaction from budget to loan can not be edited!');
     }
 
     if (transaction.from.datatype === 'LOAN') {
@@ -178,7 +178,7 @@ export default {
       });
 
       if (AFFECTED_LOAN.status.current === 'COMPLETED' || AFFECTED_LOAN.status.current === 'DEFAULTED')
-        throw new Error('Transaction from loan with status "COMPLETED" or "DEFAULTED" can not be deleted');
+        throw new Error('Transaction from loan with status "COMPLETED" or "DEFAULTED" can not be deleted!');
     } else if (transaction.to.datatype === 'LOAN') {
       const AFFECTED_LOAN: ILoan = await Loan.getOneFromUser({
         userId: transaction.userId,
@@ -186,7 +186,7 @@ export default {
       });
 
       if (AFFECTED_LOAN.status.current === 'COMPLETED' || AFFECTED_LOAN.status.current === 'DEFAULTED')
-        throw new Error('Transaction from loan with status "COMPLETED" or "DEFAULTED" can not be deleted');
+        throw new Error('Transaction from loan with status "COMPLETED" or "DEFAULTED" can not be deleted!');
     }
     transaction.revisions = transactionHelpers.runtimeCast({
       _id: transaction._id.toString(),
@@ -333,7 +333,7 @@ export default {
     if (transaction === null) throw new Error('Transaction you wanted to delete, does not exist.');
 
     if (transaction.from.datatype === 'BUDGET' && transaction.to.datatype === 'LOAN') {
-      throw new Error('Transaction from budget to loan can not be deleted');
+      throw new Error('Transaction from budget to loan can not be deleted!');
     }
     if (transaction.from.datatype === 'LOAN') {
       const AFFECTED_LOAN: ILoan = await Loan.getOneFromUser({
@@ -342,7 +342,7 @@ export default {
       });
 
       if (AFFECTED_LOAN.status.current === 'COMPLETED' || AFFECTED_LOAN.status.current === 'DEFAULTED')
-        throw new Error('Transaction from loan with status "COMPLETED" or "DEFAULTED" can not be deleted');
+        throw new Error('Transaction from loan with status "COMPLETED" or "DEFAULTED" can not be deleted!');
     } else if (transaction.to.datatype === 'LOAN') {
       const AFFECTED_LOAN: ILoan = await Loan.getOneFromUser({
         userId: transaction.userId,
@@ -350,7 +350,7 @@ export default {
       });
 
       if (AFFECTED_LOAN.status.current === 'COMPLETED' || AFFECTED_LOAN.status.current === 'DEFAULTED')
-        throw new Error('Transaction from loan with status "COMPLETED" or "DEFAULTED" can not be deleted');
+        throw new Error('Transaction from loan with status "COMPLETED" or "DEFAULTED" can not be deleted!');
     }
     // Save edited transaction into DB
     /*
@@ -547,7 +547,7 @@ export default {
         { session: session },
       );
       if (AFFECTED_LOAN.openedTimestamp > transaction.transactionTimestamp)
-        throw new Error('Transaction can not occur before loan openedTimestamp');
+        throw new Error('Transaction can not occur before loan started!');
 
       if (AFFECTED_LOAN.status.current === 'COMPLETED')
         throw new Error('Transaction can not occur on loan with status "COMPLETED"');
@@ -560,7 +560,7 @@ export default {
         { session: session },
       );
       if (AFFECTED_LOAN.openedTimestamp > transaction.transactionTimestamp)
-        throw new Error('Transaction can not occur before loan openedTimestamp');
+        throw new Error('Transaction can not occur before loan started!');
       if (AFFECTED_LOAN.status.current === 'COMPLETED')
         throw new Error('Transaction can not occur on loan with status "COMPLETED"');
     }

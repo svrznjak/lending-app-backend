@@ -1617,7 +1617,7 @@ const Loan = {
         //  Forgiveness
 
         if (loanTransaction.amount > outstandingPrincipal + outstandingInterest + outstandingFees) {
-          throw new Error('Forgiveness amount is greater than total principal, interest and fees paid!');
+          throw new Error('Forgiveness amount can not be greater than outstanding principal, interest and fees!');
         }
 
         let remainingForgivenessAmount = loanTransaction.amount;
