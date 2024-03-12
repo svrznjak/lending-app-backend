@@ -233,8 +233,9 @@ const Loan = {
       });
     }*/
 
-    if (LoanCache.getCachedItem({ itemId: loanId }) && session === undefined) {
-      return LoanCache.getCachedItem({ itemId: loanId }) as ILoan;
+    const cachedLoan = LoanCache.getCachedItem({ userId })?.find((loan) => loan._id === loanId);
+    if (cachedLoan !== undefined && session === undefined) {
+      return cachedLoan;
     } else {
       const MONGO_LOAN = await LoanModel.findOne({ _id: loanId, userId: userId }).session(session);
       if (MONGO_LOAN === null) throw new Error('Loan could not be found');
@@ -249,9 +250,9 @@ const Loan = {
             _id: note._id.toString(),
           })),
         });
-        LoanCache.setCachedItem({
-          itemId: MONGO_LOAN._id.toString(),
-          value: LOAN,
+        LoanCache.addLoanToUsersCache({
+          userId: userId,
+          loan: LOAN,
         });
         return LOAN;
       }
@@ -283,8 +284,9 @@ const Loan = {
     const budgetsToUpdate: IBudget['_id'][] = [];
     for (let i = 0; i < LOANS.length; i++) {
       const LOAN_ID = LOANS[i]._id.toString();
-      if (LoanCache.getCachedItem({ itemId: LOAN_ID }) && session === undefined) {
-        returnValue.push(LoanCache.getCachedItem({ itemId: LOAN_ID }) as ILoan);
+      const cachedLoan = LoanCache.getCachedItem({ userId })?.find((loan) => loan._id === LOAN_ID);
+      if (cachedLoan !== undefined && session === undefined) {
+        returnValue.push(cachedLoan);
       } else {
         // Do not recalculate if session is provided, because changes to data will be made in the end of successful session
         if (LOANS[i].status.current === 'COMPLETED' || LOANS[i].status.current === 'DEFAULTED') {
@@ -297,9 +299,9 @@ const Loan = {
               _id: note._id.toString(),
             })),
           });
-          LoanCache.setCachedItem({
-            itemId: LOANS[i]._id.toString(),
-            value: LOAN,
+          LoanCache.addLoanToUsersCache({
+            userId: userId,
+            loan: LOAN,
           });
           returnValue.push(LOAN);
         } else {
@@ -1163,9 +1165,9 @@ const Loan = {
     });
 
     if (session === undefined)
-      LoanCache.setCachedItem({
-        itemId: MONGO_LOAN._id.toString(),
-        value: {
+      LoanCache.addLoanToUsersCache({
+        userId: MONGO_LOAN.userId.toString(),
+        loan: {
           ...CHANGED_LOAN,
           ...CALCULATED_VALUES_UNTIL_NOW,
         },
@@ -1574,7 +1576,7 @@ const Loan = {
 
         // if refund is greater than total payments made then throw error
         if (loanTransaction.amount > totalPaidPrincipal) {
-          throw new Error('Refund amount is greater than total principal paid!');
+          throw new Error('Refund amount can not be greater than total principal paid!');
         }
 
         let remainingRefundAmount = loanTransaction.amount;
