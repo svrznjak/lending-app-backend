@@ -10,12 +10,16 @@ const CACHE: ISimpleCache = {};
 export default {
   getCachedItem: function ({ userId }: { userId: string }): ICustomer[] | false {
     if (CACHE[userId] === undefined) return false;
-    return CACHE[userId];
+    return CACHE[userId].entries;
+  },
+  getCachedItemEtag: function ({ userId }: { userId: string }): string | false {
+    if (CACHE[userId] === undefined) return false;
+    return CACHE[userId].etag;
   },
   setCachedItem: function ({ userId, value }: { userId: string; value: ICustomer[] }): void {
-    CACHE[userId] = value;
     const NOW = new Date().getTime();
     const MILLISECONDS_UNTIL_NEXT_HOUR = differenceInMilliseconds(endOfHour(NOW), NOW);
+    CACHE[userId] = { etag: NOW.toString(), entries: value };
 
     // set timeout to clear calculated values at end of hour
     setTimeout(() => {
@@ -27,7 +31,7 @@ export default {
     if (CUSTOMERS === undefined) CUSTOMERS = [];
 
     // if users cache already includes budget with same _id, replace it
-    const customerIndex = CUSTOMERS.findIndex((b) => b._id === customer._id);
+    const customerIndex = CUSTOMERS.entries.findIndex((b) => b._id === customer._id);
     if (customerIndex !== -1) {
       CUSTOMERS[customerIndex] = customer;
     } else {

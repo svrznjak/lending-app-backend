@@ -18,8 +18,8 @@ try {
 import Fastify from 'fastify'; // yarn add fastify
 import { createHandler } from 'graphql-http/lib/use/fastify';
 import fastcors from '@fastify/cors';
-import budget from './api/budget.js';
 
+import configureHttpRoutes from './http/configureHttpRoutes.js';
 // Create a fastify instance serving all methods on `/graphql`
 // where the GraphQL over HTTP fastify request handler is
 const fastify = Fastify();
@@ -27,7 +27,8 @@ const fastify = Fastify();
 await fastify.register(fastcors, {
   origin: ['https://money-lender.app', 'http://localhost:5173'],
   methods: 'GET,HEAD,PUT,PATCH,OPTIONS,POST,DELETE',
-  allowedHeaders: 'Content-Type, Authorization',
+  allowedHeaders: 'Content-Type, Authorization, if-none-match',
+  exposedHeaders: 'ETag',
 });
 
 // mount the GraphQL over HTTP fastify request handler on `/graphql` and inlude the schema and context
@@ -41,11 +42,7 @@ fastify.all(
   }),
 );
 
-fastify.get('/', async (req, reply) => {
-  if (req.headers.etag === 'TESTINGETAG1231231') return reply.status(304).send();
-  const fullBudgets = await budget.getAllFromUser({ userId: '65aa7ada1b66cbd4c5d44e68' });
-  return fullBudgets;
-});
+configureHttpRoutes(fastify);
 
 fastify.listen({ port: parseInt(process.env.PORT) || 9000, host: '0.0.0.0' });
 

@@ -4,6 +4,7 @@ import { ICustomer } from './types/customer/customerInterface.js';
 import * as User from './user.js';
 import CustomerModel from './db/model/CustomerModel.js';
 import customerCache from './cache/customerCache.js';
+import loanCache from './cache/loanCache.js';
 
 export default {
   create: async function createCustomer(
@@ -100,6 +101,7 @@ export default {
     await MONGO_CUSTOMER.save();
 
     customerCache.addCustomerToUsersCache({ userId, customer: changedCustomer });
+    loanCache.refreshEtag({ itemId: userId });
 
     return changedCustomer;
   },
