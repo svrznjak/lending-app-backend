@@ -27,7 +27,7 @@ export default {
     }, MILLISECONDS_UNTIL_NEXT_HOUR);
   },
   addCustomerToUsersCache: function ({ userId, customer }: { userId: string; customer: ICustomer }): void {
-    let CUSTOMERS = CACHE[userId];
+    let CUSTOMERS = CACHE[userId]?.entries;
     if (CUSTOMERS === undefined) CUSTOMERS = [];
 
     // if users cache already includes budget with same _id, replace it
