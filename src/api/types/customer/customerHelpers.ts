@@ -23,7 +23,7 @@ export const customerHelpers = {
       return name;
     },
     email: function validateEmail(email: string): string {
-      if (!isValidEmail({ email })) throw new Error('(validation) email is invalid!');
+      if (!isValidEmail({ email }) && email.length > 0) throw new Error('(validation) email is invalid!');
       return email;
     },
     phone: function validatePhone(phone: string): string {

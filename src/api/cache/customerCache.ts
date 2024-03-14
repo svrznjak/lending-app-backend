@@ -31,7 +31,7 @@ export default {
     if (CUSTOMERS === undefined) CUSTOMERS = [];
 
     // if users cache already includes budget with same _id, replace it
-    const customerIndex = CUSTOMERS.entries.findIndex((b) => b._id === customer._id);
+    const customerIndex = CUSTOMERS.findIndex((b) => b._id === customer._id);
     if (customerIndex !== -1) {
       CUSTOMERS[customerIndex] = customer;
     } else {
