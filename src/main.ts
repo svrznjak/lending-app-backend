@@ -9,7 +9,7 @@ console.log('Firebase project id: ' + firebaseApp);
 
 try {
   console.log(process.env.MONGO_CLOUD_URI);
-  await mongoose.connect(process.env.MONGO_CLOUD_URI);
+  await mongoose.connect(process.env.MONGO_CLOUD_URI, { autoCreate: true });
 } catch (err) {
   throw new Error('Failed to connect to MongoDB');
 }
@@ -43,7 +43,7 @@ fastify.all(
 );
 
 configureHttpRoutes(fastify);
-
+console.log(parseInt(process.env.PORT));
 fastify.listen({ port: parseInt(process.env.PORT) || 9000, host: '0.0.0.0' });
 
 process.stdin.resume(); //so the program will not close instantly
