@@ -25,7 +25,7 @@ import configureHttpRoutes from './http/configureHttpRoutes.js';
 const fastify = Fastify();
 // allow localhost client to connect
 await fastify.register(fastcors, {
-  origin: ['https://money-lender.app', 'http://localhost:5173'],
+  origin: ['https://money-lender.app', 'http://localhost:5173', 'http://localhost'],
   methods: 'GET,HEAD,PUT,PATCH,OPTIONS,POST,DELETE',
   allowedHeaders: 'Content-Type, Authorization, if-none-match',
   exposedHeaders: 'ETag',
