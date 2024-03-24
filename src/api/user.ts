@@ -88,6 +88,7 @@ export async function getUserById(id: string | object): Promise<IUser | undefine
       authId: user.authId,
       currency: user.currency,
       language: user.language,
+      formattingLocale: user.formattingLocale,
       subscription: user.subscription,
       notificationTokens: user.notificationTokens,
     });

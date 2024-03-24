@@ -1748,7 +1748,7 @@ const Loan = {
           notified: false,
         },
       },
-    }).populate('userId', 'notificationTokens');
+    }).populate('userId', 'notificationTokens language');
     //  2. send notification using sendNotifications function
     /* send notifications accepts argument array of Message that has following structure:
     {
@@ -1766,6 +1766,18 @@ const Loan = {
     pushed to array of messages (one for each notification token).
 
     */
+
+    const localizedMessages = {
+      'sl-SI': {
+        title: () => `Danes pričakujete plačilo posojila`,
+        body: (loanName: string) => `Vaše posojilo '${loanName}' danes pričakuje plačilo!`,
+      },
+      'en-US': {
+        title: () => `Loan is expecting payment`,
+        body: (loanName: string) => `Your loan '${loanName}' is expecting payment today!`,
+      },
+    };
+
     const messages: TokenMessage[] = [];
     loans.forEach((loan) => {
       loan.userId.notificationTokens.forEach((notificationToken) => {
@@ -1785,8 +1797,8 @@ const Loan = {
             userId: loan.userId._id.toString(),
           },
           notification: {
-            title: `Loan is expecting payment`, // TODO: Multilingual support
-            body: `Your loan ${loan.name} is expecting payment!`,
+            title: localizedMessages[loan.userId.language].title(),
+            body: localizedMessages[loan.userId.language].body(loan.name),
           },
           token: notificationToken,
         });

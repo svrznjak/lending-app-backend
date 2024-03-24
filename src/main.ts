@@ -43,7 +43,6 @@ fastify.all(
 );
 
 configureHttpRoutes(fastify);
-console.log(parseInt(process.env.PORT));
 fastify.listen({ port: parseInt(process.env.PORT) || 9000, host: '0.0.0.0' });
 
 process.stdin.resume(); //so the program will not close instantly
