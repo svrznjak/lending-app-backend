@@ -23,9 +23,9 @@ export async function initializeUser(
         name: initialBudgetName,
         description: initialBudgetDescription,
         defaultInterestRate: {
-          type: 'FIXED_PER_DURATION',
-          duration: 'FULL_DURATION',
-          amount: 0,
+          type: 'PERCENTAGE_PER_DURATION',
+          duration: 'YEAR',
+          amount: 5,
           isCompounding: false,
           entryTimestamp: Date.now(),
         },
